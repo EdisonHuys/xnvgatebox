@@ -41,7 +41,7 @@ python3 scripts/toolbox.py mode-a
 
 ## GitHub Actions
 
-工作流 [update.yml](.github/workflows/update.yml) 支持手动触发，并默认每小时自动刷新：
+工作流 [update.yml](.github/workflows/update.yml) 支持手动触发，并默认每 20 分钟尝试自动刷新：
 
 - `pool-only`：无需任何 Cloudflare Secrets，构建共享候选池。
 - `serverless`：设置与 `.env.example` 同名的仓库 Secrets 后执行实际链路检查；可选打开 `publish_cf` 将 `data/cf_manifest.json` 发布到自有 control Worker 的 KV。

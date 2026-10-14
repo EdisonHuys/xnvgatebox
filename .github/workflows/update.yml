@@ -12,10 +12,11 @@ on:
         type: boolean
         default: false
   # Keep the published manifest fresh without requiring a manual run.
-  # GitHub may delay scheduled jobs by a few minutes; the manifest TTL is
-  # one hour, so this hourly cadence leaves room for that delay.
+  # Request refreshes every 20 minutes inside the one-hour evidence lifetime.
+  # GitHub schedules are best-effort and can be delayed or dropped; expired
+  # evidence remains unavailable until a fresh successful batch is published.
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17,37,57 * * * *'
   # Validate checker/workflow changes immediately; this path never publishes
   # to KV, so a code push cannot replace a working manifest by itself.
   push:

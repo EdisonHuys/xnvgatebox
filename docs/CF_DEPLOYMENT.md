@@ -85,4 +85,8 @@ v0.1 的“至少一条实际订阅链路、expected=actual、无需 VPS”完�
 
 本次运行的 `publish_cf` 保持关闭，因此 KV 没有被写入，Worker 的 `/health` 仍会显示 `manifest_ready=false`；这是预期的发布前验证状态。要让 `/sub` 返回真实订阅，还需配置 GitHub Secrets `CF_API_TOKEN`、`CF_ACCOUNT_ID` 和 `CF_KV_NAMESPACE_ID` 后，再以 `serverless + publish_cf=true` 运行一次。
 
-随后已将统一 Worker 的 `/check` 响应补齐 `type=sstp` 协议标记，并在 `.github/workflows/update.yml` 启用每小时自动刷新；定时运行会自动使用 `serverless` 并发布 manifest，手动运行仍可用于立即刷新或诊断。Worker 当前 `/health` 已确认 `configured=true`；在首次成功发布前 `manifest_ready=false` 属于正常状态。若某轮候选全部失效，Actions 会报告 `no_sstp_passed_nodes` 并保留失败原因，不会发布过期或未经验证的节点。
+随后已将统一 Worker 的 `/check` 响应补齐 `type=sstp` 协议标记，并在 `.github/workflows/update.yml` 启用每 20 分钟尝试自动刷新；定时运行会自动使用 `serverless` 并发布 manifest，手动运行仍可用于立即刷新或诊断。Worker 当前 `/health` 已确认 `configured=true`；在首次成功发布前 `manifest_ready=false` 属于正常状态。若某轮候选全部失效，Actions 会报告 `no_sstp_passed_nodes` 并保留失败原因，不会发布过期或未经验证的节点。
+
+### 定时刷新与过期诊断
+
+当 `/health` 返回 `nodes > 0` 但 `manifest_ready=false` 时，KV 内可能已有过期清单。先检查最新 Actions 的发布步骤，再比较清单有效期与当前时间。2026-10-14 的实测中，定时任务间隔超过 5 小时，清单只有 60 分钟有效，导致管理页和订阅返回 `manifest_unavailable`。刷新尝试现改为每 20 分钟；GitHub 调度仍可能延迟。立即恢复方式是手动运行 `serverless` 且 `publish_cf=true`，重新完成验证后发布，不修改旧证据有效期。
