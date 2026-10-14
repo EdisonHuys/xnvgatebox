@@ -21,7 +21,9 @@ jobs:
         with:
           go-version: '1.24.4'
           cache-dependency-path: vps/fanout/go.sum
-      - run: go test ./...
+      - run: |
+          go test -c -o /tmp/xnvgatebox-tests
+          sudo /tmp/xnvgatebox-tests -test.v
         working-directory: vps/fanout
       - run: bash -n vps/install.sh vps/deploy/xnvgatebox
       - run: python scripts/build_vps_package.py
