@@ -90,3 +90,7 @@ v0.1 的“至少一条实际订阅链路、expected=actual、无需 VPS”完�
 ### 定时刷新与过期诊断
 
 当 `/health` 返回 `nodes > 0` 但 `manifest_ready=false` 时，KV 内可能已有过期清单。先检查最新 Actions 的发布步骤，再比较清单有效期与当前时间。2026-10-14 的实测中，定时任务间隔超过 5 小时，清单只有 60 分钟有效，导致管理页和订阅返回 `manifest_unavailable`。刷新尝试现改为每 20 分钟；GitHub 调度仍可能延迟。立即恢复方式是手动运行 `serverless` 且 `publish_cf=true`，重新完成验证后发布，不修改旧证据有效期。
+
+### 订阅入口跟随访问域名
+
+订阅导出的服务器地址、TLS SNI、WebSocket Host 和端口由当前 `/sub` HTTPS 请求决定，不写死域名，也不使用旧 `PUBLIC_HOST` 或 manifest 中的主机名覆盖请求域名。通过哪个已绑定到唯一 Worker 的域名订阅，就通过该域名连接。GitHub Variables 配置 `WORKER_URL` 为验活使用的 HTTPS origin；工作流从这一处派生 `/check` 与数据面地址。手机打不开 workers.dev 时，使用可达的自定义域名访问管理与订阅，再更新客户端订阅，检查节点详情三个入口域名是否一致。

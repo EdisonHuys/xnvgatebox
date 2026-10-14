@@ -13,8 +13,6 @@ id = "replace-with-kv-namespace-id"
 # Plain runtime variables. Keep real values local when generating the deploy
 # file; this example intentionally contains placeholders only.
 [vars]
-PUBLIC_HOST = "xnvgatebox.<account-subdomain>.workers.dev"
-DATA_PLANE_PORT = "443"
 DATA_PLANE_BASE_PATH = "/"
 VLESS_UUID = "replace-with-uuid-v4"
 ADMIN_TOKEN = "replace-with-admin-token"

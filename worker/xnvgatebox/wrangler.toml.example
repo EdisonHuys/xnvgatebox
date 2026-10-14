@@ -6,8 +6,6 @@ workers_dev = true
 [vars]
 # All runtime settings are ordinary Worker variables. Replace the examples
 # before deployment; no other Worker is required.
-PUBLIC_HOST = "xnvgatebox.<account-subdomain>.workers.dev"
-DATA_PLANE_PORT = "443"
 DATA_PLANE_BASE_PATH = "/"
 VLESS_UUID = "replace-with-uuid-v4"
 ADMIN_TOKEN = "replace-with-admin-token"

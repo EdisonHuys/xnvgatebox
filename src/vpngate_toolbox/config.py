@@ -58,14 +58,26 @@ def load_settings(path: Path) -> dict:
 
 
 def mode_a_environment(require_checker=True) -> dict:
+    origin = os.getenv("WORKER_URL", "").strip()
+    if origin:
+        parsed = urlsplit(https_url(origin))
+        if (parsed.path not in ("", "/") or parsed.query or parsed.fragment
+                or parsed.username or parsed.password or parsed.port not in (None, 443)):
+            raise ToolError("invalid_worker_url")
+        edge_host = parsed.hostname.lower()
+        checker_url = "https://" + edge_host + "/check"
+    else:
+        edge_host = os.getenv("EDGETUNNEL_HOST", "").lower()
+        checker_url = os.getenv("CHECKER_URL", "")
     required = (["CHECKER_URL"] if require_checker else []) + ["EDGETUNNEL_HOST", "VLESS_UUID"]
-    missing = [key for key in required if not os.getenv(key)]
+    values = {"CHECKER_URL": checker_url, "EDGETUNNEL_HOST": edge_host, "VLESS_UUID": os.getenv("VLESS_UUID")}
+    missing = [key for key in required if not values[key]]
     if missing:
         raise ToolError("missing_environment:" + ",".join(missing))
-    endpoint = https_url(os.environ["CHECKER_URL"]) if require_checker else None
+    endpoint = https_url(checker_url) if require_checker else None
     if endpoint and urlsplit(endpoint).query:
         raise ToolError("checker_url_must_not_have_query")
-    host = os.environ["EDGETUNNEL_HOST"].lower()
+    host = edge_host
     if not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?", host) or "." not in host:
         raise ToolError("invalid_edgetunnel_host")
     try:

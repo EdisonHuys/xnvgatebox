@@ -52,13 +52,14 @@ jobs:
       - name: Verify the actual Cloudflare VLESS chain
         if: inputs.profile == 'serverless' || github.event_name == 'schedule' || github.event_name == 'push'
         env:
-          CHECKER_URL: https://xnvgatebox.waynee.workers.dev/check
+          # Configure the reachable subscription origin once in repo Variables.
+          # Both /check and the VLESS entrance are derived from this value.
+          WORKER_URL: ${{ vars.WORKER_URL }}
           # The unified Worker accepts VLESS_UUID for /check, so the Actions
           # verifier does not depend on a second token that can drift.
           CHECKER_TOKEN: ${{ secrets.VLESS_UUID }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          EDGETUNNEL_HOST: xnvgatebox.waynee.workers.dev
           VLESS_UUID: ${{ secrets.VLESS_UUID }}
           VPN_USERNAME: ${{ secrets.VPN_USERNAME || 'vpn' }}
           VPN_PASSWORD: ${{ secrets.VPN_PASSWORD || 'vpn' }}

@@ -143,10 +143,14 @@ async function readManifest(env) {
   return null;
 }
 
-function dataPlane(env, manifest) {
+function dataPlane(env, manifest, url) {
   const value = manifest.data_plane || {};
-  const host = String(env.PUBLIC_HOST || env.DATA_PLANE_HOST || value.host || '').toLowerCase();
-  const port = Number(env.DATA_PLANE_PORT || value.port || 443);
+  // The subscription origin is the user's reachable entrance to this Worker.
+  // Old deployment variables and old manifests must not send clients to a
+  // different hostname. Do not trust client-supplied Forwarded/Host headers.
+  if (url.protocol !== 'https:') return null;
+  const host = url.hostname.toLowerCase();
+  const port = Number(url.port || 443);
   const basePath = String(env.DATA_PLANE_BASE_PATH || value.base_path || '/');
   if (!HOST_RE.test(host) || !host.includes('.') || !validPort(port) || !BASE_PATH_RE.test(basePath)) return null;
   return { host, port, basePath };
@@ -186,8 +190,8 @@ export async function handleRequest(request, env = {}) {
     const manifest = await readManifest(env);
     const configured = UUID_RE.test(String(env.VLESS_UUID || '')) && Boolean(env.ADMIN_TOKEN) && Boolean(env.SUB_TOKEN);
     const checkerReady = Boolean(env.CHECKER_TOKEN || env.VLESS_UUID);
-    const dataPlaneReady = UUID_RE.test(String(env.VLESS_UUID || '')) && Boolean(env.PUBLIC_HOST || env.DATA_PLANE_HOST);
-    return json({ service: 'xnvgatebox', version: 2, configured,
+    const dataPlaneReady = UUID_RE.test(String(env.VLESS_UUID || '')) && url.protocol === 'https:' && HOST_RE.test(url.hostname);
+    return json({ service: 'xnvgatebox', version: 3, configured,
       modules: { management: configured, subscription: configured, checker: checkerReady, data_plane: dataPlaneReady },
       manifest_ready: validateManifest(manifest), nodes: Array.isArray(manifest?.nodes) ? manifest.nodes.length : 0 });
   }
@@ -240,7 +244,7 @@ export async function handleRequest(request, env = {}) {
     if (!tokenEqual(supplied, String(env.SUB_TOKEN || ''))) return text('unauthorized\n', 401);
     const manifest = await readManifest(env);
     if (!validateManifest(manifest)) return text('manifest_unavailable\n', 503);
-    const plane = dataPlane(env, manifest);
+    const plane = dataPlane(env, manifest, url);
     if (!plane) return text('data_plane_unavailable\n', 503);
     const links = manifest.nodes.map(node => makeLink(node, env, plane)).filter(Boolean);
     if (!links.length) return text('subscription_empty\n', 503);

@@ -44,7 +44,7 @@ python3 scripts/toolbox.py mode-a
 工作流 [update.yml](.github/workflows/update.yml) 支持手动触发，并默认每 20 分钟尝试自动刷新：
 
 - `pool-only`：无需任何 Cloudflare Secrets，构建共享候选池。
-- `serverless`：设置与 `.env.example` 同名的仓库 Secrets 后执行实际链路检查；可选打开 `publish_cf` 将 `data/cf_manifest.json` 发布到自有 control Worker 的 KV。
+- `serverless`：在仓库 Variables 配置 `WORKER_URL`（HTTPS 订阅入口，不含路径或 token），再设置 UUID 等仓库 Secrets，执行实际链路检查；可选打开 `publish_cf` 将 `data/cf_manifest.json` 发布到唯一 Worker 的 KV。检查与数据面地址都由 `WORKER_URL` 派生，无部署域名硬编码。
 
 定时运行使用 `serverless` 链路并自动发布 Cloudflare manifest；手动运行仍可选择 `pool-only` 或 `serverless`，并可显式打开 `publish_cf`。公开 artifact 只包括池、配置数据、验活证据、`cf_manifest.json` 和报告，不包含 `.env` 或订阅。成功后下载 `mode_a_validated.json` 等证据到 `data/`，在本机使用相同数据面/UUID 和配置生成私有订阅：
 

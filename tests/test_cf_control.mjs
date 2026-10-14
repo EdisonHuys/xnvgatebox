@@ -54,7 +54,7 @@ response = await handleRequest(request('/sub?token=sub-secret'), env);
 assert.equal(response.status, 200);
 const links = atob((await response.text()).trim()).trim().split('\n');
 assert.equal(links.length, 1);
-assert.match(links[0], /^vless:\/\/12345678-1234-4123-8123-123456789abc@vpngate-edge\.example\.com:443\?/);
+assert.match(links[0], /^vless:\/\/12345678-1234-4123-8123-123456789abc@control\.example\.com:443\?/);
 const path = new URL(links[0]).searchParams.get('path');
 assert.equal(new URL('https://edge.invalid' + path).searchParams.get('sstp'), 'vpn:p%40ss%26%3D%3F@public-vpn-1.opengw.net:443');
 assert.equal(new URL('https://edge.invalid' + path).searchParams.get('globalproxy'), '1');
@@ -97,5 +97,23 @@ response = await handleRequest(request(edgePath, { headers: { upgrade: 'websocke
 assert.equal(response.status, 200);
 response = await handleRequest(request('/sub?token=sub-secret'), unifiedEnv);
 const unifiedLinks = atob((await response.text()).trim()).trim().split('\n');
-assert.match(unifiedLinks[0], /@xnvgatebox\.example\.workers\.dev:443\?/);
+assert.match(unifiedLinks[0], /@control\.example\.com:443\?/);
+
+// Changing the subscription origin must change all entrance names even with
+// stale PUBLIC_HOST/DATA_PLANE_HOST/manifest values left by an old deployment.
+for (const origin of ['https://custom-a.example.com', 'https://custom-b.example.net:8443']) {
+  const res = await handleRequest(new Request(origin + '/sub?token=sub-secret', {
+    headers: { 'x-forwarded-host': 'untrusted.example.com' },
+  }), { ...unifiedEnv, DATA_PLANE_HOST: 'old.example.com', DATA_PLANE_PORT: '2053' });
+  assert.equal(res.status, 200);
+  const link = new URL(atob((await res.text()).trim()).trim());
+  const incoming = new URL(origin);
+  assert.equal(link.hostname, incoming.hostname);
+  assert.equal(link.port, incoming.port || '443');
+  assert.equal(link.searchParams.get('sni'), incoming.hostname);
+  assert.equal(link.searchParams.get('host'), incoming.hostname);
+  assert.equal(link.searchParams.get('path'), path);
+}
+response = await handleRequest(new Request('http://control.example.com/sub?token=sub-secret'), unifiedEnv);
+assert.equal(response.status, 503);
 console.log('Cloudflare unified Worker tests passed');

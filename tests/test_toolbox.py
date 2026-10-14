@@ -18,7 +18,7 @@ from vpngate_toolbox.checker import check_node
 from vpngate_toolbox.classifier import classify
 from vpngate_toolbox.cli import main, output_lock
 from vpngate_toolbox.common import ServiceError, ToolError, digest, expires_at, public_ipv4, utc_now
-from vpngate_toolbox.config import load_env, load_settings
+from vpngate_toolbox.config import load_env, load_settings, mode_a_environment
 from vpngate_toolbox.full_chain import XraySession, parse_echo, verify, verify_no_fallback
 from vpngate_toolbox.intelligence import enrich
 from vpngate_toolbox.pipeline import publish, run_mode_a
@@ -85,6 +85,29 @@ def passing_factory(*args):
 
 def blocking_factory(*args):
     return FakeSession([ToolError("curl_failed_97"), ToolError("curl_failed_97")])
+
+
+class WorkerOriginTests(unittest.TestCase):
+    def test_one_origin_overrides_legacy_endpoints(self):
+        for origin in ["https://custom-a.example.com", "https://custom-b.example.net/"]:
+            with self.subTest(origin=origin), patch.dict(os.environ, {
+                "WORKER_URL": origin, "VLESS_UUID": ENV["uuid"],
+                "CHECKER_URL": "https://old.example.com/check", "EDGETUNNEL_HOST": "old.example.com",
+            }, clear=True):
+                result = mode_a_environment()
+                expected = origin.rstrip("/")
+                self.assertEqual(result["checker_url"], expected + "/check")
+                self.assertEqual(result["edge_host"], expected.split("://")[1])
+
+    def test_worker_origin_rejects_non_origin_values(self):
+        for origin in ["http://example.com", "https://example.com/admin", "https://example.com/?token=x", "https://example.com/#x", "https://example.com:8443"]:
+            with self.subTest(origin=origin), patch.dict(os.environ, {"WORKER_URL": origin, "VLESS_UUID": ENV["uuid"]}, clear=True):
+                with self.assertRaises(ToolError):
+                    mode_a_environment()
+
+    def test_legacy_endpoints_remain_supported(self):
+        with patch.dict(os.environ, {"CHECKER_URL": ENV["checker_url"], "EDGETUNNEL_HOST": ENV["edge_host"], "VLESS_UUID": ENV["uuid"]}, clear=True):
+            self.assertEqual(mode_a_environment()["edge_host"], ENV["edge_host"])
 
 
 class SourceTests(unittest.TestCase):

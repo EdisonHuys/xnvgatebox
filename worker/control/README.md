@@ -20,12 +20,11 @@ ADMIN_TOKEN      # 管理接口 token
 SUB_TOKEN        # 订阅 token
 VPN_USERNAME     # 可选，默认 vpn
 VPN_PASSWORD     # 可选，默认 vpn
-PUBLIC_HOST      # 可选；订阅链接使用的唯一 Worker 主机名
-DATA_PLANE_HOST  # 兼容旧配置；PUBLIC_HOST 设置后优先
-DATA_PLANE_PORT  # 可选；覆盖 manifest.data_plane.port
 DATA_PLANE_BASE_PATH # 可选；覆盖 manifest.data_plane.base_path
 CHECKER_TOKEN    # /check 管理鉴权；未设置时使用 VLESS_UUID
 ```
+
+订阅入口自动跟随访问 `/sub` 的 HTTPS 域名与端口，服务器地址、TLS SNI、WebSocket Host 始终一致。旧 `PUBLIC_HOST`、`DATA_PLANE_HOST`、`DATA_PLANE_PORT` 和 manifest 中的入口地址不再覆盖订阅请求地址。GitHub 仓库 Variables 使用唯一 `WORKER_URL` 配置验活入口，不在工作流中写死部署域名。
 
 `MANIFEST` 是 KV namespace binding，固定读取键 `manifest:current`。没有 KV 时可以在本地开发用 `MANIFEST_JSON`，生产环境不要把 manifest JSON 塞进源码或公开变量。
 

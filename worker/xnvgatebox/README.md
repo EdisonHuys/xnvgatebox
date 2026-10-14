@@ -4,4 +4,6 @@
 
 Worker 内置节点出口检查和 TCP-only VLESS 数据面，直接通过 Cloudflare Sockets 连接 VPN Gate SSTP 节点，不转发到其他 Worker。部署只需要这个 Worker 和一个 KV Namespace。
 
-生产部署只绑定一个 KV Namespace（键 `manifest:current`）。`PUBLIC_HOST` 必须是这个 Worker 的公开主机名，确保订阅链接回到统一入口。
+生产部署只绑定一个 KV Namespace（键 `manifest:current`）。订阅节点的服务器地址、TLS SNI、WebSocket Host 和入口端口跟随 `/sub` 请求的 HTTPS 域名与端口。用户通过自定义域名订阅，就使用该域名连接；不受旧 `PUBLIC_HOST` 或 manifest 主机名影响。
+
+GitHub 仓库 Variables 中设置 `WORKER_URL` 为准备使用的 HTTPS 订阅入口（只填 origin，不含 `/sub` 或 token）。Actions 从这一处配置派生检查与数据面地址。改用新域名时更新这一变量，再以 `serverless`、`publish_cf=true` 运行验证。
