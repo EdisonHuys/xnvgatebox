@@ -1,0 +1,44 @@
+name: Publish tested VPS package
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Successful VPS tests and package run ID'
+        required: true
+        type: string
+      tag:
+        description: 'Release tag'
+        required: true
+        default: v0.3.0
+        type: string
+permissions:
+  actions: read
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Verify source run and publish its tested artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          gh run view "$RUN_ID" --json conclusion,workflowName,headSha > run.json
+          python3 - <<'PYCODE'
+          import json,pathlib
+          r=json.loads(pathlib.Path('run.json').read_text())
+          assert r['conclusion']=='success' and r['workflowName']=='VPS tests and package'
+          pathlib.Path('source-sha').write_text(r['headSha'])
+          PYCODE
+          gh run download "$RUN_ID" -n xnvgatebox-linux-amd64 -D package
+          (cd package && sha256sum --check checksums.txt)
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --target "$(cat source-sha)" --draft --title "xnvgatebox $RELEASE_TAG" --notes 'VPS Standalone. See repository README for installation and validation limits.'
+          fi
+          gh release upload "$RELEASE_TAG" package/xnvgatebox-linux-amd64.tar.gz package/checksums.txt --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --latest
