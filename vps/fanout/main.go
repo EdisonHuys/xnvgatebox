@@ -20,8 +20,8 @@ var version = "dev"
 func main() {
 	var (
 		webPort  = flag.Int("web", 8899, "Web 管理端口")
-		maxSlots = flag.Int("max", 20, "最多同时运行的隧道数")
-		workDir  = flag.String("dir", "/var/lib/fanout", "工作目录")
+		maxSlots = flag.Int("max", 3, "最多同时运行的隧道数")
+		workDir  = flag.String("dir", "/var/lib/xnvgatebox/fanout", "工作目录")
 	)
 	panelMode := flag.String("panel", "", "节点链接后端: 留空按界面设置/自动探测, 3x-ui, native, xray-cf-lite")
 	publicIP := flag.String("ip", "", "母机公网 IPv4，用于分享链接/SOCKS5 地址；留空则自动探测")
@@ -33,7 +33,7 @@ func main() {
 	}
 
 	if *showVersion {
-		fmt.Println("fanout", version)
+		fmt.Println("xnvgatebox", version)
 		return
 	}
 
@@ -98,6 +98,7 @@ func main() {
 	startConfiguredSlot(mgr)
 
 	go mgr.WatchHealth()
+	go mgr.WatchNodePool()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
@@ -125,6 +126,7 @@ func main() {
 	mux.HandleFunc("/api/jobs", apiJobs(mgr))
 	mux.HandleFunc("/api/jobs/dismiss", apiJobDismiss(mgr))
 	mux.HandleFunc("/api/exits", apiExits(mgr))
+	mux.HandleFunc("/api/export/xray", apiExportXray(mgr))
 	mux.HandleFunc("/api/xui", apiXUIStatus)
 	mux.HandleFunc("/api/xui/inbounds", apiXUIInbounds(mgr))
 	mux.HandleFunc("/api/xui/bind", apiXUIBind(mgr))
@@ -269,6 +271,10 @@ func apiStop(m *Manager) http.HandlerFunc {
 
 func apiRefresh(m *Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		n, err := m.RefreshNodes()
 		if err != nil {
 			writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})

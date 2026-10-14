@@ -1,3 +1,21 @@
+# 当前开发方向（2026-10-15）
+
+用户决定暂停 Cloudflare 模式，备份并撤下线上 Worker，全力开发 VPS Standalone。以下旧 Mode A / Hybrid 章节作为历史设计保留，不再是当前交付目标；不得新增 Cloudflare 部署或恢复其定时发布。
+
+当前交付链路：官方全量来源 → 统一 Python Pool Builder → VPS 本地候选池 → 独立 OpenVPN namespace → 固定 SOCKS Slot → 内置 Xray → 一个聚合订阅。管理与订阅共用 VPS 上的一个进程，不要求 3x-ui、Cloudflare 或 GitHub Actions 凭据。
+
+本轮必须验收：
+
+1. 备份源码、Git 历史、线上 CF 配置/代码/manifest，删除 `xnvgatebox` Worker，停用旧 CF 工作流。
+2. 一个完整 Linux amd64 安装包、一条安装命令；本机每十分钟刷新共享候选池，刷新失败保留旧池。
+3. 上限三个可配置出口，固定 `slot-01..03` 和 `17928..17930`。不固定地区，不把未知节点标记为家宽。
+4. 内置 Xray 无可用绑定时默认 blackhole；换节点不改变 Slot 标签和 SOCKS 端口。管理页导出标准 Xray JSON，第一版本不写 3x-ui 数据库。
+5. 真实订阅经内置 Xray 出网，出口与对应 Slot 一致；掉线请求失败，不回落 VPS IP。
+
+仍待后续收紧：ISP/ASN 的 OpenVPN 出口画像、Slot 的 ISP/延迟策略持久化、更完整的配置回滚。不得把技术连通验收称为住宅类型验收。
+
+---
+
 # xnvgatebox 出口节点与订阅系统分阶段开发文档
 
 修订日期：2026 年 10 月 10 日。范围：v0.1～v1.0；实现进度见 [ROUND1.md](ROUND1.md)。

@@ -1,0 +1,10 @@
+[Unit]
+Description=xnvgatebox shared candidate pool builder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/xnvgatebox/scripts/toolbox.py --config /etc/xnvgatebox/pool.json pool --output /var/lib/xnvgatebox/pool
+TimeoutStartSec=120
+UMask=0077

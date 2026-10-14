@@ -22,52 +22,54 @@ func TestNativeInboundTagMatchesXUIFormat(t *testing.T) {
 	}
 }
 
-func TestBuildXrayConfigBindsOnlyLiveTunnels(t *testing.T) {
-	up := &Tunnel{Port: 1080, Status: "up", Node: Node{HostName: "jp1"}}
-	down := &Tunnel{Port: 1081, Status: "failed", Node: Node{HostName: "jp2"}}
+func TestBuildXrayConfigBlocksUnavailableAndUnbound(t *testing.T) {
+	up := &Tunnel{Slot: 1, Port: 17928, Status: "up", Node: Node{HostName: "jp1"}}
+	down := &Tunnel{Slot: 2, Port: 17929, Status: "failed", Node: Node{HostName: "jp2"}}
 	inbounds := []*nativeInbound{
 		{ID: 1, Port: 100, Protocol: "vless", Enable: true, BoundTo: "jp1"},
 		{ID: 2, Port: 200, Protocol: "vless", Enable: true, BoundTo: "jp2"},
 		{ID: 3, Port: 300, Protocol: "vless", Enable: true},
+		{ID: 4, Port: 400, Protocol: "vless", Enable: false, BoundTo: "jp1"},
 	}
-
 	cfg := buildXrayConfig(inbounds, []*Tunnel{up, down})
-
-	outs := map[string]bool{}
-	for _, o := range cfg["outbounds"].([]any) {
-		outs[o.(map[string]any)["tag"].(string)] = true
+	outs := cfg["outbounds"].([]any)
+	if outs[0].(map[string]any)["protocol"] != "blackhole" {
+		t.Fatal("default outbound must block")
 	}
-	if !outs["fanout-jp1"] {
-		t.Error("已连通的隧道应当有对应出站")
+	protocols := map[string]any{}
+	for _, o := range outs {
+		m := o.(map[string]any)
+		protocols[m["tag"].(string)] = m["protocol"]
 	}
-	if outs["fanout-jp2"] {
-		t.Error("未连通的隧道不该生成出站")
+	if protocols["slot-01"] != "socks" || protocols["slot-02"] != "blackhole" {
+		t.Fatalf("unexpected outbounds: %v", protocols)
 	}
-
 	rules := cfg["routing"].(map[string]any)["rules"].([]any)
-	if len(rules) != 1 {
-		t.Fatalf("只有绑到连通隧道的入站才该有规则，实际 %d 条", len(rules))
+	if len(rules) != 3 {
+		t.Fatalf("all enabled inbounds must have explicit routes: %v", rules)
 	}
-	if got := rules[0].(map[string]any)["outboundTag"]; got != "fanout-jp1" {
-		t.Errorf("outboundTag = %v, want fanout-jp1", got)
+	for i, want := range []string{"slot-01", "slot-02", "block"} {
+		if rules[i].(map[string]any)["outboundTag"] != want {
+			t.Fatalf("route %d must use %s", i, want)
+		}
 	}
 }
 
-func TestBuildXrayConfigForcesIPv4OnDirect(t *testing.T) {
-	// 隧道内没有 IPv6，direct 走 IPv6 会暴露母机真实地址
-	cfg := buildXrayConfig(nil, nil)
-	for _, o := range cfg["outbounds"].([]any) {
-		m := o.(map[string]any)
-		if m["tag"] != "direct" {
-			continue
+func TestSlotOutboundSurvivesNodeReplacement(t *testing.T) {
+	for _, host := range []string{"node-a", "node-b"} {
+		for _, status := range []string{"up", "starting", "failed"} {
+			outs := slotOutbounds([]*Tunnel{{Slot: 3, Port: 17930, Status: status, Node: Node{HostName: host}}})
+			if outs[1].(map[string]any)["tag"] != "slot-03" {
+				t.Fatal("slot tag changed")
+			}
+			if status == "up" {
+				server := outs[1].(map[string]any)["settings"].(map[string]any)["servers"].([]any)[0].(map[string]any)
+				if server["port"] != 17930 || server["address"] != "127.0.0.1" {
+					t.Fatalf("slot address changed: %v", server)
+				}
+			}
 		}
-		s := m["settings"].(map[string]any)
-		if s["domainStrategy"] != "UseIPv4" {
-			t.Errorf("direct 出站应强制 IPv4，实际 %v", s["domainStrategy"])
-		}
-		return
 	}
-	t.Fatal("没有找到 direct 出站")
 }
 
 func TestShareLinkPerProtocol(t *testing.T) {

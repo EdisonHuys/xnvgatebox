@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const updateRepo = "byJoey/fanout"
+const updateRepo = "hanhaoops/xnvgatebox"
 
 // releaseInfo 是 GitHub Releases API 里我们关心的字段。
 type releaseInfo struct {
@@ -64,7 +64,7 @@ func fetchLatestRelease() (*releaseInfo, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "fanout-updater")
+	req.Header.Set("User-Agent", "xnvgatebox-updater")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -144,72 +144,7 @@ func parseSemver(v string) ([3]int, bool) {
 // applyUpdate 下载最新版对应架构的包、校验、替换当前二进制，然后重启服务。
 // 成功后本进程会被 init 系统拉起成新版本，所以正常情况下这里返回后进程即被替换。
 func applyUpdate() error {
-	rel, err := fetchLatestRelease()
-	if err != nil {
-		return err
-	}
-
-	arch := assetArch()
-	assetName := fmt.Sprintf("fanout-linux-%s.tar.gz", arch)
-	var assetURL, sumsURL string
-	for _, a := range rel.Assets {
-		switch a.Name {
-		case assetName:
-			assetURL = a.URL
-		case "checksums.txt":
-			sumsURL = a.URL
-		}
-	}
-	if assetURL == "" {
-		return fmt.Errorf("最新版里找不到适配 %s 的包", arch)
-	}
-
-	tmp, err := os.MkdirTemp("", "fanout-update-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmp)
-
-	tarPath := filepath.Join(tmp, assetName)
-	if err := downloadFile(assetURL, tarPath); err != nil {
-		return fmt.Errorf("下载失败: %w", err)
-	}
-
-	// 有校验和就核对，防止下到损坏或被篡改的包
-	if sumsURL != "" {
-		if err := verifyChecksum(tarPath, assetName, sumsURL); err != nil {
-			return err
-		}
-	}
-
-	newBin := filepath.Join(tmp, "fanout")
-	if err := extractBinary(tarPath, "fanout", newBin); err != nil {
-		return fmt.Errorf("解包失败: %w", err)
-	}
-
-	self, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("定位当前程序失败: %w", err)
-	}
-	self, _ = filepath.EvalSymlinks(self)
-
-	// 原子替换：先写到同目录临时文件再 rename，避免替一半崩了留下坏二进制
-	staged := self + ".new"
-	if err := copyFileMode(newBin, staged, 0755); err != nil {
-		return fmt.Errorf("写入新版本失败: %w", err)
-	}
-	if err := os.Rename(staged, self); err != nil {
-		os.Remove(staged)
-		return fmt.Errorf("替换二进制失败: %w", err)
-	}
-
-	// 让 init 系统重启我们，拉起新版本。异步触发并延迟一下，
-	// 好让这次请求的响应先发回界面。
-	go func() {
-		time.Sleep(800 * time.Millisecond)
-		restartSelf()
-	}()
-	return nil
+	return fmt.Errorf("请使用 xnvgatebox install --mode vps 更新完整部署包；网页不执行单文件替换")
 }
 
 func downloadFile(url, dst string) error {
@@ -219,7 +154,7 @@ func downloadFile(url, dst string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", "fanout-updater")
+	req.Header.Set("User-Agent", "xnvgatebox-updater")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err

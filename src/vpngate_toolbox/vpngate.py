@@ -93,6 +93,6 @@ def parse_csv(data: bytes, settings: dict):
                 profiles[sha] = raw_profile
         except (ToolError, ValueError, UnicodeError, KeyError, AttributeError, TypeError):
             rejected += 1
-    nodes = sorted(found.values(), key=lambda node: (-node["source_score"], node["node_id"]))[:settings["candidate_limit"]]
+    nodes = sorted(found.values(), key=lambda node: (-node["source_score"], node["node_id"]))
     selected_profiles = {node["protocols"]["openvpn"]["profile_sha256"]: profiles[node["protocols"]["openvpn"]["profile_sha256"]] for node in nodes}
     return nodes, selected_profiles, rejected

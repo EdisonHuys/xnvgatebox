@@ -96,7 +96,7 @@ func fetchNodes(timeout time.Duration) ([]Node, error) {
 	if pool := strings.TrimSpace(os.Getenv("FANOUT_VALIDATED_POOL_FILE")); pool != "" {
 		return fetchNodesFromValidatedPool(pool)
 	}
-	return fetchNodesWith(vpngateAPI, timeout)
+	return nil, fmt.Errorf("请配置 FANOUT_VALIDATED_POOL_FILE；本项目只消费共享 Pool Builder 的 node_pool.json")
 }
 
 // fetchNodesWith 把直连地址拆成参数，方便测试两条分支。

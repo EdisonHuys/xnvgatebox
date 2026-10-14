@@ -1,16 +1,17 @@
 [Unit]
-Description=VPN Gate Box VPS Multi-Exit
-After=network-online.target x-ui.service
+Description=xnvgatebox exit manager and subscription
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 EnvironmentFile=-/etc/default/xnvgatebox-fanout
-ExecStart=/usr/local/bin/xnvgatebox-fanout -max 1 -dir /var/lib/xnvgatebox/fanout -panel 3x-ui
+ExecStart=/usr/local/bin/xnvgatebox-fanout -max 3 -dir /var/lib/xnvgatebox/fanout -panel native
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
 KillMode=mixed
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

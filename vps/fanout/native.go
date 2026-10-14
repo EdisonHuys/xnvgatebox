@@ -44,7 +44,7 @@ func openNative(workDir string) (*Native, error) {
 func (n *Native) Kind() string { return "native" }
 
 func (n *Native) Describe() string {
-	return fmt.Sprintf("fanout 自建 Xray（%s）", n.proc.bin)
+	return fmt.Sprintf("xnvgatebox 内置 Xray（%s）", n.proc.bin)
 }
 
 // apply 重新生成配置并重启 Xray，然后落盘。

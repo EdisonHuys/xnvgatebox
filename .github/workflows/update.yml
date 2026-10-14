@@ -1,93 +1,21 @@
-name: Build node pool / verify Mode A
+name: Build shared candidate pool
 on:
   workflow_dispatch:
-    inputs:
-      profile:
-        description: 'pool-only does not require Cloudflare; serverless performs final VLESS verification'
-        type: choice
-        options: [pool-only, serverless]
-        default: pool-only
-      publish_cf:
-        description: 'publish the fresh credential-free manifest to Cloudflare KV'
-        type: boolean
-        default: false
-  # Keep the published manifest fresh without requiring a manual run.
-  # Request refreshes every 20 minutes inside the one-hour evidence lifetime.
-  # GitHub schedules are best-effort and can be delayed or dropped; expired
-  # evidence remains unavailable until a fresh successful batch is published.
-  schedule:
-    - cron: '17,37,57 * * * *'
-  # Validate checker/workflow changes immediately; this path never publishes
-  # to KV, so a code push cannot replace a working manifest by itself.
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'scripts/**'
-      - 'worker/**'
-      - 'config/**'
-      - '.github/workflows/update.yml'
 permissions:
   contents: read
-concurrency:
-  group: vpngate-pool-update
-  cancel-in-progress: false
 jobs:
-  update:
+  pool:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
-      - name: Install pinned Xray
-        if: inputs.profile == 'serverless' || github.event_name == 'schedule' || github.event_name == 'push'
-        run: python scripts/install_xray.py
-      - name: Build shared candidate pool
-        if: inputs.profile == 'pool-only'
-        run: python scripts/toolbox.py pool
-      - name: Verify the actual Cloudflare VLESS chain
-        if: inputs.profile == 'serverless' || github.event_name == 'schedule' || github.event_name == 'push'
-        env:
-          # Configure the reachable subscription origin once in repo Variables.
-          # Both /check and the VLESS entrance are derived from this value.
-          WORKER_URL: ${{ vars.WORKER_URL }}
-          # The unified Worker accepts VLESS_UUID for /check, so the Actions
-          # verifier does not depend on a second token that can drift.
-          CHECKER_TOKEN: ${{ secrets.VLESS_UUID }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          VLESS_UUID: ${{ secrets.VLESS_UUID }}
-          VPN_USERNAME: ${{ secrets.VPN_USERNAME || 'vpn' }}
-          VPN_PASSWORD: ${{ secrets.VPN_PASSWORD || 'vpn' }}
-          INTELLIGENCE_URL_TEMPLATE: ${{ secrets.INTELLIGENCE_URL_TEMPLATE }}
-          INTELLIGENCE_TOKEN: ${{ secrets.INTELLIGENCE_TOKEN }}
-          XRAY_BIN: tools/bin/xray
-        run: python scripts/toolbox.py mode-a
-      - name: Publish validated manifest to Cloudflare KV
-        if: (inputs.publish_cf == true || github.event_name == 'schedule') && (inputs.profile == 'serverless' || github.event_name == 'schedule')
-        env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
-        run: python scripts/publish_cf_manifest.py
-      - name: Upload public pool and verification evidence only
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      - run: python scripts/toolbox.py pool
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: node-pool-and-evidence
+          name: shared-candidate-pool
           retention-days: 1
-          if-no-files-found: warn
-          path: |
-            data/node_pool.json
-            data/node_pool.json.sha256
-            data/configs/*.ovpn
-            data/mode_a_validated.json
-            data/cf_manifest.json
-            data/residential.json
-            data/nodes.txt
-            data/report.json
-      # runtime/subscription.txt and .env MUST NOT be uploaded to public artifacts.
+          path: data/

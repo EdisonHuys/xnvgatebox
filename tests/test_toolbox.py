@@ -119,6 +119,15 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(second["protocols"]["openvpn"]["status"], "not_tested")
         self.assertIsNone(second["protocols"]["sstp"]["expected_exit_ip"])
 
+    def test_discovery_is_not_truncated_by_probe_budget(self):
+        data = csv_data().decode().replace("*\n", "")
+        row = data.splitlines()[-1].replace("vpn-test", "vpn-other")
+        data += row + "\n*\n"
+        nodes, profiles, _ = parse_csv(data.encode(), {**SETTINGS, "candidate_limit": 1})
+        self.assertEqual(len(nodes), 2)
+        self.assertTrue(all(n["protocols"]["openvpn"]["status"] == "not_tested" for n in nodes))
+        self.assertEqual(len(profiles), 1)
+
     def test_udp_port_is_not_an_sstp_capability(self):
         value = parse_csv(csv_data(proto="udp"), SETTINGS)[0][0]
         self.assertEqual([c["port"] for c in value["protocols"]["sstp"]["candidates"]], [443])

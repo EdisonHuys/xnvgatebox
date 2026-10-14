@@ -56,13 +56,13 @@ func findXray(workDir string) (string, error) {
 
 // buildXrayConfig 由入站列表和当前隧道生成完整的 Xray 运行配置。
 //
-// 出站分三类：每条连通隧道一个 socks 出站（tag 为 fanout-<节点名>）、
-// 一个直连 direct、一个 block。绑定关系落成 routing 规则。
+// Every slot keeps its outbound identity when the backing node changes.
+// Unbound, unavailable and stale bindings are blocked, never sent via the host.
 func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]any {
-	live := map[string]bool{}
+	bound := map[string]string{}
 	for _, t := range tunnels {
-		if t.Status == "up" {
-			live[sanitizeTag(t.Node.HostName)] = true
+		if t.Slot > 0 {
+			bound[sanitizeTag(t.Node.HostName)] = slotOutboundTag(t.Slot)
 		}
 	}
 
@@ -74,38 +74,21 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 		ins = append(ins, nativeInboundJSON(ib))
 	}
 
-	// direct 强制 IPv4：隧道内没有 IPv6，母机有全局 IPv6 时
-	// 没匹配上规则的流量会从 IPv6 出去，暴露服务器真实地址。
-	outs := []any{
-		map[string]any{
-			"tag":      "direct",
-			"protocol": "freedom",
-			"settings": map[string]any{"domainStrategy": "UseIPv4"},
-		},
-		map[string]any{"tag": "block", "protocol": "blackhole"},
-	}
-	for _, t := range tunnels {
-		if t.Status != "up" {
-			continue
-		}
-		outs = append(outs, map[string]any{
-			"tag":      tunnelTag(t),
-			"protocol": "socks",
-			"settings": map[string]any{
-				"servers": []any{socksServerJSON(t)},
-			},
-		})
-	}
+	outs := slotOutbounds(tunnels)
 
 	rules := []any{}
 	for _, ib := range inbounds {
-		if !ib.Enable || ib.BoundTo == "" || !live[ib.BoundTo] {
+		if !ib.Enable {
 			continue
+		}
+		tag := bound[ib.BoundTo]
+		if tag == "" {
+			tag = "block"
 		}
 		rules = append(rules, map[string]any{
 			"type":        "field",
 			"inboundTag":  []any{ib.tag()},
-			"outboundTag": xuiTagPrefix + ib.BoundTo,
+			"outboundTag": tag,
 		})
 	}
 

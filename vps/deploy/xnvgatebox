@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-status}" in
+  install) shift; exec bash /usr/local/lib/xnvgatebox/install.sh "$@" ;;
+  status) systemctl --no-pager status xnvgatebox-fanout.service xnvgatebox-pool.timer ;;
+  refresh) systemctl start xnvgatebox-pool.service ;;
+  restart) systemctl restart xnvgatebox-fanout.service ;;
+  access)
+    python3 - <<'PY'
+import pathlib,json,socket
+p=pathlib.Path('/var/lib/xnvgatebox/fanout')
+s=json.loads((p/'settings.json').read_text())
+host=socket.getfqdn()
+print('管理地址：http://<VPS公网IP>:'+str(s['port'])+'/'+(p/'basepath').read_text().strip()+'/')
+print('管理密码：'+(p/'password').read_text().strip())
+PY
+    ;;
+  *) echo '用法：xnvgatebox {install --mode vps|status|refresh|restart|access}'; exit 1 ;;
+esac

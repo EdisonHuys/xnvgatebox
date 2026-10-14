@@ -73,7 +73,8 @@ def run_mode_a(settings: dict, environment: dict, output: Path, runtime: Path, c
             return result
 
         with ThreadPoolExecutor(max_workers=settings["sstp_concurrency"]) as executor:
-            pool["nodes"] = list(executor.map(check, pool["nodes"]))
+            budget = settings["candidate_limit"]
+            pool["nodes"] = list(executor.map(check, pool["nodes"][:budget])) + pool["nodes"][budget:]
         report["intelligence"] = enricher(pool["nodes"], settings, runtime / "intelligence-cache.json")
         passed = [node for node in pool["nodes"] if node["protocols"]["sstp"]["status"] == "passed"]
         report["sstp_passed"] = len(passed)

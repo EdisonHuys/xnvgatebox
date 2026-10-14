@@ -250,6 +250,7 @@ textarea:focus{outline:none;border-color:var(--accent)}
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
       导出链接
     </button>
+    <button id="exportXray" title="下载标准 Xray 出站与路由模板">导出 Xray 配置</button>
     <button id="stopall" title="停止所有出口">
       <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
       全部停止
@@ -1339,6 +1340,7 @@ $('#crsave').onclick = async e => {
 };
 
 // ---- 导出 ----
+$('#exportXray').onclick = () => { window.location.href = 'api/export/xray'; };
 $('#exportAll').onclick = async () => {
   const ids = view.exits.flatMap(x => (x.inbounds || []).map(i => i.id));
   if(!ids.length){ toast('还没有节点可导出', true); return; }
