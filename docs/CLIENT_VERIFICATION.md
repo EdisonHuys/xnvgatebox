@@ -35,3 +35,14 @@
 ### 后续定位：订阅入口仍为旧域名
 
 用户确认手机直连 workers.dev 不可达，自定义域名可打开；TLS 已开启，端口443。最终核对发现节点详情仍为旧域名。用户要求跟随订阅请求域名，不在代码中写死域名。正在将 Worker 导出入口改为当前 HTTPS 请求 origin，Actions 入口改为唯一仓库变量 WORKER_URL。后续截图已有一个节点显示242ms，但实际网页成功尚未得到确认。
+
+### 自动跟随域名修复与线上阻塞
+
+- 修复提交 `88d4164`：Worker `/sub` 使用本次 HTTPS 请求域名与端口，同时更新 VLESS 服务器地址、TLS SNI、WebSocket Host。旧 PUBLIC_HOST 和 manifest 地址不覆盖请求域名。Actions 从仓库变量 WORKER_URL 派生检查与数据面入口，源代码和工作流不写死用户部署域名。
+- 本地 Node 路由与边界测试通过；34 项 Python 测试全部通过（真实 Xray 进程测试需要允许回环监听）。
+- 修复版已部署到唯一 Worker，版本 `61890fe9-5205-43c9-be99-a0b5a38fb7cb`。原有普通变量、唯一 MANIFEST KV 和自定义域名均保留。
+- 线上复测自定义域名 `/health` 和 GitHub `/check` 均返回 522。GitHub 运行 `38589682095`、`38589795544` 未发布新清单；手机也确认 522 或打不开。
+- 旧版本 `fea14ac6` 做对照也返回 522；已恢复修复版本到 100% 流量。刷新现有自定义域名绑定成功，但没有消除 522。
+- Cloudflare API 显示域名 enabled=true、服务为同一 Worker；zone active、paused=false，权威 NS 与公网一致，zone 中没有 Worker 路由。这些状态不证明外部请求已成功到达应用。
+- 与该 Worker 相关的 Cloudflare Trust & Safety 邮件显示：2026-10-14 23:28（北京时间）收到 Network abuse 报告，编号 `9b250b0a1159afa9`。邮件未明确说明停用范围，也未提供具体日志。通知与 522 时间接近，平台限制是待确认原因，不能当作已证实的停用结论。
+- 修复版的线上真实订阅与代理验收尚未通过，不能宣称已恢复可用。后续应先确认 Cloudflare 通知与资源运行限制，再验证 `/health`、实际 `/sub` 和 HTTPS 出口。
