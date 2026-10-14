@@ -611,7 +611,7 @@ let lastNodesLoad = 0;
 function isNative(){ return view.backend === 'native'; }
 // xray-cf-lite 模式下节点归它管，本服务只改路由，界面不给新建入口
 function isXCL(){ return view.backend === 'xray-cf-lite'; }
-const BACKEND_NAME = {'native':'自建 Xray', '3x-ui':'3x-ui', 'xray-cf-lite':'xray-cf-lite'};
+const BACKEND_NAME = {'native':'内置 Xray', '3x-ui':'3x-ui', 'xray-cf-lite':'xray-cf-lite'};
 function backendName(){ return BACKEND_NAME[view.backend] || '3x-ui'; }
 
 const STATUS = {up:'已连通', starting:'连接中', failed:'失败', stopped:'已停止'};
@@ -726,7 +726,7 @@ function renderOrphans(){
   if(!list.length){ box.innerHTML = ''; return; }
   const hasUp = view.exits.some(e => e.status === 'up');
   box.innerHTML = '<div class="orphan"><div class="top">'
-    + '<h3>未绑定出口的入站</h3><span class="count">' + list.length + ' 个，走直连</span>'
+    + '<h3>未绑定出口的入站</h3><span class="count">' + list.length + ' 个，' + (isNative() ? '未绑定将阻断' : '由外部面板路由') + '</span>'
     + '<span class="spacer"></span>'
     + (isXCL() ? ''
         : '<button data-delorphans="1" title="删除这些入站">' + ICON.trash + '清理</button>')
@@ -1116,7 +1116,7 @@ async function openDetail(id){
 // 出口下拉：列出所有已连通的隧道，外加"直连"。绑定按 Xray 的 inboundTag 走。
 function exitOptions(currentHost){
   const up = view.exits.filter(e => e.status === 'up');
-  return '<option value=""' + (currentHost ? '' : ' selected') + '>直连（不走隧道）</option>'
+  return '<option value=""' + (currentHost ? '' : ' selected') + '>' + (isNative() ? '未绑定（阻断流量）' : '未绑定（外部面板路由）') + '</option>'
     + up.map(e => '<option value="' + esc(e.host) + '"'
         + (e.host === currentHost ? ' selected' : '') + '>'
         + esc((e.exit_ip || e.host) + ' · ' + (e.country || e.region)) + '</option>').join('');
