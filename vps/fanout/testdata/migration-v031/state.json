@@ -1,0 +1,37 @@
+{
+  "tunnels": [
+    {
+      "slot": 1,
+      "port": 17928,
+      "hostname": "fixture-node-1",
+      "country_code": "JP",
+      "country": "JP",
+      "config": "fixture-profile-1",
+      "socks_user": "fixture-user-1",
+      "socks_pass": "fixture-pass-1",
+      "prev_host": ""
+    },
+    {
+      "slot": 2,
+      "port": 17929,
+      "hostname": "fixture-node-2",
+      "country_code": "KR",
+      "country": "KR",
+      "config": "fixture-profile-2",
+      "socks_user": "fixture-user-2",
+      "socks_pass": "fixture-pass-2",
+      "prev_host": "fixture-previous-node"
+    },
+    {
+      "slot": 3,
+      "port": 17930,
+      "hostname": "fixture-node-3",
+      "country_code": "RU",
+      "country": "RU",
+      "config": "fixture-profile-3",
+      "socks_user": "fixture-user-3",
+      "socks_pass": "fixture-pass-3",
+      "prev_host": ""
+    }
+  ]
+}

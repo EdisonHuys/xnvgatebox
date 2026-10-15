@@ -1,0 +1,6 @@
+{
+  "port": 8899,
+  "listen_addr": "",
+  "residential_only": false,
+  "sub_token": "fixture-subscription-token-not-production"
+}

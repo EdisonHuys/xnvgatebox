@@ -15,7 +15,7 @@ func slotOutbounds(tunnels []*Tunnel) []any {
 			continue
 		}
 		out := map[string]any{"tag": slotOutboundTag(t.Slot), "protocol": "blackhole"}
-		if t.Status == "up" {
+		if t.snapshot().Status == "up" {
 			out["protocol"] = "socks"
 			out["settings"] = map[string]any{"servers": []any{socksServerJSON(t)}}
 		}
@@ -31,7 +31,7 @@ func apiExportXray(m *Manager) http.HandlerFunc {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		tunnels := m.Tunnels()
+		tunnels := m.exportTunnels()
 		rules := []any{}
 		for _, t := range tunnels {
 			if t.Slot > 0 {

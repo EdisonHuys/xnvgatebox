@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -54,7 +53,7 @@ func realityKeys(bin string) (priv, pub string, err error) {
 	mp := rePriv.FindStringSubmatch(text)
 	mb := rePub.FindStringSubmatch(text)
 	if mp == nil || mb == nil {
-		return "", "", fmt.Errorf("无法解析 xray x25519 输出: %s", strings.TrimSpace(text))
+		return "", "", fmt.Errorf("无法解析 xray x25519 输出")
 	}
 	return mp[1], mb[1], nil
 }
@@ -78,8 +77,20 @@ func selfSignedCert(dir, serverName string) (certFile, keyFile string, err error
 	if err := os.MkdirAll(certDir, 0700); err != nil {
 		return "", "", err
 	}
-	base := filepath.Join(certDir, sanitizeTag(serverName))
+	reserved, err := os.CreateTemp(certDir, "generated-*")
+	if err != nil {
+		return "", "", err
+	}
+	base := reserved.Name()
+	reserved.Close()
+	defer os.Remove(base)
 	certFile, keyFile = base+".crt", base+".key"
+	defer func() {
+		if err != nil {
+			os.Remove(certFile)
+			os.Remove(keyFile)
+		}
+	}()
 
 	cmd := exec.Command("openssl", "req", "-x509", "-nodes",
 		"-newkey", "rsa:2048",
@@ -89,8 +100,15 @@ func selfSignedCert(dir, serverName string) (certFile, keyFile string, err error
 		"-subj", "/CN="+serverName,
 		"-addext", "subjectAltName=DNS:"+serverName,
 	)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return "", "", fmt.Errorf("生成自签证书失败: %s", trimOutput(out))
+	if _, e := cmd.CombinedOutput(); e != nil {
+		err = fmt.Errorf("生成自签证书失败")
+		return certFile, keyFile, err
+	}
+	if err = os.Chmod(keyFile, 0600); err != nil {
+		return certFile, keyFile, err
+	}
+	if err = os.Chmod(certFile, 0600); err != nil {
+		return certFile, keyFile, err
 	}
 	return certFile, keyFile, nil
 }

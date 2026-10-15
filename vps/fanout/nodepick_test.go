@@ -104,16 +104,16 @@ func TestPickNodesIncludesHostingWhenOff(t *testing.T) {
 	}
 }
 
-// 地区统计要跟挑节点同一个口径，否则向导上写着"可用 3 个"、点下去却开不出来。
-func TestRegionsSkipsHosting(t *testing.T) {
+// 地区统计列出来源候选，不将旧 hostname 标记当作真实出口类型证据。
+func TestRegionsIncludesUnverifiedCandidates(t *testing.T) {
 	withResidentialOnly(t, boolPtr(true))
 	m := mgrWith(mixed)
 	for _, r := range m.Regions() {
-		if r.Code == "JP" && r.Available != 1 {
-			t.Fatalf("JP 只有 1 个家宽，实际 %d", r.Available)
+		if r.Code == "JP" && r.Available != 2 {
+			t.Fatalf("JP 有两个待验候选，实际 %d", r.Available)
 		}
-		if r.Code == "KR" {
-			t.Fatal("KR 全是机房节点，不该出现在地区列表里")
+		if r.Code == "KR" && r.Available != 1 {
+			t.Fatal("仅旧来源标记不能替代真实画像验活")
 		}
 	}
 }

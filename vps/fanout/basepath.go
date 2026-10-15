@@ -43,17 +43,9 @@ func currentBasePath() string {
 
 // setBasePath 校验并保存新的访问路径，立即生效。空串表示不加路径前缀。
 func setBasePath(raw string) (string, error) {
-	bp := normalizeBasePath(raw)
-	if bp != "" {
-		// 用户手填的路径放宽到任意字母数字加 - _，不套用自动生成时刻意避开的
-		// 易混字符集（那套是给随机生成用的）。
-		for _, c := range strings.TrimPrefix(bp, "/") {
-			ok := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-				(c >= '0' && c <= '9') || c == '-' || c == '_'
-			if !ok {
-				return "", fmt.Errorf("访问路径只能用字母、数字、- 和 _")
-			}
-		}
+	bp, err := validateBasePath(raw)
+	if err != nil {
+		return "", err
 	}
 	basePathMu.RLock()
 	dir := basePathDir
@@ -67,6 +59,22 @@ func setBasePath(raw string) (string, error) {
 	return bp, nil
 }
 
+func validateBasePath(raw string) (string, error) {
+	bp := normalizeBasePath(raw)
+	if bp != "" {
+		// 用户手填的路径放宽到任意字母数字加 - _，不套用自动生成时刻意避开的
+		// 易混字符集（那套是给随机生成用的）。
+		for _, c := range strings.TrimPrefix(bp, "/") {
+			ok := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+				(c >= '0' && c <= '9') || c == '-' || c == '_'
+			if !ok {
+				return "", fmt.Errorf("访问路径只能用字母、数字、- 和 _")
+			}
+		}
+	}
+	return bp, nil
+}
+
 // LoadBasePath 读取或生成随机访问路径，形如 /aB3xY9pQ。
 // 和 3x-ui 一样：路径本身也是一层门槛，扫端口的探不到界面。
 func LoadBasePath(dir string) (string, bool, error) {
@@ -74,9 +82,8 @@ func LoadBasePath(dir string) (string, bool, error) {
 
 	blob, err := os.ReadFile(path)
 	if err == nil {
-		if bp := strings.TrimSpace(string(blob)); bp != "" {
-			return normalizeBasePath(bp), false, nil
-		}
+		bp, err := validateBasePath(strings.TrimSpace(string(blob)))
+		return bp, false, err
 	} else if !os.IsNotExist(err) {
 		return "", false, err
 	}

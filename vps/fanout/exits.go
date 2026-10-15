@@ -18,15 +18,19 @@ type ExitInbound struct {
 // Exit 是界面上的一行：一条隧道加上挂在它出口的所有入站。
 // 用户脑子里的单位是"一个出口"，不是"一条隧道"和"一个入站"两样东西。
 type Exit struct {
-	Slot    int       `json:"slot"`
-	Port    int       `json:"port"` // SOCKS5 端口
-	Host    string    `json:"host"`
-	Region  string    `json:"region"`
-	Country string    `json:"country"`
-	ExitIP  string    `json:"exit_ip"`
-	Status  string    `json:"status"`
-	Err     string    `json:"err,omitempty"`
-	Since   time.Time `json:"since"`
+	Slot              int            `json:"slot"`
+	Port              int            `json:"port"` // SOCKS5 端口
+	Host              string         `json:"host"`
+	Region            string         `json:"region"`
+	Country           string         `json:"country"`
+	ExitIP            string         `json:"exit_ip"`
+	Status            string         `json:"status"`
+	Err               string         `json:"err,omitempty"`
+	Since             time.Time      `json:"since"`
+	Egress            *EgressProfile `json:"egress"`
+	Policy            SlotPolicy     `json:"policy"`
+	LatencyMS         float64        `json:"latency_ms,omitempty"`
+	CanRollbackPolicy bool           `json:"can_rollback_policy"`
 	// SOCKS5 凭据：界面要能看、能复制、能改
 	SocksUser string        `json:"socks_user"`
 	SocksPass string        `json:"socks_pass"`
@@ -97,20 +101,25 @@ func (m *Manager) ExitsOf() ExitsView {
 
 	live := map[string]bool{}
 	for _, t := range tunnels {
-		if t.Status == "up" {
-			live[sanitizeTag(t.Node.HostName)] = true
+		snapshot := t.snapshot()
+		if snapshot.Status == "up" {
+			live[sanitizeTag(snapshot.Node.HostName)] = true
 		}
 	}
 
 	byHost := map[string]int{}
 	for i, t := range tunnels {
-		byHost[sanitizeTag(t.Node.HostName)] = i
-		cred := t.credential()
+		snapshot := t.snapshot()
+		byHost[sanitizeTag(snapshot.Node.HostName)] = i
+		cred := snapshot.Cred
 		view.Exits = append(view.Exits, Exit{
-			Slot: t.Slot, Port: t.Port, Host: t.Node.HostName,
-			Region: t.Node.CountryCode, Country: nodeLabel(t.Node),
-			ExitIP: t.ExitIP, Status: t.Status, Err: t.Err, Since: t.Since,
-			SocksUser: cred.User, SocksPass: cred.Pass,
+			Slot: snapshot.Slot, Port: snapshot.Port, Host: snapshot.Node.HostName,
+			Region: snapshot.Node.CountryCode, Country: nodeLabel(snapshot.Node),
+			ExitIP: snapshot.ExitIP, Status: snapshot.Status, Err: snapshot.Err, Since: snapshot.Since,
+			Egress: snapshot.Egress,
+			Policy: t.policySnapshot(), LatencyMS: snapshot.LatencyMS,
+			CanRollbackPolicy: snapshot.CanRollbackPolicy,
+			SocksUser:         cred.User, SocksPass: cred.Pass,
 		})
 	}
 

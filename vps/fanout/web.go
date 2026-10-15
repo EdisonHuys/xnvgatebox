@@ -57,7 +57,8 @@ main{padding:14px 16px 40px;max-width:1180px;margin:0 auto}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--dim);justify-self:center}
 .dot.up{background:var(--ok)}
 .dot.starting{background:var(--warn);animation:pulse 1.2s ease-in-out infinite}
-.dot.failed{background:var(--bad)}
+.dot.failed,.dot.blocked{background:var(--bad)}
+.dot.waiting_for_nodes{background:var(--warn)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .ip{font-weight:600;font-variant-numeric:tabular-nums}
 .meta{color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -246,6 +247,7 @@ textarea:focus{outline:none;border-color:var(--accent)}
       <svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
       订阅
     </button>
+    <button id="rollbackNative">回滚内置配置</button>
     <button id="exportAll" title="导出全部节点链接">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
       导出链接
@@ -298,6 +300,7 @@ textarea:focus{outline:none;border-color:var(--accent)}
         </div>
         <div class="hint" id="availhint"></div>
       </label>
+      <button id="wizardPolicy">配置出口策略</button><div class="hint" id="wizardPolicyHint">使用新建 Slot 的默认策略</div>
       <label class="f" id="tplwrap">
         <span>节点链接</span>
         <select id="tpl"></select>
@@ -312,6 +315,21 @@ textarea:focus{outline:none;border-color:var(--accent)}
     </div>
   </div>
 </div>
+
+<div class="modal" id="policybox"><div class="sheet">
+<div class="head"><h2 id="policyTitle">Slot 策略</h2><span class="spacer"></span><button data-close="policybox">关闭</button></div>
+<div class="body"><label class="f"><span>目标国家代码（留空不限）</span><input id="policyCountry" maxlength="2" placeholder="例如 JP"></label>
+<label class="f"><span>允许出口类型（逗号分隔）</span><input id="policyTypes" placeholder="strict_residential, likely_residential"></label>
+<div class="hint">unknown 必须显式允许。缺少国家、ISP 或 ASN 证据时不能满足对应限制。</div>
+<label class="f"><span>偏好 ISP（仅排序，逗号分隔）</span><input id="policyPreferred"></label>
+<label class="f"><span>允许 ISP（留空不限，逗号分隔）</span><input id="policyAllowedISP"></label>
+<label class="f"><span>阻止 ISP（逗号分隔）</span><input id="policyBlockedISP"></label>
+<label class="f"><span>允许 ASN（例如 AS7922，逗号分隔）</span><input id="policyAllowedASN"></label>
+<label class="f"><span>阻止 ASN（逗号分隔）</span><input id="policyBlockedASN"></label>
+<label class="f"><span>本机 SOCKS HTTPS 延迟上限（毫秒，0 不限）</span><input id="policyLatency" type="number" min="0" max="120000"></label>
+<div class="hint">ISP 名称完整匹配，不区分大小写；延迟采用两站实测中较慢的一次。保存运行中的 Slot 策略会中断当前连接并重新验活。</div></div>
+<div class="foot"><span class="spacer"></span><button data-close="policybox">取消</button><button id="policyRollback">恢复上次策略</button><button id="policySave" class="primary">保存策略</button></div>
+</div></div>
 
 <div class="modal" id="newnodebox">
   <div class="sheet">
@@ -511,7 +529,7 @@ textarea:focus{outline:none;border-color:var(--accent)}
       <div class="hint" id="setBackendHint">节点从哪来。装了 3x-ui 或 xray-cf-lite 就能直接接管，都没有就用自建。</div>
 
       <label class="chk" style="margin-top:16px"><input type="checkbox" id="setResi"> 只用家宽节点</label>
-      <div class="hint" id="setResiHint">vpngate 里混着一批它自己的机房机器，出口一眼看得出是数据中心。勾着就只挑志愿者家宽。</div>
+      <div class="hint" id="setResiHint">为新建 Slot 默认只允许 strict/likely 住宅类型；候选必须经实际 OpenVPN 画像验活。已有 Slot 的策略请在对应出口单独修改。</div>
 
       <div class="setrow">
         <label class="f" style="margin:0"><span>监听端口</span>
@@ -570,6 +588,60 @@ async function api(path, opts){
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+let wizardPolicy = null;
+let editingPolicySlot = null;
+function policyList(id){ return $(id).value.split(/[,，]/).map(s=>s.trim()).filter(Boolean); }
+function fillPolicy(p){
+  $('#policyCountry').value = p.country || '';
+  $('#policyTypes').value = (p.allowed_ip_types || []).join(', ');
+  $('#policyPreferred').value = (p.preferred_isp || []).join(', ');
+  $('#policyAllowedISP').value = (p.allowed_isp || []).join(', ');
+  $('#policyBlockedISP').value = (p.blocked_isp || []).join(', ');
+  $('#policyAllowedASN').value = (p.allowed_asn || []).join(', ');
+  $('#policyBlockedASN').value = (p.blocked_asn || []).join(', ');
+  $('#policyLatency').value = p.maximum_latency_ms || 0;
+}
+function readPolicy(){
+  return {country:$('#policyCountry').value.trim().toUpperCase(),allowed_ip_types:policyList('#policyTypes'),
+    preferred_isp:policyList('#policyPreferred'),allowed_isp:policyList('#policyAllowedISP'),blocked_isp:policyList('#policyBlockedISP'),
+    allowed_asn:policyList('#policyAllowedASN'),blocked_asn:policyList('#policyBlockedASN'),maximum_latency_ms:Number($('#policyLatency').value)};
+}
+$('#wizardPolicy').onclick = ()=>{
+  if(!wizardPolicy){ toast('请等待默认策略加载',true); return; }
+  editingPolicySlot = null; $('#policyRollback').disabled = true; fillPolicy(wizardPolicy);
+  if(region && region !== '*') $('#policyCountry').value = region;
+  $('#policyTitle').textContent = '新建出口策略'; openModal('policybox');
+};
+$('#policyRollback').onclick = async e=>{
+  if(editingPolicySlot === null || !confirm('恢复这个 Slot 上一次保存的策略？当前连接会中断，出口需要重新验活。')) return;
+  e.target.disabled = true;
+  try{ await api('/api/slot/policy/rollback?slot='+editingPolicySlot,{method:'POST'}); closeModal('policybox'); toast('已恢复上一次策略'); poll(); }
+  catch(err){ toast(err.message,true); e.target.disabled = false; }
+};
+$('#rollbackNative').onclick = async e=>{
+  if(!confirm('恢复上一次成功提交的内置入站、客户端凭据和绑定？可能重新启用旧客户端链接，所有 Xray 连接会短暂中断；Slot 策略不会改变。')) return;
+  e.target.disabled = true;
+  try{ await api('/api/config/rollback',{method:'POST'}); toast('已回滚内置配置'); poll(); }
+  catch(err){ toast(err.message,true); }
+  e.target.disabled = false;
+};
+$('#policySave').onclick = async e=>{
+  const p = readPolicy(); e.target.disabled = true;
+  try{
+    if(editingPolicySlot === null){
+      if(!p.allowed_ip_types.length) throw new Error('至少允许一种出口类型');
+      wizardPolicy = p;
+      if(p.country) region = p.country;
+      $('#wizardPolicyHint').textContent = '国家：' + (p.country || '不限') + ' · 类型：' + p.allowed_ip_types.join(', ');
+      renderRegions();
+    }else{
+      await api('/api/slot/policy?slot='+editingPolicySlot,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+      toast('策略已保存，运行中的 Slot 将重新验活'); poll();
+    }
+    closeModal('policybox');
+  }catch(err){ toast(err.message,true); }
+  e.target.disabled = false;
+};
 let toastTimer;
 function toast(msg, bad){
   const el = $('#toast');
@@ -614,7 +686,7 @@ function isXCL(){ return view.backend === 'xray-cf-lite'; }
 const BACKEND_NAME = {'native':'内置 Xray', '3x-ui':'3x-ui', 'xray-cf-lite':'xray-cf-lite'};
 function backendName(){ return BACKEND_NAME[view.backend] || '3x-ui'; }
 
-const STATUS = {up:'已连通', starting:'连接中', failed:'失败', stopped:'已停止'};
+const STATUS = {up:'已连通', starting:'连接中', failed:'失败', stopped:'已停止', waiting_for_nodes:'等待合格节点', blocked:'已阻断'};
 
 function nodeStatus(value){
   const s = String(value || 'unknown').toLowerCase();
@@ -644,12 +716,12 @@ function renderValidatedNodes(){
     return;
   }
   box.innerHTML = '<table class="nodetable"><thead><tr>'
-    + '<th>国家</th><th>出口 IP</th><th>ASN</th><th>ISP</th><th>类型</th>'
-    + '<th>延迟</th><th>SSTP</th><th>OpenVPN</th><th>Mode A Full Chain</th><th>Last Verified</th><th>操作</th>'
+    + '<th>来源国家</th><th>OpenVPN 出口 IP</th><th>ASN</th><th>ISP</th><th>类型</th>'
+    + '<th>来源延迟</th><th>SSTP</th><th>OpenVPN</th><th>Mode A Full Chain</th><th>Last Verified</th><th>操作</th>'
     + '</tr></thead><tbody>'
     + list.map(n => '<tr title="' + esc(n.hostname || '') + '">'
       + '<td>' + esc(n.country || n.country_code || '—') + '</td>'
-      + '<td>' + esc(n.expected_exit_ip || n.ip || '—') + '</td>'
+      + '<td>' + esc(n.expected_exit_ip || '未验证') + '</td>'
       + '<td class="muted">' + esc(n.asn || 'unknown') + '</td>'
       + '<td class="muted host">' + esc(n.isp || 'unknown') + '</td>'
       + '<td>' + esc(n.ip_type || 'unknown') + '</td>'
@@ -698,10 +770,17 @@ function renderExits(){
           + esc((i.remark || i.protocol) + ' · ' + i.protocol + ' :' + i.port) + '">'
           + esc(i.protocol) + ' :' + i.port + '</button>').join('')
       : '<span class="chip none">无节点</span>';
-    const err = e.status === 'failed' && e.err
+    const err = ['failed','blocked','waiting_for_nodes'].includes(e.status) && e.err
       ? '<div class="errline" title="' + esc(e.err) + '">' + esc(e.err) + '</div>' : '';
     // country 后端已经给成"国旗 中文"，再拼国家码就重复了
     const place = esc(e.country || e.region || '—');
+    const g = e.egress || {};
+    const profile = '<div class="hint" title="' + esc([
+        g.provider, g.queried_at, g.expires_at, g.rule_version, g.reason
+      ].filter(Boolean).join(' · ')) + '">OpenVPN 出口：'
+      + esc(g.country || 'unknown') + ' · ' + esc(g.asn || 'unknown')
+      + ' · ' + esc(g.isp || 'unknown') + ' · ' + esc(g.ip_type || 'unknown')
+      + (g.intelligence_error ? ' · ' + esc(g.intelligence_error) : '') + '</div>';
     return '<div class="exit">'
       + '<div class="row">'
       +   '<span class="dot ' + e.status + '" title="' + (STATUS[e.status] || e.status) + '"></span>'
@@ -711,14 +790,18 @@ function renderExits(){
       +   '<span class="socks"><button data-cred="' + e.slot + '" title="SOCKS5 访问凭据">'
       +     ICON.lock + ':' + e.port + '</button></span>'
       +   '<span class="acts">'
-      +     '<button class="icon" data-swap="' + e.slot + '" title="换一个节点">' + ICON.redo + '</button>'
+       + '<button data-policy="' + e.slot + '">策略</button>'
+      + (['stopped','failed','blocked','waiting_for_nodes'].includes(e.status) ? '<button data-resume="' + e.slot + '">启动</button>' : '<button class="icon" data-swap="' + e.slot + '" title="换一个节点">' + ICON.redo + '</button>')
+      + (e.status === 'stopped' ? '<button data-delete-slot="' + e.slot + '">删除</button>' : '')
       +     '<button class="icon" data-stop="' + e.slot + '" title="停止这个出口">' + ICON.stop + '</button>'
       +   '</span>'
-      + '</div>' + err + '</div>';
+      + '</div>' + profile + '<div class="hint">目标：' + esc((e.policy || {}).country || '不限国家')
+      + ' · ' + esc(((e.policy || {}).allowed_ip_types || []).join(', '))
+      + ' · SOCKS HTTPS ' + esc(e.latency_ms ? e.latency_ms.toFixed(0) + ' ms' : '未测') + '</div>' + err + '</div>';
   }).join('');
 }
 
-// 停掉出口后它的入站会留在面板里。这些入站现在走直连，
+// 没有绑定到有效出口的入站仍保留；内置 Xray 对这些绑定执行阻断。
 // 用户既看不出它们和本服务的关系，也没有清理入口，所以单独列出来。
 function renderOrphans(){
   const box = $('#orphans');
@@ -776,6 +859,7 @@ async function poll(){
     $('#newnode').hidden = isXCL();
     // 链接由 xray-cf-lite 的订阅体系发，本服务这边导不出来
     $('#exportAll').hidden = isXCL();
+    $('#rollbackNative').hidden = !isNative();
     renderExits();
     renderOrphans();
   }catch(e){}
@@ -821,7 +905,7 @@ function renderRegions(){
       + '" data-rg="*"><b>每个国家</b><em>' + regions.length + ' 个国家各来几个</em></button>']
     .concat(list.map(r => '<button class="rg' + (region === r.code ? ' sel' : '')
       + '" data-rg="' + esc(r.code) + '"><b>' + esc(r.name || r.code) + '</b>'
-      + '<em>' + r.available + ' 个空闲 · ' + r.best_speed_mbps.toFixed(0) + ' Mbps</em></button>'))
+      + '<em>' + r.available + ' 个来源候选 · ' + r.best_speed_mbps.toFixed(0) + ' Mbps</em></button>'))
     .join('');
   updateAvail();
 }
@@ -849,14 +933,17 @@ function updateAvail(){
     return;
   }
   const avail = availOf(region);
-  hint.textContent = avail ? '可用 ' + avail + ' 个节点' : '这个地区没有空闲节点';
+  hint.textContent = avail ? '来源候选 ' + avail + ' 个节点' : '这个地区没有空闲节点';
   hint.className = 'hint' + (want > avail ? ' bad' : '');
-  if(want > avail && avail) hint.textContent = '只剩 ' + avail + ' 个，将全部使用';
-  $('#go').disabled = !avail;
+  if(want > avail && avail) hint.textContent = '来源候选 ' + avail + ' 个；未满足的 Slot 将等待合格节点';
+  $('#go').disabled = !wizardPolicy || want < 1 || want > (3-view.exits.length);
+  if(!avail) hint.textContent = '暂无候选；创建后保留 Slot 并等待符合策略的节点';
 }
 
 async function loadWizard(){
+  $('#go').disabled = true;
   try{
+    if(!wizardPolicy) wizardPolicy = await api('/api/slot/policy?slot=0');
     regions = await api('/api/regions') || [];
     regionsLoaded = true;
     renderRegions();
@@ -993,13 +1080,14 @@ function step(d){
 $('#count').oninput = updateAvail;
 
 $('#go').onclick = async e => {
-  const want = Math.min(Number($('#count').value) || 1, availOf(region) || 1);
+  const want = Number($('#count').value) || 1;
   const tpl = $('#tpl').value || '0';
   e.target.disabled = true;
   try{
     await api('/api/provision?count=' + want
       + (region === '*' ? '&every=1' : '&region=' + encodeURIComponent(region))
-      + '&template=' + tpl, {method:'POST'});
+      + '&template=' + tpl, {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...wizardPolicy,country:region === '*' ? '' : region})});
     closeModal('wizard');
     poll();
   }catch(err){ toast(err.message, true); }
@@ -1033,6 +1121,23 @@ document.addEventListener('click', async e => {
 
 // ---- 出口操作 ----
 document.addEventListener('click', async e => {
+  const policy = e.target.closest('[data-policy]');
+  if(policy){
+    editingPolicySlot = Number(policy.dataset.policy);
+    $('#policyRollback').disabled = !(view.exits.find(x=>x.slot===editingPolicySlot) || {}).can_rollback_policy;
+    try{ fillPolicy(await api('/api/slot/policy?slot='+editingPolicySlot)); $('#policyTitle').textContent = 'Slot '+editingPolicySlot+' 策略'; openModal('policybox'); }
+    catch(err){ toast(err.message,true); }
+    return;
+  }
+  const lifecycle = e.target.closest('[data-resume],[data-delete-slot]');
+  if(lifecycle){
+    const deleting = lifecycle.hasAttribute('data-delete-slot');
+    if(deleting && !confirm('删除这个已停止的 Slot？端口和策略将释放，原绑定保持阻断。')) return;
+    lifecycle.disabled = true;
+    try{ await api('/api/slot/'+(deleting?'delete':'resume')+'?slot='+(deleting?lifecycle.dataset.deleteSlot:lifecycle.dataset.resume),{method:'POST'}); }
+    catch(err){ toast(err.message,true); }
+    poll(); return;
+  }
   const stop = e.target.closest('[data-stop]');
   if(stop){
     stop.disabled = true;

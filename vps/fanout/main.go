@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -26,6 +27,7 @@ func main() {
 	panelMode := flag.String("panel", "", "节点链接后端: 留空按界面设置/自动探测, 3x-ui, native, xray-cf-lite")
 	publicIP := flag.String("ip", "", "母机公网 IPv4，用于分享链接/SOCKS5 地址；留空则自动探测")
 	showVersion := flag.Bool("version", false, "显示版本后退出")
+	checkState := flag.Bool("check-state", false, "只读检查内置模式状态副本的迁移配置，不启动服务")
 	flag.Parse()
 
 	if *publicIP == "" {
@@ -35,6 +37,9 @@ func main() {
 	if *showVersion {
 		fmt.Println("xnvgatebox", version)
 		return
+	}
+	if *checkState {
+		os.Exit(runMigrationCheck(os.Stdout, *workDir, *maxSlots, *webPort))
 	}
 
 	if os.Geteuid() != 0 {
@@ -66,6 +71,9 @@ func main() {
 		log.Printf("非默认工作目录，本实例用 netns fo%s* 与网段 10.%d.x", instTag, instBase)
 	}
 
+	if err := recoverConfigTransaction(*workDir, managementJournal, managementConfigFiles); err != nil {
+		log.Fatalf("恢复管理配置失败: %v", err)
+	}
 	setPublicIPOverride(*publicIP)
 	go hostPublicIP() // 预热探测，别让首个请求阻塞
 	if err := prepareHost(); err != nil {
@@ -79,6 +87,18 @@ func main() {
 		log.Printf("节点链接后端: %s", p.Describe())
 	}
 
+	// 用户显式给了 -web 就以命令行为准，否则沿用界面上存过的端口
+	portExplicit := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "web" {
+			portExplicit = true
+		}
+	})
+	webCfg, err := loadWebSettings(*workDir, *webPort, portExplicit)
+	if err != nil {
+		log.Fatalf("加载 Web 设置失败: %v", err)
+	}
+
 	mgr := NewManager(*maxSlots, *workDir)
 	log.Printf("正在拉取节点列表...")
 	if n, err := mgr.RefreshNodes(); err != nil {
@@ -88,7 +108,7 @@ func main() {
 	}
 
 	if n, err := mgr.restoreState(); err != nil {
-		log.Printf("恢复上次状态失败: %v", err)
+		log.Fatalf("恢复上次状态失败，拒绝忽略已保存策略: %v", err)
 	} else if n > 0 {
 		log.Printf("正在恢复上次的 %d 条隧道", n)
 		// 3x-ui 模式重启不会自动重写面板出站，旧版本升上来时面板里的 socks
@@ -119,6 +139,11 @@ func main() {
 	mux.HandleFunc("/api/stop", apiStop(mgr))
 	mux.HandleFunc("/api/swap", apiSwap(mgr))
 	mux.HandleFunc("/api/replace", apiReplace(mgr))
+	mux.HandleFunc("/api/slot/policy", apiSlotPolicy(mgr))
+	mux.HandleFunc("/api/slot/policy/rollback", apiRollbackSlotPolicy(mgr))
+	mux.HandleFunc("/api/config/rollback", apiRollbackNative(mgr))
+	mux.HandleFunc("/api/slot/resume", apiSlotLifecycle(mgr, false))
+	mux.HandleFunc("/api/slot/delete", apiSlotLifecycle(mgr, true))
 	mux.HandleFunc("/api/cred", apiCred(mgr))
 	mux.HandleFunc("/api/refresh", apiRefresh(mgr))
 	mux.HandleFunc("/api/regions", apiRegions(mgr))
@@ -159,18 +184,6 @@ func main() {
 	}
 	if bpCreated {
 		log.Printf("已生成访问路径，见 %s", filepath.Join(*workDir, "basepath"))
-	}
-
-	// 用户显式给了 -web 就以命令行为准，否则沿用界面上存过的端口
-	portExplicit := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "web" {
-			portExplicit = true
-		}
-	})
-	webCfg, err := loadWebSettings(*workDir, *webPort, portExplicit)
-	if err != nil {
-		log.Fatalf("加载 Web 设置失败: %v", err)
 	}
 
 	srv := newWebServer(StripBasePath(auth.Wrap(mux)))
@@ -352,58 +365,24 @@ func apiCred(m *Manager) http.HandlerFunc {
 }
 
 // apiSettings 管理界面自身的设置：改密码 / 改路径 / 改端口 / 改本地监听。
-// GET 返回当前值（不含明文口令）；POST 按传入的字段逐项应用，任一项失败即整体回报。
+// GET 返回当前值（不含明文口令）；POST 先验证完整请求，再事务提交所有字段。
 func apiSettings(auth *Auth, srv *webServer) http.HandlerFunc {
-	type settingsReq struct {
-		Password        *string `json:"password"`         // 非空则改口令
-		BasePath        *string `json:"base_path"`        // 提供即改访问路径（空串=去掉前缀）
-		Port            *int    `json:"port"`             // 提供即改监听端口
-		ListenAddr      *string `json:"listen_addr"`      // 提供即改监听地址
-		ResidentialOnly *bool   `json:"residential_only"` // 提供即改"只用家宽"
-	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			var in settingsReq
-			if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
+			var in managementSettingsRequest
+			dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32768))
+			dec.DisallowUnknownFields()
+			if err := dec.Decode(&in); err != nil {
+				writeJSON(w, 400, map[string]string{"error": "请求格式错误"})
 				return
 			}
-
-			// 改口令
-			if in.Password != nil && *in.Password != "" {
-				if err := auth.SetPassword(*in.Password); err != nil {
-					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-					return
-				}
+			if err := dec.Decode(&struct{}{}); err != io.EOF {
+				writeJSON(w, 400, map[string]string{"error": "请求格式错误"})
+				return
 			}
-			// 改访问路径
-			if in.BasePath != nil {
-				if _, err := setBasePath(*in.BasePath); err != nil {
-					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-					return
-				}
-			}
-			// 改"只用家宽"。放在改端口之前：applyWebSettings 会整份覆盖设置，
-			// 顺序颠倒会把这个开关写回旧值。
-			if in.ResidentialOnly != nil {
-				if err := setResidentialOnly(*in.ResidentialOnly); err != nil {
-					writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-					return
-				}
-			}
-			// 改端口 / 监听地址：合成一份新的 WebSettings 一起应用，避免绑两次
-			if in.Port != nil || in.ListenAddr != nil {
-				next := getWebSettings()
-				if in.Port != nil {
-					next.Port = *in.Port
-				}
-				if in.ListenAddr != nil {
-					next.ListenAddr = *in.ListenAddr
-				}
-				if err := srv.applyWebSettings(next); err != nil {
-					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-					return
-				}
+			if err := applyManagementSettings(auth, srv, in); err != nil {
+				writeJSON(w, 400, map[string]string{"error": err.Error()})
+				return
 			}
 		}
 
@@ -479,9 +458,19 @@ func apiProvision(m *Manager) http.HandlerFunc {
 				return
 			}
 		}
+		var policy *SlotPolicy
+		if r.ContentLength != 0 {
+			p, err := decodeSlotPolicy(w, r)
+			if err != nil {
+				writeJSON(w, 400, map[string]string{"error": "无效策略 JSON"})
+				return
+			}
+			policy = &p
+		}
 		job, err := m.Provision(ProvisionRequest{
 			Region: q.Get("region"), Count: count, TemplateID: tpl,
 			EveryRegion: q.Get("every") == "1",
+			Policy:      policy,
 		})
 		if err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})

@@ -62,7 +62,7 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 	bound := map[string]string{}
 	for _, t := range tunnels {
 		if t.Slot > 0 {
-			bound[sanitizeTag(t.Node.HostName)] = slotOutboundTag(t.Slot)
+			bound[sanitizeTag(t.snapshot().Node.HostName)] = slotOutboundTag(t.Slot)
 		}
 	}
 
@@ -228,9 +228,9 @@ func writeXrayConfig(dir string, cfg map[string]any) (string, error) {
 // 先校验再重启：配置写坏时进程会起不来，而那时旧进程已经被杀掉，
 // 所有节点链接会一起断掉。校验能把这类错误挡在重启之前。
 func verifyXrayConfig(bin, cfgPath string) error {
-	out, err := cmdCombined(exec.Command(bin, "run", "-test", "-c", cfgPath))
+	_, err := cmdCombined(exec.Command(bin, "run", "-test", "-c", cfgPath))
 	if err != nil {
-		return fmt.Errorf("Xray 配置校验失败: %s", trimOutput(out))
+		return fmt.Errorf("Xray 配置校验失败: %w", err)
 	}
 	return nil
 }
@@ -249,14 +249,17 @@ type xrayProc struct {
 	dir  string
 	cmd  *exec.Cmd
 	logf *os.File
+	done chan error
 }
+
+func (p *xrayProc) verify(path string) error { return verifyXrayConfig(p.bin, path) }
 
 // restart 用当前配置重启 xray。配置已在调用前写好并校验过。
 func (p *xrayProc) restart(cfgPath string) error {
 	p.stop()
 
 	logPath := filepath.Join(p.dir, "xray.log")
-	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return fmt.Errorf("打开 Xray 日志失败: %w", err)
 	}
@@ -272,22 +275,37 @@ func (p *xrayProc) restart(cfgPath string) error {
 		return fmt.Errorf("启动 Xray 失败: %w", err)
 	}
 	p.cmd, p.logf = cmd, f
-	go cmd.Wait() // 回收子进程，避免僵尸
-	p.writePID(cmd.Process.Pid)
+	p.done = make(chan error, 1)
+	finished := p.done
+	go func() { finished <- cmd.Wait() }()
+	if err := p.writePID(cmd.Process.Pid); err != nil {
+		p.stop()
+		return fmt.Errorf("保存 Xray 进程标识失败: %w", err)
+	}
 
 	// 起得来但立刻退出的情况要能被发现，否则界面会显示成功而实际不通
-	time.Sleep(400 * time.Millisecond)
-	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+	select {
+	case <-p.done:
+		p.cmd = nil
+		p.done = nil
 		return fmt.Errorf("Xray 启动后立刻退出，详见 %s", logPath)
+	case <-time.After(400 * time.Millisecond):
+		return nil
 	}
-	return nil
 }
 
 func (p *xrayProc) stop() {
 	if p.cmd != nil && p.cmd.Process != nil {
 		_ = p.cmd.Process.Kill()
+		if p.done != nil {
+			select {
+			case <-p.done:
+			case <-time.After(2 * time.Second):
+			}
+		}
 		p.cmd = nil
 	}
+	p.done = nil
 	if p.logf != nil {
 		p.logf.Close()
 		p.logf = nil
@@ -297,8 +315,8 @@ func (p *xrayProc) stop() {
 
 func (p *xrayProc) pidPath() string { return filepath.Join(p.dir, "xray.pid") }
 
-func (p *xrayProc) writePID(pid int) {
-	_ = os.WriteFile(p.pidPath(), []byte(strconv.Itoa(pid)), 0600)
+func (p *xrayProc) writePID(pid int) error {
+	return atomicConfigWrite(p.pidPath(), []byte(strconv.Itoa(pid)))
 }
 
 // reapOrphan 清掉上次遗留的 Xray。

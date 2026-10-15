@@ -33,14 +33,15 @@ func subToken() (string, error) {
 // resetSubToken 换一串新的订阅口令。旧地址立即失效，
 // 已经订阅过的客户端要重新配。
 func resetSubToken() (string, error) {
+	managementMu.Lock()
+	defer managementMu.Unlock()
 	tok, err := randomToken(subTokenLen)
 	if err != nil {
 		return "", err
 	}
-	webSettingsMu.Lock()
-	webSettingsCur.SubToken = tok
-	webSettingsMu.Unlock()
-	if err := saveWebSettings(); err != nil {
+	next := getWebSettings()
+	next.SubToken = tok
+	if err := commitManagementSettings(nil, &webServer{}, next, nil, nil); err != nil {
 		return "", err
 	}
 	return tok, nil

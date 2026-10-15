@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -22,20 +23,36 @@ type SocksCred struct {
 
 // Tunnel 是一条运行中的隧道：一个 netns + 一个 openvpn 进程 + 一个本地 SOCKS5 端口。
 type Tunnel struct {
-	Slot   int       `json:"slot"`
-	Port   int       `json:"port"`
-	Node   Node      `json:"node"`
-	Status string    `json:"status"` // starting | up | failed | stopped
-	ExitIP string    `json:"exit_ip"`
-	Err    string    `json:"err,omitempty"`
-	Since  time.Time `json:"since"`
-	Cred   SocksCred `json:"cred"`
+	Slot           int         `json:"slot"`
+	Port           int         `json:"port"`
+	Node           Node        `json:"node"`
+	Status         string      `json:"status"` // starting | up | failed | stopped
+	ExitIP         string      `json:"exit_ip"`
+	Err            string      `json:"err,omitempty"`
+	Since          time.Time   `json:"since"`
+	Cred           SocksCred   `json:"cred"`
+	Policy         *SlotPolicy `json:"policy,omitempty"`
+	previousPolicy *SlotPolicy
+	LatencyMS      float64 `json:"latency_ms,omitempty"`
 
-	ns         string
-	listener   net.Listener
-	ovpn       *exec.Cmd
-	mu         sync.Mutex
-	validating bool // permits only the manager's own expected/actual probe
+	ns                  string
+	listener            net.Listener
+	ovpn                *exec.Cmd
+	mu                  sync.Mutex
+	opMu                sync.Mutex
+	changeMu            sync.Mutex
+	workCtx             context.Context
+	cancelWork          context.CancelFunc
+	clients             map[net.Conn]bool
+	cooldown            map[string]time.Time
+	validating          bool // permits only the manager's own expected/actual probe
+	validationCred      *SocksCred
+	egress              *EgressProfile
+	egressExpectedIP    string
+	egressActualIP      string
+	egressVerifiedAt    string
+	egressNodeHost      string
+	egressProfileDigest string
 	// swapped 是这条出口换节点时用过的 hostname，按时间先后排。
 	// 手动换节点要避开它们：只排除"当前这个"的话，连点两次就会在
 	// 两个节点之间来回跳（A 换成 B，B 再换回 A）。
@@ -213,6 +230,7 @@ func ensureRuleInsert(table, chain string, spec ...string) {
 }
 
 func (t *Tunnel) teardownNetns() {
+	t.clearEgress()
 	ns, sub := t.nsName(), t.subnet()
 	cidr := sub + ".0/30"
 	veth, _ := t.vethNames()
@@ -243,7 +261,8 @@ func (t *Tunnel) startOpenVPN(dir string) error {
 	}
 
 	logPath := filepath.Join(dir, ns+".log")
-	cmd := exec.Command("ip", "netns", "exec", ns, "openvpn",
+	ctx := t.workContext()
+	cmd := exec.CommandContext(ctx, "ip", "netns", "exec", ns, "openvpn",
 		"--config", cfgPath,
 		"--auth-user-pass", authPath,
 		"--auth-nocache",
@@ -264,7 +283,10 @@ func (t *Tunnel) startOpenVPN(dir string) error {
 	// openvpn 建好 tun0 前 SOCKS5 无法正常出网，这里等它就绪
 	deadline := time.Now().Add(40 * time.Second)
 	for time.Now().Before(deadline) {
-		if out, err := cmdOutput(exec.Command("ip", "netns", "exec", ns, "ip", "-4", "addr", "show", "tun0")); err == nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if out, err := cmdOutput(exec.CommandContext(ctx, "ip", "netns", "exec", ns, "ip", "-4", "addr", "show", "tun0")); err == nil {
 			if strings.Contains(string(out), "inet ") {
 				return nil
 			}
@@ -272,7 +294,9 @@ func (t *Tunnel) startOpenVPN(dir string) error {
 		if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
 			return fmt.Errorf("openvpn 提前退出，详见 %s", logPath)
 		}
-		time.Sleep(time.Second)
+		if !waitForWork(ctx, time.Second) {
+			return ctx.Err()
+		}
 	}
 	return fmt.Errorf("等待 tun0 就绪超时，详见 %s", logPath)
 }
@@ -286,25 +310,21 @@ func (t *Tunnel) serve() error {
 	var ln net.Listener
 	var err error
 	for i := 0; i < 6; i++ {
+		if err := t.workContext().Err(); err != nil {
+			return err
+		}
 		// SOCKS is an internal hand-off to Xray/3x-ui.  Never expose it on the
 		// VPS public interface; the panel's own inbound ports remain separate.
 		ln, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", t.Port))
 		if err == nil {
 			break
 		}
-		time.Sleep(time.Second)
+		if !waitForWork(t.workContext(), time.Second) {
+			return t.workContext().Err()
+		}
 	}
 	if err != nil {
-		// 确实被别的进程长期占用了，才换端口
-		port, perr := freeRandomPort(map[int]bool{t.Port: true})
-		if perr != nil {
-			return fmt.Errorf("监听 %d 失败且无备用端口: %w", t.Port, err)
-		}
-		ln, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-		if err != nil {
-			return fmt.Errorf("监听 %d 失败: %w", port, err)
-		}
-		t.Port = port
+		return fmt.Errorf("Slot 固定端口 %d 监听失败: %w", t.Port, err)
 	}
 	t.listener = ln
 	dial := dialerInNetns(t.nsName())
@@ -319,13 +339,27 @@ func (t *Tunnel) serve() error {
 			// business until the current node has passed expected/actual checks.
 			// This prevents callers from using a half-built namespace or a slot
 			// whose OpenVPN process has just been killed.
-			if !t.acceptsSocks() {
+			if !t.trackClient(conn) {
 				_ = conn.Close()
 				continue
 			}
 			// 每次连接现取凭据：改口令后不必重建监听，新连接立刻按新凭据校验
-			cred := t.credential()
-			go serveSocks(conn, &cred, dial)
+			cred := t.probeCredential()
+			ctx := t.workContext()
+			go func() {
+				defer t.untrackClient(conn)
+				serveSocks(conn, &cred, func(network, addr string) (net.Conn, error) {
+					if err := ctx.Err(); err != nil {
+						return nil, err
+					}
+					remote, err := dial(network, addr)
+					if err == nil && ctx.Err() != nil {
+						remote.Close()
+						return nil, ctx.Err()
+					}
+					return remote, err
+				})
+			}()
 		}
 	}()
 	return nil
@@ -341,13 +375,66 @@ func (t *Tunnel) credential() SocksCred {
 func (t *Tunnel) acceptsSocks() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.Status == "up" || t.validating
+	return t.acceptsSocksLocked()
+}
+
+func (t *Tunnel) acceptsSocksLocked() bool {
+	if t.workCtx != nil && t.workCtx.Err() != nil {
+		return false
+	}
+	if t.validating {
+		return t.validationCred != nil
+	}
+	if t.Status != "up" {
+		return false
+	}
+	if t.Policy != nil {
+		if t.egress == nil || t.Policy.checkImage(*t.egress) != nil || t.Policy.checkLatency(t.LatencyMS) != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func (t *Tunnel) trackClient(conn net.Conn) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.acceptsSocksLocked() {
+		return false
+	}
+	if t.clients == nil {
+		t.clients = map[net.Conn]bool{}
+	}
+	t.clients[conn] = true
+	return true
+}
+
+func (t *Tunnel) untrackClient(conn net.Conn) {
+	t.mu.Lock()
+	delete(t.clients, conn)
+	t.mu.Unlock()
 }
 
 func (t *Tunnel) setValidating(v bool) {
 	t.mu.Lock()
-	t.validating = v
+	t.validationCred = nil
+	t.validating = false
+	if v && (t.workCtx == nil || t.workCtx.Err() == nil) {
+		if cred, err := newSocksCred(); err == nil {
+			t.validationCred = &cred
+			t.validating = true
+		}
+	}
 	t.mu.Unlock()
+}
+
+func (t *Tunnel) probeCredential() SocksCred {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.validating && t.validationCred != nil {
+		return *t.validationCred
+	}
+	return t.Cred
 }
 
 // setCredential 换掉这条隧道的 SOCKS5 凭据。已建立的连接不受影响，
@@ -365,8 +452,16 @@ func (t *Tunnel) probeExitIP() (string, error) {
 
 // stop 停止这条隧道并清理它占用的所有资源。
 func (t *Tunnel) stop() {
+	t.stopWithCleanup(t.teardownNetns)
+}
+
+func (t *Tunnel) stopWithCleanup(cleanup func()) {
+	t.blockWork()
+	t.opMu.Lock()
+	defer t.opMu.Unlock()
 	t.mu.Lock()
-	defer t.mu.Unlock()
+	t.Status = "stopped"
+	t.mu.Unlock()
 	if t.listener != nil {
 		t.listener.Close()
 		t.listener = nil
@@ -375,6 +470,5 @@ func (t *Tunnel) stop() {
 		_ = t.ovpn.Process.Kill()
 		t.ovpn = nil
 	}
-	t.teardownNetns()
-	t.Status = "stopped"
+	cleanup()
 }

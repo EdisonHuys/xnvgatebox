@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,51 +23,89 @@ type persistedTunnel struct {
 	SocksPass string `json:"socks_pass,omitempty"`
 	// PrevHost 非空表示上次换节点只做了一半：隧道已经指向新节点，
 	// 但入站还绑在这个旧节点上。恢复时照着它把入站接回来。
-	PrevHost string `json:"prev_host,omitempty"`
+	PrevHost       string      `json:"prev_host,omitempty"`
+	Policy         *SlotPolicy `json:"policy,omitempty"`
+	Stopped        bool        `json:"stopped,omitempty"`
+	PreviousPolicy *SlotPolicy `json:"previous_policy,omitempty"`
 }
 
 type persistedState struct {
-	Tunnels []persistedTunnel `json:"tunnels"`
+	Tunnels      []persistedTunnel `json:"tunnels"`
+	DeletedSlots []int             `json:"deleted_slots,omitempty"`
 }
 
 func statePath(dir string) string { return filepath.Join(dir, "state.json") }
 
+const stateJournal = ".state-transaction.json"
+
 // saveState 把当前隧道写入磁盘，供重启后恢复。
 func (m *Manager) saveState() error {
+	m.saveMu.Lock()
+	defer m.saveMu.Unlock()
 	var st persistedState
+	m.mu.RLock()
+	for slot := range m.deletedSlots {
+		st.DeletedSlots = append(st.DeletedSlots, slot)
+	}
+	m.mu.RUnlock()
 	for _, t := range m.Tunnels() {
-		// 只跳过用户主动停掉的。starting/failed 的隧道也要存：
-		// 它们正在重连或等着重试，漏存会让重启后凭空少几个出口。
-		if t.Status == "stopped" {
-			continue
-		}
+		// Preserve stopped intent too; starting/failed Slots must not disappear
+		// merely because they were waiting for a candidate at shutdown.
+		t.mu.Lock()
 		st.Tunnels = append(st.Tunnels, persistedTunnel{
-			Slot:        t.Slot,
-			Port:        t.Port,
-			HostName:    t.Node.HostName,
-			CountryCode: t.Node.CountryCode,
-			Country:     t.Node.Country,
-			Config:      t.Node.Config,
-			SocksUser:   t.Cred.User,
-			SocksPass:   t.Cred.Pass,
-			PrevHost:    t.prevHostOf(),
+			Slot:           t.Slot,
+			Port:           t.Port,
+			HostName:       t.Node.HostName,
+			CountryCode:    t.Node.CountryCode,
+			Country:        t.Node.Country,
+			Config:         t.Node.Config,
+			SocksUser:      t.Cred.User,
+			SocksPass:      t.Cred.Pass,
+			PrevHost:       t.prevHost,
+			Policy:         t.Policy,
+			Stopped:        t.Status == "stopped",
+			PreviousPolicy: t.previousPolicy,
 		})
+		t.mu.Unlock()
 	}
 
 	blob, err := json.MarshalIndent(st, "", "  ")
 	if err != nil {
 		return err
 	}
-	tmp := statePath(m.workDir) + ".tmp"
-	if err := os.WriteFile(tmp, blob, 0600); err != nil {
+	tx, err := beginConfigTransaction(m.workDir, stateJournal, []string{"state.json"})
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, statePath(m.workDir))
+	fail := func(cause error) error {
+		if rollbackErr := tx.rollback(); rollbackErr != nil {
+			return fmt.Errorf("状态提交失败且回滚未完成，保留恢复记录: %w", rollbackErr)
+		}
+		return cause
+	}
+	if err := atomicConfigWrite(statePath(m.workDir), blob); err != nil {
+		return fail(err)
+	}
+	if m.stateWriteHook != nil {
+		if err := m.stateWriteHook("before_commit"); err != nil {
+			return fail(err)
+		}
+	}
+	if err := tx.commit(); err != nil {
+		return fail(err)
+	}
+	if err := m.saveSlotHealth(); err != nil {
+		log.Printf("保存出口观察快照失败: %v", err)
+	}
+	return nil
 }
 
 // restoreState 读回上次的隧道并逐条拉起。
 // 节点配置一并存了盘，所以即使 VPN Gate 列表里该节点已消失也能重建。
 func (m *Manager) restoreState() (int, error) {
+	if err := recoverConfigTransaction(m.workDir, stateJournal, []string{"state.json"}); err != nil {
+		return 0, err
+	}
 	blob, err := os.ReadFile(statePath(m.workDir))
 	if os.IsNotExist(err) {
 		return 0, nil
@@ -75,17 +114,93 @@ func (m *Manager) restoreState() (int, error) {
 		return 0, err
 	}
 
-	var st persistedState
-	if err := json.Unmarshal(blob, &st); err != nil {
-		return 0, fmt.Errorf("解析状态文件失败: %w", err)
+	st, err := decodePersistedState(blob, m.maxSlots, residentialOnly())
+	if err != nil {
+		return 0, err
 	}
+	tunnels, err := prepareRestoredTunnels(st, m.nodes)
+	if err != nil {
+		return 0, err
+	}
+	// Publish the entire validated batch before starting any worker. A malformed
+	// later Slot or tombstone must not leave a partially restored manager.
+	m.mu.Lock()
+	for _, slot := range st.DeletedSlots {
+		m.deletedSlots[slot] = true
+	}
+	for _, t := range tunnels {
+		m.tunnels[t.Slot] = t
+	}
+	m.mu.Unlock()
+	for _, t := range tunnels {
+		if t.Status != "stopped" {
+			t.resetWork()
+			go m.restoreTunnel(t, t.workContext())
+		}
+	}
+	return len(tunnels), nil
+}
 
+// Shared by real startup and the offline checker. No file writes, workers,
+// random credentials or global settings changes occur during validation.
+func decodePersistedState(blob []byte, maxSlots int, residential bool) (*persistedState, error) {
+	var st *persistedState
+	if err := json.Unmarshal(blob, &st); err != nil || st == nil {
+		return nil, fmt.Errorf("解析状态文件失败")
+	}
+	if maxSlots < 1 {
+		return nil, fmt.Errorf("Slot 上限无效")
+	}
+	seen := map[int]bool{}
+	ports := map[int]bool{}
+	for i := range st.Tunnels {
+		p := &st.Tunnels[i]
+		if p.Slot < 1 || p.Slot > maxSlots || seen[p.Slot] || ports[p.Port] || p.Port < 1 || p.Port > 65535 {
+			return nil, fmt.Errorf("持久化 Slot 身份或端口无效")
+		}
+		seen[p.Slot] = true
+		ports[p.Port] = true
+		policy := defaultSlotPolicyForMode(p.CountryCode, residential)
+		if p.Policy != nil {
+			policy = *p.Policy
+		}
+		normalized, err := normalizePolicy(policy)
+		if err != nil {
+			return nil, fmt.Errorf("Slot %d 策略无效", p.Slot)
+		}
+		p.Policy = &normalized
+		if p.PreviousPolicy != nil {
+			before, err := normalizePolicy(*p.PreviousPolicy)
+			if err != nil {
+				return nil, fmt.Errorf("上一次 Slot 策略无效")
+			}
+			p.PreviousPolicy = &before
+		}
+		// Only a completely absent legacy pair may be generated. Rotating an
+		// existing half-pair silently would invalidate deployed clients.
+		if p.SocksUser != "" || p.SocksPass != "" {
+			if err := validateCred(SocksCred{User: p.SocksUser, Pass: p.SocksPass}); err != nil {
+				return nil, fmt.Errorf("Slot %d 持久化 SOCKS 凭据无效", p.Slot)
+			}
+		}
+	}
+	for _, slot := range st.DeletedSlots {
+		if slot < 1 || slot > maxSlots || seen[slot] {
+			return nil, fmt.Errorf("删除记录无效")
+		}
+		seen[slot] = true
+	}
+	return st, nil
+}
+
+func prepareRestoredTunnels(st *persistedState, nodes []Node) ([]*Tunnel, error) {
 	// 从当前节点列表补回地区、延迟等元数据；节点已下线时退回存盘的最小信息
 	known := map[string]Node{}
-	for _, n := range m.nodes {
+	for _, n := range nodes {
 		known[n.HostName] = n
 	}
 
+	tunnels := make([]*Tunnel, 0, len(st.Tunnels))
 	for _, p := range st.Tunnels {
 		node, ok := known[p.HostName]
 		if !ok {
@@ -104,19 +219,21 @@ func (m *Manager) restoreState() (int, error) {
 		}
 		// 从旧版本升上来的状态文件没有凭据字段，补一套新的
 		cred := SocksCred{User: p.SocksUser, Pass: p.SocksPass}
-		if cred.User == "" || cred.Pass == "" {
+		if cred.User == "" && cred.Pass == "" {
 			gen, err := newSocksCred()
 			if err != nil {
-				return 0, fmt.Errorf("生成 SOCKS5 凭据失败: %w", err)
+				return nil, fmt.Errorf("生成 SOCKS5 凭据失败: %w", err)
 			}
 			cred = gen
 		}
 		t := &Tunnel{
-			Slot:   p.Slot,
-			Port:   p.Port,
-			Node:   node,
-			Status: "starting",
-			Cred:   cred,
+			Slot:           p.Slot,
+			Port:           p.Port,
+			Node:           node,
+			Status:         "starting",
+			Cred:           cred,
+			Policy:         p.Policy,
+			previousPolicy: p.PreviousPolicy,
 		}
 		bindingHost := p.PrevHost
 		if bindingHost == "" {
@@ -125,24 +242,31 @@ func (m *Manager) restoreState() (int, error) {
 			bindingHost = p.HostName
 		}
 		t.setPrevHost(bindingHost)
-		m.mu.Lock()
-		m.tunnels[p.Slot] = t
-		m.mu.Unlock()
-		go m.restoreTunnel(t)
+		if p.Stopped {
+			t.Status = "stopped"
+		}
+		tunnels = append(tunnels, t)
 	}
-	return len(st.Tunnels), nil
+	return tunnels, nil
 }
 
 // restoreTunnel 拉起一条恢复出来的隧道，顺手把上次没做完的换节点收尾。
-func (m *Manager) restoreTunnel(t *Tunnel) {
+func (m *Manager) restoreTunnel(t *Tunnel, ctx context.Context) {
 	prev := t.prevHostOf()
-	m.bringUpPersist(t, true, true)
-	if prev == "" || t.Status != "up" {
+	m.bringUpPersistContext(t, true, true, ctx)
+	if ctx.Err() != nil || prev == "" || t.Status != "up" {
+		return
+	}
+	t.opMu.Lock()
+	defer t.opMu.Unlock()
+	if ctx.Err() != nil || !m.tunnelActive(t) {
 		return
 	}
 	// 上次换节点改完隧道就中断了，入站还指着旧节点。不接回来的话它会一直
 	// 显示成"未绑定出口"，流量悄悄走直连——用户看不出哪里不对。
 	if err := m.rebind(prev, t); err != nil {
+		t.blockForPolicy("恢复绑定配置失败，Slot 保持阻断")
+		_ = m.saveState()
 		log.Printf("恢复时把入站接回出口 %d 失败: %v", t.Slot, err)
 		return
 	}

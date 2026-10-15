@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 type validatedPoolFile struct {
@@ -29,9 +30,10 @@ type validatedPoolNode struct {
 	SourcePingMS      int     `json:"source_ping_ms"`
 	Protocols         struct {
 		OpenVPN struct {
-			Status         string `json:"status"`
-			ProfileRef     string `json:"profile_ref"`
-			ExpectedExitIP string `json:"expected_exit_ip"`
+			Status         string        `json:"status"`
+			ProfileRef     string        `json:"profile_ref"`
+			ExpectedExitIP string        `json:"expected_exit_ip"`
+			Egress         EgressProfile `json:"egress"`
 		} `json:"openvpn"`
 		SSTP struct {
 			Status         string `json:"status"`
@@ -82,11 +84,29 @@ func fetchNodesFromValidatedPool(poolPath string) ([]Node, error) {
 				continue
 			}
 		}
-		ipType := strings.TrimSpace(item.Protocols.SSTP.Egress.IPType)
-		// Unknown is deliberately not treated as residential.  The first VPS
-		// technical run can disable fanout's residential-only filter, while a
-		// configured intelligence provider can later mark strict/likely nodes.
-		residential := ipType == "strict_residential" || ipType == "likely_residential" || ipType == "residential"
+		// SSTP evidence belongs to SSTP, even if its IP happens to match.
+		// Only fresh, IP-bound OpenVPN evidence can describe this candidate.
+		image := item.Protocols.OpenVPN.Egress
+		expiry, expiryErr := time.Parse(time.RFC3339Nano, image.ExpiresAt)
+		ipType, isp, asn, expected := "unknown", "", "", ""
+		if item.Protocols.OpenVPN.Status == "passed" && image.Protocol == "openvpn" &&
+			image.IntelligenceStatus == "passed" && image.Provider != "" && image.QueriedAt != "" && image.RuleVersion != "" && image.IP != "" &&
+			image.IP == item.Protocols.OpenVPN.ExpectedExitIP && expiryErr == nil && expiry.After(time.Now()) {
+			ipType = image.IPType
+			if image.ISP != nil {
+				isp = *image.ISP
+			}
+			if image.ASN != nil {
+				asn = *image.ASN
+			}
+			expected = image.IP
+		}
+		residential := ipType == "strict_residential" || ipType == "likely_residential"
+		var publicImage *EgressProfile
+		if expected != "" {
+			image.Raw = nil
+			publicImage = &image
+		}
 		nodes = append(nodes, Node{
 			HostName:          item.Hostname,
 			IP:                item.ServerIP,
@@ -98,9 +118,10 @@ func fetchNodesFromValidatedPool(poolPath string) ([]Node, error) {
 			Config:            string(config),
 			PoolNodeID:        item.NodeID,
 			IPType:            ipType,
-			ISP:               item.Protocols.SSTP.Egress.ISP,
-			ASN:               item.Protocols.SSTP.Egress.ASN,
-			ExpectedExitIP:    firstNonEmpty(item.Protocols.OpenVPN.ExpectedExitIP, item.Protocols.SSTP.ExpectedExitIP),
+			ISP:               isp,
+			ASN:               asn,
+			ExpectedExitIP:    expected,
+			OpenVPNEgress:     publicImage,
 			SSTPStatus:        item.Protocols.SSTP.Status,
 			OpenVPNStatus:     item.Protocols.OpenVPN.Status,
 			FullChainVerified: item.ModeA.Status == "passed",
@@ -126,15 +147,6 @@ func fetchNodesFromValidatedPool(poolPath string) ([]Node, error) {
 		return nodes[i].SpeedMbps > nodes[j].SpeedMbps
 	})
 	return nodes, nil
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 func withinDir(base, path string) bool {

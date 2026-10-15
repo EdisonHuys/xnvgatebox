@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -15,10 +14,12 @@ import (
 type webServer struct {
 	handler http.Handler
 
-	mu   sync.Mutex
-	ln   net.Listener
-	srv  *http.Server
-	addr string
+	mu              sync.Mutex
+	ln              net.Listener
+	srv             *http.Server
+	addr            string
+	prepareListener func(WebSettings) (*preparedManagementListener, error)
+	managementHook  func(string) error
 }
 
 func newWebServer(h http.Handler) *webServer {
@@ -39,12 +40,15 @@ func (s *webServer) serve() error {
 // reload 切换到新的监听地址：先探测能否绑上，绑得上再关旧的、启新的。
 // 绑不上就保持旧监听不动，返回错误让调用方回报给用户。
 func (s *webServer) reload(cfg WebSettings) error {
-	addr := cfg.listenAddrString()
-
-	ln, err := net.Listen("tcp", addr)
+	prepared, err := s.prepareManagementListener(cfg)
 	if err != nil {
-		return fmt.Errorf("无法监听 %s：%w", addr, err)
+		return err
 	}
+	prepared.activate()
+	return nil
+}
+
+func (s *webServer) activateListener(ln net.Listener, addr string) {
 
 	s.mu.Lock()
 	oldSrv := s.srv
@@ -74,36 +78,11 @@ func (s *webServer) reload(cfg WebSettings) error {
 	}
 
 	log.Printf("管理界面监听已切换到 %s", addr)
-	return nil
 }
 
 // applyWebSettings 校验、落盘并切换监听。任一步失败都不改动线上监听。
 func (s *webServer) applyWebSettings(next WebSettings) error {
-	if err := validatePort(next.Port); err != nil {
-		return err
-	}
-	norm, err := normalizeListenAddr(next.ListenAddr)
-	if err != nil {
-		return err
-	}
-	next.ListenAddr = norm
-
-	cur := getWebSettings()
-	// 端口和监听地址都没变就只需要确保已生效，避免无谓重绑
-	if next.Port == cur.Port && next.ListenAddr == cur.ListenAddr {
-		return nil
-	}
-
-	if err := s.reload(next); err != nil {
-		return err
-	}
-
-	webSettingsMu.Lock()
-	webSettingsCur = next
-	webSettingsMu.Unlock()
-	if err := saveWebSettings(); err != nil {
-		log.Printf("保存 Web 设置失败: %v", err)
-		return err
-	}
-	return nil
+	managementMu.Lock()
+	defer managementMu.Unlock()
+	return commitManagementSettings(nil, s, next, nil, nil)
 }
