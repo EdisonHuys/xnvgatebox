@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", default="v0.3.0")
+    parser.add_argument("--version", default="v0.3.1")
     parser.add_argument("--manager", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / "dist")
     args = parser.parse_args()

@@ -105,8 +105,8 @@ func TestRestoreStateReadsPrevHost(t *testing.T) {
 	tn.Status = "stopped"
 }
 
-// 老版本的状态文件里没有这个字段，读出来该是空的，不能误触发改绑。
-func TestRestoreStateOldFormatHasNoPrevHost(t *testing.T) {
+// 干净关闭也要保留原绑定，恢复时可能因节点离线而换候选。
+func TestRestoreStateArmsBindingEvenAfterCleanShutdown(t *testing.T) {
 	dir := t.TempDir()
 	blob := `{"tunnels":[{"slot":1,"port":12345,"hostname":"vpn-a","country_code":"JP","config":"x","socks_user":"u","socks_pass":"p"}]}`
 	if err := os.WriteFile(filepath.Join(dir, "state.json"), []byte(blob), 0600); err != nil {
@@ -119,8 +119,8 @@ func TestRestoreStateOldFormatHasNoPrevHost(t *testing.T) {
 	m.mu.RLock()
 	tn := m.tunnels[1]
 	m.mu.RUnlock()
-	if got := tn.prevHostOf(); got != "" {
-		t.Fatalf("老格式不该带标记，实际 %q", got)
+	if got := tn.prevHostOf(); got != "vpn-a" {
+		t.Fatalf("恢复需记住原绑定节点，实际 %q", got)
 	}
 	tn.Status = "stopped"
 }
@@ -132,4 +132,27 @@ func containsStr(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+func TestRestoreStatePrefersCurrentPoolProfile(t *testing.T) {
+	dir := t.TempDir()
+	blob := `{"tunnels":[{"slot":2,"port":17929,"hostname":"vpn-a","country_code":"KR","config":"stale-profile","socks_user":"u","socks_pass":"p"}]}`
+	if err := os.WriteFile(filepath.Join(dir, "state.json"), []byte(blob), 0600); err != nil {
+		t.Fatal(err)
+	}
+	m := NewManager(3, dir)
+	m.nodes = []Node{{HostName: "vpn-a", CountryCode: "KR", Config: "current-pool-profile"}}
+	if _, err := m.restoreState(); err != nil {
+		t.Fatal(err)
+	}
+	m.mu.RLock()
+	tn := m.tunnels[2]
+	m.mu.RUnlock()
+	defer func() { tn.Status = "stopped" }()
+	if tn.Node.Config != "current-pool-profile" {
+		t.Fatal("stale saved profile replaced current pool profile")
+	}
+	if tn.Port != 17929 || tn.Slot != 2 || tn.prevHostOf() != "vpn-a" {
+		t.Fatal("restored Slot lost identity or original binding")
+	}
 }

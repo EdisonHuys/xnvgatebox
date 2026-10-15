@@ -96,7 +96,12 @@ func (m *Manager) restoreState() (int, error) {
 				Country:     p.Country,
 			}
 		}
-		node.Config = p.Config
+		// Prefer the current shared-pool profile when the node has changed IP
+		// or configuration since the last restart. Keep the saved profile only
+		// for nodes no longer present in the pool.
+		if node.Config == "" {
+			node.Config = p.Config
+		}
 		// 从旧版本升上来的状态文件没有凭据字段，补一套新的
 		cred := SocksCred{User: p.SocksUser, Pass: p.SocksPass}
 		if cred.User == "" || cred.Pass == "" {
@@ -113,7 +118,13 @@ func (m *Manager) restoreState() (int, error) {
 			Status: "starting",
 			Cred:   cred,
 		}
-		t.setPrevHost(p.PrevHost)
+		bindingHost := p.PrevHost
+		if bindingHost == "" {
+			// Recovery may choose another candidate even when shutdown was
+			// clean. Remember the original binding so it follows this Slot.
+			bindingHost = p.HostName
+		}
+		t.setPrevHost(bindingHost)
 		m.mu.Lock()
 		m.tunnels[p.Slot] = t
 		m.mu.Unlock()
