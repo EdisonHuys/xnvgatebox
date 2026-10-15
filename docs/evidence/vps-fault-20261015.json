@@ -1,0 +1,41 @@
+{
+  "fault": {
+    "source": "external VLESS client from subscription",
+    "slot": 1,
+    "public_port": 30001,
+    "socks_port": 17928,
+    "baseline_exit_ip": "219.107.54.157",
+    "blocked": true,
+    "after_kill": [
+      {
+        "returncode": 35,
+        "response": ""
+      },
+      {
+        "returncode": 35,
+        "response": ""
+      }
+    ],
+    "verified_at": "2026-10-15T00:10:10.109744+00:00"
+  },
+  "recovery": {
+    "slot": 1,
+    "socks_port": 17928,
+    "expected_exit_ip": "219.107.54.157",
+    "status": "up",
+    "country": "JP",
+    "public_port": 30001,
+    "actual_exit_ips": [
+      "219.107.54.157",
+      "219.107.54.157"
+    ],
+    "content_passed": true,
+    "passed": true,
+    "errors": [
+      null,
+      null
+    ],
+    "source": "external-client-from-subscription",
+    "verified_at": "2026-10-15T00:11:24.842395+00:00"
+  }
+}

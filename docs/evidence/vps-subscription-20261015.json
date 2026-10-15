@@ -1,0 +1,71 @@
+{
+  "subscription_count": 3,
+  "ports": [
+    30001,
+    30002,
+    30003
+  ],
+  "all_three_passed": true,
+  "nodes": [
+    {
+      "slot": 1,
+      "socks_port": 17928,
+      "expected_exit_ip": "219.107.54.157",
+      "status": "up",
+      "country": "JP",
+      "public_port": 30001,
+      "actual_exit_ips": [
+        "219.107.54.157",
+        "219.107.54.157"
+      ],
+      "content_passed": true,
+      "passed": true,
+      "errors": [
+        null,
+        null
+      ],
+      "source": "external-client-from-subscription",
+      "verified_at": "2026-10-15T00:09:28.044184+00:00"
+    },
+    {
+      "slot": 2,
+      "socks_port": 17929,
+      "expected_exit_ip": "121.130.89.23",
+      "status": "up",
+      "country": "KR",
+      "public_port": 30002,
+      "actual_exit_ips": [
+        "121.130.89.23",
+        "121.130.89.23"
+      ],
+      "content_passed": true,
+      "passed": true,
+      "errors": [
+        null,
+        null
+      ],
+      "source": "external-client-from-subscription",
+      "verified_at": "2026-10-15T00:09:40.228481+00:00"
+    },
+    {
+      "slot": 3,
+      "socks_port": 17930,
+      "expected_exit_ip": "95.55.44.105",
+      "status": "up",
+      "country": "RU",
+      "public_port": 30003,
+      "actual_exit_ips": [
+        "95.55.44.105",
+        "95.55.44.105"
+      ],
+      "content_passed": true,
+      "passed": true,
+      "errors": [
+        null,
+        null
+      ],
+      "source": "external-client-from-subscription",
+      "verified_at": "2026-10-15T00:09:49.674401+00:00"
+    }
+  ]
+}

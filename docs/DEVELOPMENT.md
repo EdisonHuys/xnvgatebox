@@ -1,5 +1,8 @@
 # 当前开发方向（2026-10-15）
 
+
+2026-10-15 VPS 实测更新：`v0.3.1` 已在测试机部署，三个固定 SOCKS Slot 及 `30001/30002/30003` 三个 VLESS/REALITY 入站通过同一个真实订阅完成外部验活；重启自动恢复绑定、强杀后阻断及端到端自动恢复通过。当前出口类型仍 unknown，ISP/家宽认定不在已完成项内。完整结果见 [VPS_STANDALONE_VALIDATION.md](VPS_STANDALONE_VALIDATION.md)。
+
 用户决定暂停 Cloudflare 模式，备份并撤下线上 Worker，全力开发 VPS Standalone。以下旧 Mode A / Hybrid 章节作为历史设计保留，不再是当前交付目标；不得新增 Cloudflare 部署或恢复其定时发布。
 
 当前交付链路：官方全量来源 → 统一 Python Pool Builder → VPS 本地候选池 → 独立 OpenVPN namespace → 固定 SOCKS Slot → 内置 Xray → 一个聚合订阅。管理与订阅共用 VPS 上的一个进程，不要求 3x-ui、Cloudflare 或 GitHub Actions 凭据。
