@@ -52,14 +52,15 @@ jobs:
           assert build['git_head']==pathlib.Path('source-sha').read_text().strip(), 'Package is from another commit'
           assert build['source_dirty'] is False and build['manager_origin']=='built_from_source', 'Release requires a clean source build'
           PYCODE
-          if gh release view "$RELEASE_TAG" --json isDraft > existing-release.json 2>/dev/null; then
-            python3 - <<'PYCODE'
-          import json
-          assert json.load(open('existing-release.json'))['isDraft'], 'Refusing to overwrite a published release'
-          PYCODE
-          fi
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          if ! gh release view "$RELEASE_TAG" --json isDraft,targetCommitish > existing-release.json; then
             gh release create "$RELEASE_TAG" --target "$(cat source-sha)" --draft --title "xnvgatebox $RELEASE_TAG" --notes 'VPS Standalone. See repository README for installation and validation limits.'
+            gh release view "$RELEASE_TAG" --json isDraft,targetCommitish > existing-release.json
           fi
+          python3 - <<'PYCODE'
+          import json,pathlib
+          release=json.load(open('existing-release.json'))
+          assert release['isDraft'], 'Refusing to overwrite a published release'
+          assert release['targetCommitish']==pathlib.Path('source-sha').read_text().strip(), 'Draft targets another commit'
+          PYCODE
           gh release upload "$RELEASE_TAG" package/xnvgatebox-linux-amd64.tar.gz package/checksums.txt --clobber
           gh release edit "$RELEASE_TAG" --draft=false --latest
