@@ -1,0 +1,237 @@
+{
+  "status": "passed",
+  "release": "v0.4.0",
+  "release_url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.4.0",
+  "recorded_at": "2026-10-16T04:12:55.032265+00:00",
+  "source_commit": "371174dd309b5ba537a884360e788a26f2b07049",
+  "merge_commit": "46814c792ccc3030fa28ac42c59775c906b99f26",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/1",
+  "candidate_run": "https://github.com/hanhaoops/xnvgatebox/actions/runs/38848624904",
+  "publication_run": "https://github.com/hanhaoops/xnvgatebox/actions/runs/38849361368",
+  "candidate_validation": {
+    "status": "passed",
+    "run_id": 38848624904,
+    "sha256": "d6d1b8203a9fcd16a3ab6a5eb6de9b945264e61f4e2624456c1bf71283ecc9a0",
+    "build": {
+      "git_head": "371174dd309b5ba537a884360e788a26f2b07049",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "cfd9d776b56d66bed7657e5b4ed8da1e8b81667b1301bbdb1c747f87880420ba",
+      "version": "v0.4.0",
+      "xray_version": "v26.3.27"
+    },
+    "checks": {
+      "clean_candidate": "passed",
+      "wrong_version": "correctly_rejected",
+      "wrong_commit": "correctly_rejected"
+    }
+  },
+  "regressions": {
+    "mac_python_passed": 62,
+    "node_boundary_passed": 29,
+    "node_unified_worker": "passed",
+    "github_python_versions": [
+      "3.9",
+      "3.12"
+    ],
+    "linux_top_level_passed": 185,
+    "linux_pass_events": 237,
+    "linux_fail_events": 0,
+    "explicit_live_cases_on_runner": "four top-level skips; real VPS coverage retained in vps-migration-mac-20261015.json"
+  },
+  "candidate_installation_smoke": {
+    "status": "passed",
+    "verified_at": "2026-10-16T04:05:47.143426Z",
+    "build": {
+      "git_head": "371174dd309b5ba537a884360e788a26f2b07049",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "cfd9d776b56d66bed7657e5b4ed8da1e8b81667b1301bbdb1c747f87880420ba",
+      "version": "v0.4.0",
+      "xray_version": "v26.3.27"
+    },
+    "checks": {
+      "management_password_preserved": true,
+      "management_path_preserved": true,
+      "subscription_token_preserved": true,
+      "default_type_policy_preserved": true,
+      "management_listener_preserved": true,
+      "slot_identity_and_credentials_preserved": true,
+      "inbound_clients_and_keys_preserved": true,
+      "explicit_slot_policies_preserved": true,
+      "xui_files_unchanged": true,
+      "xnvgatebox-fanout_active": true,
+      "xnvgatebox-pool.timer_active": true,
+      "x-ui_active": true,
+      "no_pending_transactions": true,
+      "installed_archive_matches_candidate": true,
+      "clean_commit_and_version_installed": true
+    },
+    "slots": [
+      {
+        "slot": 1,
+        "socks_port": 17928,
+        "status": "up",
+        "actual_exit_ip": "219.107.54.157",
+        "country": "JP",
+        "ip_type": "unknown"
+      },
+      {
+        "slot": 2,
+        "socks_port": 17929,
+        "status": "up",
+        "actual_exit_ip": "118.41.251.223",
+        "country": "KR",
+        "ip_type": "unknown"
+      },
+      {
+        "slot": 3,
+        "socks_port": 17930,
+        "status": "up",
+        "actual_exit_ip": "221.158.213.241",
+        "country": "KR",
+        "ip_type": "unknown"
+      }
+    ],
+    "cloudflare_operations": 0
+  },
+  "candidate_server_local_subscription": {
+    "status": "passed",
+    "source": "server-local-public-client",
+    "verified_at": "2026-10-16T04:05:50.348006Z",
+    "nodes": [
+      {
+        "slot": 1,
+        "socks_port": 17928,
+        "public_port": 30001,
+        "expected_exit_ip": "219.107.54.157",
+        "ip_type": "unknown",
+        "actual_exit_ips": [
+          "219.107.54.157",
+          "219.107.54.157",
+          "219.107.54.157",
+          "219.107.54.157"
+        ],
+        "socks_exit_ips": [
+          "219.107.54.157",
+          "219.107.54.157",
+          "219.107.54.157",
+          "219.107.54.157"
+        ],
+        "status": "passed"
+      },
+      {
+        "slot": 2,
+        "socks_port": 17929,
+        "public_port": 30002,
+        "expected_exit_ip": "118.41.251.223",
+        "ip_type": "unknown",
+        "actual_exit_ips": [
+          "118.41.251.223",
+          "118.41.251.223",
+          "118.41.251.223",
+          "118.41.251.223"
+        ],
+        "socks_exit_ips": [
+          "118.41.251.223",
+          "118.41.251.223",
+          "118.41.251.223",
+          "118.41.251.223"
+        ],
+        "status": "passed"
+      },
+      {
+        "slot": 3,
+        "socks_port": 17930,
+        "public_port": 30003,
+        "expected_exit_ip": "221.158.213.241",
+        "ip_type": "unknown",
+        "actual_exit_ips": [
+          "221.158.213.241",
+          "221.158.213.241",
+          "221.158.213.241",
+          "221.158.213.241"
+        ],
+        "socks_exit_ips": [
+          "221.158.213.241",
+          "221.158.213.241",
+          "221.158.213.241",
+          "221.158.213.241"
+        ],
+        "status": "passed"
+      }
+    ]
+  },
+  "candidate_mac_external_subscription": {
+    "status": "passed",
+    "source": "external-client",
+    "verified_at": "2026-10-16T04:08:04.135981Z",
+    "nodes": [
+      {
+        "slot": 1,
+        "socks_port": 17928,
+        "public_port": 30001,
+        "expected_exit_ip": "219.107.54.157",
+        "ip_type": "unknown",
+        "actual_exit_ips": [
+          "219.107.54.157",
+          "219.107.54.157",
+          "219.107.54.157",
+          "219.107.54.157"
+        ],
+        "status": "passed"
+      },
+      {
+        "slot": 2,
+        "socks_port": 17929,
+        "public_port": 30002,
+        "expected_exit_ip": "118.41.251.223",
+        "ip_type": "unknown",
+        "actual_exit_ips": [
+          "118.41.251.223",
+          "118.41.251.223",
+          "118.41.251.223",
+          "118.41.251.223"
+        ],
+        "status": "passed"
+      },
+      {
+        "slot": 3,
+        "socks_port": 17930,
+        "public_port": 30003,
+        "expected_exit_ip": "221.158.213.241",
+        "ip_type": "unknown",
+        "actual_exit_ips": [
+          "221.158.213.241",
+          "221.158.213.241",
+          "221.158.213.241",
+          "221.158.213.241"
+        ],
+        "status": "passed"
+      }
+    ]
+  },
+  "complete_pre_candidate_backup": {
+    "local_copy_verified": true,
+    "sha256": "f8b28de08c62352a3dd64db1befc7c2e3436bc5f451c06a3228c724669b53f39"
+  },
+  "cloudflare": {
+    "left_paused": true,
+    "deployment_or_schedule_enable_operations": 0
+  },
+  "classification": {
+    "actual_ip_type": "unknown",
+    "residential_acceptance": false,
+    "isp_asn_acceptance": false
+  },
+  "limits": [
+    "Upstream country availability is not guaranteed; unavailable candidates do not by themselves imply a program defect.",
+    "No phone-network, UDP, IPv6 or residential acceptance is claimed.",
+    "Native Xray applies configuration by restarting the whole process; existing connections may be interrupted."
+  ],
+  "public_download": {
+    "status": "passed",
+    "sha256_matches_accepted_candidate": true,
+    "latest_release": "v0.4.0"
+  }
+}

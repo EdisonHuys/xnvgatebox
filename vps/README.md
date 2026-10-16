@@ -99,14 +99,14 @@ python3 scripts/toolbox.py --config config/settings.json --env-file /path/intell
 
 ## 验收与限制
 
-先通过 Slot 的两个 HTTPS expected 探测，再通过 SOCKS 检查 actual 出口并排除母机 IP。客户端全链路仍需实际连接对应公开 Xray 入站确认。类型未知显示 unknown，技术连通不能等同于住宅类型证明。本开发分支已完成真实 VPS 画像国家证据、策略、迁移、订阅和故障恢复验收，尚未正式发布；具体成功、失败及未覆盖范围见 [Mac 实测](../docs/VPS_UPGRADE_VALIDATION.md#2026-10-15-mac-实测)。
+先通过 Slot 的两个 HTTPS expected 探测，再通过 SOCKS 检查 actual 出口并排除母机 IP。客户端全链路仍需实际连接对应公开 Xray 入站确认。类型未知显示 unknown，技术连通不能等同于住宅类型证明。v0.4.0 已发布，并完成真实 VPS 画像国家证据、策略、迁移、订阅和故障恢复验收；具体成功、失败及未覆盖范围见 [Mac 实测](../docs/VPS_UPGRADE_VALIDATION.md#2026-10-15-mac-实测)。
 
 源码中保留原 MIT 许可证和来源记录于 `fanout/UPSTREAM.md`。内部旧目录、兼容环境变量和服务名暂保留，用户入口统一叫 xnvgatebox。
 
 
 ## 配置事务与回滚
 
-以下为未发布开发版本能力，历史 v0.3.1 的三 Slot 验收不覆盖这些改动。
+以下能力已随 v0.4.0 发布，真实恢复与迁移记录见 [迁移验证](../docs/VPS_UPGRADE_VALIDATION.md)；历史 v0.3.1 的三 Slot 验收不覆盖这些改动。
 
 - 内置 Xray 入站、客户端及绑定变更使用副本生成 `0600` 候选 JSON，先调用 Xray 静态校验，再替换进程和提交配置。校验失败不停止旧进程；后续失败恢复旧文件并用**当前 Slot 状态**重建路由。恢复失败则停止 Xray、拒绝生成可用链接，并保留恢复记录。
 - 受管文件通过临时文件、fsync、rename 和私有 undo 记录提交。`.native-transaction.json` 管理 `native.json`、`xray.json`、`native.previous.json`；`.state-transaction.json` 管理 `state.json`；`.management-transaction.json` 管理 `settings.json`、`password`、`basepath`。启动加载相应配置前恢复未完成事务；损坏或不匹配的恢复记录导致报错，不回退到默认配置。这些文件含凭据，不能公开或加入源码。
