@@ -62,16 +62,20 @@ func probeSocksPair(command func(string) ([]byte, error)) (string, float64, erro
 		if err != nil {
 			return nil, err
 		}
-		parts := strings.Split(strings.TrimSpace(string(out)), "\n")
-		if len(parts) != 2 {
+		// curl appends the timing after the response body. Echo services may
+		// already end that body with a newline (for example icanhazip), so
+		// only the final separator belongs to --write-out.
+		response := strings.TrimSpace(string(out))
+		separator := strings.LastIndexByte(response, '\n')
+		if separator < 0 {
 			return nil, fmt.Errorf("SOCKS 出口和延迟响应异常")
 		}
-		seconds, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+		seconds, err := strconv.ParseFloat(strings.TrimSpace(response[separator+1:]), 64)
 		if err != nil || seconds <= 0 || math.IsNaN(seconds) || math.IsInf(seconds, 0) {
 			return nil, fmt.Errorf("SOCKS 延迟响应异常")
 		}
 		maximum = math.Max(maximum, seconds*1000)
-		return []byte(parts[0]), nil
+		return []byte(strings.TrimSpace(response[:separator])), nil
 	})
 	return ip, maximum, err
 }

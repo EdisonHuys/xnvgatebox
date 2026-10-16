@@ -60,6 +60,17 @@ def passing_factory(profile, binary, timeout):
 
 
 class VpsAcceptanceTests(unittest.TestCase):
+    def test_unbound_slot_null_inbounds_reports_not_ready(self):
+        manager = a.LocalManager.__new__(a.LocalManager)
+        manager.opener = object()
+        manager.base = "http://127.0.0.1:8899/fixture/"
+        view = {"backend": "native", "panel": "", "public_ip": "8.8.8.8",
+                "exits": [{"slot": i, "status": "starting", "inbounds": None} for i in range(1, 4)]}
+        with patch.object(a, "request_bytes", return_value=json.dumps(view).encode()) as fetch:
+            with self.assertRaisesRegex(ToolError, "three_live_bound_vless_slots_required"):
+                manager.plan()
+            self.assertEqual(fetch.call_count, 1)
+
     def test_exact_real_link_fields_and_no_direct_outbound(self):
         profile = a.connection_from_native_link(link())
         config = profile.xray_config(19001)

@@ -147,7 +147,7 @@ class LocalManager:
         host = public_ipv4(view["public_ip"])
         rows = []
         for e in sorted(view["exits"], key=lambda e: e["slot"]):
-            inbounds = [i for i in e.get("inbounds", []) if i.get("enable")]
+            inbounds = [i for i in (e.get("inbounds") or []) if i.get("enable")]
             if e.get("status") != "up" or len(inbounds) != 1 or inbounds[0].get("protocol") != "vless":
                 raise ToolError("three_live_bound_vless_slots_required")
             expected = public_ipv4(e["exit_ip"])

@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -163,6 +164,54 @@ func TestSlotPolicyUsesSlowerSocksHTTPSMeasurementNotSourcePing(t *testing.T) {
 	m.nodes = []Node{{HostName: "source-fast", CountryCode: "US", Ping: 1}}
 	if len(m.policyCandidates(p, nil, 0)) != 1 || p.checkLatency(500) == nil {
 		t.Fatal("source ping used as measured SOCKS latency")
+	}
+}
+
+func TestSocksProbeAcceptsEchoTrailingNewline(t *testing.T) {
+	for _, ending := range []string{"\n", "\r\n"} {
+		t.Run(strconv.Quote(ending), func(t *testing.T) {
+			calls := 0
+			ip, latency, err := probeSocksPair(func(string) ([]byte, error) {
+				calls++
+				if calls == 1 {
+					return []byte("73.1.1.1\n0.050"), nil
+				}
+				return []byte("73.1.1.1" + ending + "\n0.350"), nil
+			})
+			if err != nil || ip != "73.1.1.1" || latency != 350 || calls != 2 {
+				t.Fatal("valid newline-terminated echo rejected or timing lost")
+			}
+		})
+	}
+	for _, body := range []string{"73.1.1.1\n8.8.8.8", "73.1.1.1\nunexpected", ""} {
+		if _, _, err := probeSocksPair(func(string) ([]byte, error) { return []byte(body + "\n0.100"), nil }); err == nil {
+			t.Fatal("malformed echo body accepted")
+		}
+	}
+}
+
+func TestCandidateBudgetDoesNotStarveUntriedNodesAfterCooldown(t *testing.T) {
+	m := NewManager(3, t.TempDir())
+	p := SlotPolicy{Country: "JP", AllowedIPTypes: []string{"unknown"}}
+	failed := map[string]time.Time{"current": time.Now().Add(-time.Second)}
+	for i := 0; i < 10; i++ {
+		host := "candidate-" + strconv.Itoa(i)
+		m.nodes = append(m.nodes, Node{HostName: host, CountryCode: "JP", SpeedMbps: float64(100 - i)})
+		if i < 5 {
+			failed[host] = time.Now().Add(-time.Second)
+		}
+	}
+	tunnel := &Tunnel{Slot: 1, Status: "waiting_for_nodes", Policy: &p,
+		Node: Node{HostName: "current", CountryCode: "JP"}, cooldown: failed}
+	m.tunnels[1] = tunnel
+	got := m.candidatesFor(tunnel)
+	if len(got) != 6 || got[0].HostName != "current" {
+		t.Fatal("current candidate preference or round budget changed")
+	}
+	for i := 1; i < len(got); i++ {
+		if got[i].HostName != "candidate-"+strconv.Itoa(i+4) {
+			t.Fatal("expired high-ranked failures starved untried candidates")
+		}
 	}
 }
 

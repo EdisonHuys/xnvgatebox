@@ -420,7 +420,20 @@ func (m *Manager) candidatesFor(t *Tunnel) []Node {
 	if first.HostName != "" && !m.nodeInUse(first.HostName, t.Slot) && eligible(first) {
 		out = append(out, first)
 	}
-	for _, n := range m.policyCandidates(policy, avoid, t.Slot) {
+	candidates := m.policyCandidates(policy, avoid, t.Slot)
+	t.mu.Lock()
+	failedUntil := make(map[string]time.Time, len(t.cooldown))
+	for host, until := range t.cooldown {
+		failedUntil[host] = until
+	}
+	t.mu.Unlock()
+	// A round can outlast the cooldown. Keep untried candidates ahead of
+	// expired failures so the six-probe budget cannot starve the rest of the
+	// pool by retrying the same highest-ranked failures every round.
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return failedUntil[candidates[i].HostName].Before(failedUntil[candidates[j].HostName])
+	})
+	for _, n := range candidates {
 		if len(out) >= 6 {
 			break
 		}
