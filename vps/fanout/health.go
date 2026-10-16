@@ -18,11 +18,27 @@ func (m *Manager) WatchHealth() {
 
 	for range time.Tick(healthInterval) {
 		for _, t := range m.Tunnels() {
-			if t.Status != "up" {
+			t.mu.Lock()
+			status := t.Status
+			t.mu.Unlock()
+			if status != "up" {
+				continue
+			}
+			if t.snapshot().Status == "blocked" {
+				t.blockForPolicy("画像证据已过期或不满足当前策略")
+				m.reconnect(t, t.snapshot().Node.HostName)
 				continue
 			}
 			if m.tunnelHealthy(t) {
 				fails[t.Slot] = 0
+				continue
+			}
+			t.mu.Lock()
+			blocked := t.Status == "blocked"
+			t.mu.Unlock()
+			if blocked {
+				fails[t.Slot] = 0
+				m.reconnect(t, t.Node.HostName)
 				continue
 			}
 
@@ -45,12 +61,32 @@ func (m *Manager) WatchHealth() {
 // openvpn 死掉后照样能出网，只是出口变回了母机 IP。
 // 所以要比对出口 IP 是否仍是建立隧道时拿到的那个。
 func (m *Manager) tunnelHealthy(t *Tunnel) bool {
-	got, err := t.probeSocksExitIP()
+	t.opMu.Lock()
+	defer t.opMu.Unlock()
+	ctx := t.workContext()
+	got, latency, err := t.probeSocksExitIPWithLatency()
 	if err != nil {
 		return false
 	}
+	if ctx.Err() != nil {
+		return false
+	}
 	// 出口 IP 变了说明 VPN 已经断开，流量退回了母机
-	return got == t.ExitIP
+	if got != t.ExitIP {
+		t.blockForPolicy("实际出口 IP 已变化，必须重新建立基线")
+		return false
+	}
+	if t.Policy != nil {
+		image := t.egressSnapshot(false)
+		if image == nil || t.policySnapshot().checkImage(*image) != nil || t.policySnapshot().checkLatency(latency) != nil {
+			t.blockForPolicy("当前画像或本机 SOCKS 延迟不满足 Slot 策略")
+			return false
+		}
+	}
+	t.mu.Lock()
+	t.LatencyMS = latency
+	t.mu.Unlock()
+	return true
 }
 
 // reconnect 就地把一条隧道换到别的节点上，保持槽位与端口不变，
@@ -60,47 +96,64 @@ func (m *Manager) tunnelHealthy(t *Tunnel) bool {
 // 改过 t.Node（比如手动换节点），就要把改之前的名字传进来，
 // 否则 rebind 找不到旧绑定，入站会掉成孤儿。
 func (m *Manager) reconnect(t *Tunnel, oldHost string) {
-	t.Status = "starting"
-	t.Err = "正在换节点重连"
-	t.ExitIP = ""
+	t.changeMu.Lock()
+	defer t.changeMu.Unlock()
+	t.mu.Lock()
+	up := t.Status == "up" || t.Status == "blocked"
+	t.mu.Unlock()
+	if !up {
+		return
+	}
+	m.reconnectTo(t, oldHost, nil)
+}
 
-	// 动手之前先把"原来绑的是谁"落盘。
-	//
-	// 换节点是两步：连上新节点、再把入站改绑过来。两步之间崩溃或重启的话，
-	// 存盘的隧道已经是新节点、入站却还指着旧节点，那个入站就成了孤儿。
-	// 这条线索留在盘上，重启恢复时能照着把它接回来。
-	t.setPrevHost(oldHost)
+func (m *Manager) reconnectTo(t *Tunnel, oldHost string, node *Node) {
+	t.blockWork()
+	t.opMu.Lock()
+	if !m.tunnelActive(t) {
+		t.opMu.Unlock()
+		return
+	}
+	t.mu.Lock()
+	t.Status, t.Err, t.ExitIP = "starting", "正在按 Slot 策略重新验活", ""
+	if node != nil {
+		t.Node = *node
+	}
+	if t.prevHost == "" {
+		t.prevHost = oldHost
+	}
+	t.mu.Unlock()
 	if err := m.saveState(); err != nil {
 		log.Printf("保存状态失败: %v", err)
 	}
-
-	if t.ovpn != nil && t.ovpn.Process != nil {
-		_ = t.ovpn.Process.Kill()
-		t.ovpn = nil
-	}
 	t.teardownNetns()
-
+	t.resetWork()
+	ctx := t.workContext()
+	t.opMu.Unlock()
 	go func() {
-		// 通知延后到 rebind/resync 之后：那两步会把入站改绑到新节点，
-		// 提前重建配置会因为入站还指着旧节点名而丢掉路由规则
-		m.bringUpPersist(t, false, true)
-		if t.Status != "up" {
+		m.bringUpPersistContext(t, false, true, ctx)
+		if ctx.Err() != nil || t.Status != "up" || !m.tunnelActive(t) {
 			return
 		}
-		// 出站 tag 跟着节点名走，换了节点就要把原来指向它的入站重新绑过去，
-		// 否则面板里的路由会指向一个已经不存在的出站。
-		if t.Node.HostName != oldHost {
-			if err := m.rebind(oldHost, t); err != nil {
-				log.Printf("重连后同步 3x-ui 绑定失败: %v", err)
+		t.opMu.Lock()
+		defer t.opMu.Unlock()
+		if ctx.Err() != nil || !m.tunnelActive(t) {
+			return
+		}
+		bindingHost := t.prevHostOf()
+		if t.Node.HostName != bindingHost {
+			if err := m.rebind(bindingHost, t); err != nil {
+				t.blockForPolicy("绑定配置应用失败，已阻断，请修复配置后重新启动 Slot")
+				_ = m.saveState()
+				log.Printf("重连后同步绑定失败: %v", err)
 				return
 			}
 		} else if err := m.resync(t); err != nil {
-			// 节点名没变也要重写一次出站：出口 IP 可能变了，
-			// 而且上一轮换节点时留下的绑定需要重新指回来。
-			log.Printf("重连后重写 3x-ui 出站失败: %v", err)
+			t.blockForPolicy("出站配置应用失败，已阻断，请修复配置后重新启动 Slot")
+			_ = m.saveState()
+			log.Printf("重连后重写出站失败: %v", err)
 			return
 		}
-		// 入站已经跟过来了，标记可以清了
 		t.setPrevHost("")
 		if err := m.saveState(); err != nil {
 			log.Printf("保存状态失败: %v", err)

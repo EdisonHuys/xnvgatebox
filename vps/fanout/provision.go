@@ -15,6 +15,7 @@ type ProvisionRequest struct {
 	TemplateID int // 3x-ui 入站模板；0 表示只开隧道不建入站
 	// EveryRegion 表示每个有节点的国家都来 Count 个，此时 Region 被忽略。
 	EveryRegion bool
+	Policy      *SlotPolicy
 }
 
 // Provision 异步执行一次批量开出口，立刻返回作业句柄供界面轮询。
@@ -25,13 +26,7 @@ func (m *Manager) Provision(req ProvisionRequest) (*Job, error) {
 	if req.Count < 1 {
 		return nil, fmt.Errorf("数量至少为 1")
 	}
-	var picks []Node
-	var err error
-	if req.EveryRegion {
-		picks, err = m.pickEveryRegion(req.Count)
-	} else {
-		picks, err = m.pickNodes(req.Region, req.Count, nil)
-	}
+	picks, policy, err := m.planProvision(req)
 	if err != nil {
 		return nil, err
 	}
@@ -55,18 +50,22 @@ func (m *Manager) Provision(req ProvisionRequest) (*Job, error) {
 	}
 	job := m.jobs.New(title, labels)
 
-	go m.runProvision(job, picks, req.TemplateID)
+	go m.runProvision(job, picks, req.TemplateID, policy, req.EveryRegion)
 	return job, nil
 }
 
-func (m *Manager) runProvision(job *Job, picks []Node, templateID int) {
+func (m *Manager) runProvision(job *Job, picks []Node, templateID int, policy SlotPolicy, every bool) {
 	defer job.Finish()
 
 	var wg sync.WaitGroup
 	started := make([]*Tunnel, len(picks))
 
 	for i, node := range picks {
-		t, err := m.Start(node)
+		p := policy
+		if every {
+			p.Country = node.CountryCode
+		}
+		t, err := m.StartWithPolicy(node, p)
 		if err != nil {
 			job.Set(i, "failed", err.Error())
 			continue
@@ -118,13 +117,73 @@ func (m *Manager) runProvision(job *Job, picks []Node, templateID int) {
 	job.Set(step, "ok", fmt.Sprintf("已创建 %d 个入站", len(ports)))
 }
 
+// planProvision keeps missing candidates as waiting intent instead of silently
+// selecting another country or relaxing allowed types/ISP/ASN.
+func (m *Manager) planProvision(req ProvisionRequest) ([]Node, SlotPolicy, error) {
+	p := defaultSlotPolicy(req.Region)
+	if req.Policy != nil {
+		p = *req.Policy
+	}
+	if req.Region != "" && p.Country != "" && !strings.EqualFold(req.Region, p.Country) {
+		return nil, p, fmt.Errorf("地区和策略国家冲突")
+	}
+	if req.Region != "" {
+		p.Country = req.Region
+	}
+	var err error
+	p, err = normalizePolicy(p)
+	if err != nil {
+		return nil, p, err
+	}
+	m.mu.RLock()
+	room := m.maxSlots - len(m.tunnels)
+	m.mu.RUnlock()
+	if room <= 0 {
+		return nil, p, fmt.Errorf("Slot 已满；停止保留 Slot，删除才释放")
+	}
+	if req.Count < 1 || req.Count > room {
+		return nil, p, fmt.Errorf("数量超出空闲 Slot 数量")
+	}
+	candidates := m.policyCandidates(p, nil, 0)
+	if !req.EveryRegion {
+		out := make([]Node, 0, req.Count)
+		for _, n := range candidates {
+			if len(out) < req.Count {
+				out = append(out, n)
+			}
+		}
+		for len(out) < req.Count {
+			out = append(out, Node{CountryCode: p.Country, Country: p.Country})
+		}
+		return out, p, nil
+	}
+	if p.Country != "" {
+		return nil, p, fmt.Errorf("每地区模式不能同时固定国家")
+	}
+	out, counts := []Node{}, map[string]int{}
+	for _, n := range candidates {
+		if n.CountryCode == "" || counts[n.CountryCode] >= req.Count {
+			continue
+		}
+		out = append(out, n)
+		counts[n.CountryCode]++
+		if len(out) == room {
+			break
+		}
+	}
+	if len(out) == 0 {
+		return nil, p, fmt.Errorf("没有可发现地区；可直接指定国家创建等待中的 Slot")
+	}
+	return out, p, nil
+}
+
 // waitUp 等一条隧道跑完 bringUp。bringUp 最多试 6 个候选节点，
 // 每个节点等 tun0 最长 40 秒，所以这里给足余量。
 func (m *Manager) waitUp(t *Tunnel) {
 	const maxWait = 5 * time.Minute
 	deadline := time.Now().Add(maxWait)
 	for time.Now().Before(deadline) {
-		if t.Status == "up" || t.Status == "failed" || t.Status == "stopped" {
+		if t.Status == "up" || t.Status == "failed" || t.Status == "waiting_for_nodes" || t.Status == "blocked" || t.Status == "stopped" {
 			return
 		}
 		time.Sleep(time.Second)
@@ -283,7 +342,7 @@ func (m *Manager) Regions() []RegionStat {
 	}
 
 	byCode := map[string]*RegionStat{}
-	for _, n := range m.nodePoolLocked() {
+	for _, n := range m.nodes {
 		if used[n.HostName] || n.CountryCode == "" {
 			continue
 		}

@@ -13,10 +13,14 @@ import (
 // 入站数据存在 native.json，Xray 的运行配置每次改动后整份重新生成。
 // 全量重写比增量改省心：配置是纯函数产物，不会出现改了一半的中间态。
 type Native struct {
-	mu    sync.Mutex
-	dir   string
-	store *nativeStore
-	proc  *xrayProc
+	mu              sync.Mutex
+	dir             string
+	store           *nativeStore
+	proc            *xrayProc
+	committed       *nativeStore
+	runtime         nativeRuntime
+	transactionHook func(string) error
+	unavailable     bool
 }
 
 func openNative(workDir string) (*Native, error) {
@@ -27,17 +31,21 @@ func openNative(workDir string) (*Native, error) {
 	if err != nil {
 		return nil, err
 	}
+	proc := &xrayProc{bin: bin, dir: workDir}
+	proc.reapOrphan()
+	if err := recoverConfigTransaction(workDir, nativeJournal, nativeConfigFiles); err != nil {
+		return nil, err
+	}
 	store, err := loadNativeStore(workDir)
 	if err != nil {
 		return nil, err
 	}
 	n := &Native{
-		dir:   workDir,
-		store: store,
-		proc:  &xrayProc{bin: bin, dir: workDir},
+		dir:       workDir,
+		store:     store,
+		proc:      proc,
+		committed: store,
 	}
-	// 上次进程被强杀时遗留的 Xray 还占着入站端口，先收掉
-	n.proc.reapOrphan()
 	return n, nil
 }
 
@@ -45,28 +53,6 @@ func (n *Native) Kind() string { return "native" }
 
 func (n *Native) Describe() string {
 	return fmt.Sprintf("xnvgatebox 内置 Xray（%s）", n.proc.bin)
-}
-
-// apply 重新生成配置并重启 Xray，然后落盘。
-// 调用方必须已持有 n.mu。
-func (n *Native) apply(tunnels []*Tunnel) error {
-	cfg := buildXrayConfig(n.store.sorted(), tunnels)
-	path, err := writeXrayConfig(n.dir, cfg)
-	if err != nil {
-		return err
-	}
-	if err := verifyXrayConfig(n.proc.bin, path); err != nil {
-		return err
-	}
-	// 没有入站时不必留着进程占资源
-	if len(cfg["inbounds"].([]any)) == 0 {
-		n.proc.stop()
-		return n.store.save(n.dir)
-	}
-	if err := n.proc.restart(path); err != nil {
-		return err
-	}
-	return n.store.save(n.dir)
 }
 
 // OnTunnelsChanged 在隧道集合变化后重建配置。自建模式下出站直接由隧道列表
@@ -87,6 +73,9 @@ func (n *Native) Close() {
 func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	if n.unavailable {
+		return nil, fmt.Errorf("配置运行恢复未完成，内置 Xray 保持阻断")
+	}
 
 	list := n.store.sorted()
 	out := make([]Inbound, 0, len(list))
@@ -103,6 +92,9 @@ func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 func (n *Native) InboundDetail(id int, publicHost string) (*InboundDetail, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	if n.unavailable {
+		return nil, fmt.Errorf("配置恢复未完成，订阅服务已阻断")
+	}
 
 	ib := n.store.byID(id)
 	if ib == nil {
@@ -132,6 +124,9 @@ func (n *Native) InboundDetail(id int, publicHost string) (*InboundDetail, error
 func (n *Native) InboundLinks(ids []int, publicHost string) ([]string, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	if n.unavailable {
+		return nil, fmt.Errorf("配置恢复未完成，订阅服务已阻断")
+	}
 
 	var out []string
 	for _, id := range ids {
@@ -149,6 +144,8 @@ func (n *Native) InboundLinks(ids []int, publicHost string) ([]string, error) {
 func (n *Native) Bind(inboundTag string, hostname string, tunnels []*Tunnel) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	var target *Tunnel
 	if hostname != "" {
@@ -188,6 +185,8 @@ func (n *Native) Bind(inboundTag string, hostname string, tunnels []*Tunnel) err
 func (n *Native) Rebind(oldHost string, target *Tunnel, tunnels []*Tunnel) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	oldTag := sanitizeTag(oldHost)
 	newTag := sanitizeTag(target.Node.HostName)
@@ -215,6 +214,8 @@ func (n *Native) ResyncOutbound(t *Tunnel, tunnels []*Tunnel) error {
 func (n *Native) CloneToTunnels(templateID int, hosts []string, tunnels []*Tunnel) ([]int, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	tpl := n.store.byID(templateID)
 	if tpl == nil {
@@ -240,7 +241,7 @@ func (n *Native) CloneToTunnels(templateID int, hosts []string, tunnels []*Tunne
 		}
 		port, err := freeRandomPort(used)
 		if err != nil {
-			return created, err
+			return nil, err
 		}
 		used[port] = true
 
@@ -270,10 +271,10 @@ func (n *Native) CloneToTunnels(templateID int, hosts []string, tunnels []*Tunne
 	}
 
 	if len(created) == 0 {
-		return created, fmt.Errorf("没有可用的隧道")
+		return nil, fmt.Errorf("没有可用的隧道")
 	}
 	if err := n.apply(tunnels); err != nil {
-		return created, err
+		return nil, err
 	}
 	return created, nil
 }
@@ -281,6 +282,8 @@ func (n *Native) CloneToTunnels(templateID int, hosts []string, tunnels []*Tunne
 func (n *Native) DeleteInbounds(ids []int, tunnels []*Tunnel) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	drop := map[int]bool{}
 	for _, id := range ids {
@@ -303,6 +306,8 @@ func (n *Native) DeleteInbounds(ids []int, tunnels []*Tunnel) error {
 func (n *Native) UpdateInbound(id int, patch InboundPatch, tunnels []*Tunnel) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	ib := n.store.byID(id)
 	if ib == nil {
@@ -336,6 +341,8 @@ func (n *Native) UpdateInbound(id int, patch InboundPatch, tunnels []*Tunnel) er
 func (n *Native) AddClient(id int, email string, tunnels []*Tunnel) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	ib := n.store.byID(id)
 	if ib == nil {
@@ -367,6 +374,8 @@ func (n *Native) AddClient(id int, email string, tunnels []*Tunnel) error {
 func (n *Native) DeleteClient(id int, email string, tunnels []*Tunnel) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	ib := n.store.byID(id)
 	if ib == nil {
@@ -393,6 +402,8 @@ func (n *Native) DeleteClient(id int, email string, tunnels []*Tunnel) error {
 func (n *Native) ResetClient(id int, email string, tunnels []*Tunnel) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	ib := n.store.byID(id)
 	if ib == nil {
@@ -452,6 +463,8 @@ var nativeProtocols = map[string]bool{"vless": true, "vmess": true, "trojan": tr
 func (n *Native) CreateInbound(spec NewInboundSpec, tunnels []*Tunnel) (*CreatedInbound, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	finish := n.beginChange()
+	defer finish()
 
 	ns, err := normalizeInboundSpec(spec, n.store.usedPorts())
 	if err != nil {
@@ -498,12 +511,9 @@ func (n *Native) CreateInbound(spec NewInboundSpec, tunnels []*Tunnel) (*Created
 	n.store.Inbounds = append(n.store.Inbounds, ib)
 
 	if err := n.apply(tunnels); err != nil {
-		// 起不来就别把坏入站留在库里
-		n.store.Inbounds = n.store.Inbounds[:len(n.store.Inbounds)-1]
-		n.store.NextID--
-		_ = n.apply(tunnels)
 		return nil, err
 	}
+
 	return &CreatedInbound{
 		ID:       ib.ID,
 		Port:     ib.Port,
@@ -614,6 +624,8 @@ func buildTLS(dir string, spec NewInboundSpec) (*tlsConfig, error) {
 	// 指纹是自签证书唯一能让客户端验过的凭据，算不出来就没法生成可用链接
 	fp, err := certFingerprint(c)
 	if err != nil {
+		os.Remove(c)
+		os.Remove(k)
 		return nil, err
 	}
 	conf.CertSha256 = fp

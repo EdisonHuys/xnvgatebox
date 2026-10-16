@@ -9,7 +9,6 @@ on:
       tag:
         description: 'Release tag'
         required: true
-        default: v0.3.0
         type: string
 permissions:
   actions: read
@@ -37,6 +36,28 @@ jobs:
           PYCODE
           gh run download "$RUN_ID" -n xnvgatebox-linux-amd64 -D package
           (cd package && sha256sum --check checksums.txt)
+          python3 - <<'PYCODE'
+          import hashlib,json,os,pathlib,tarfile
+          with tarfile.open('package/xnvgatebox-linux-amd64.tar.gz') as t:
+              members=t.getmembers()
+              assert all(m.isfile() or m.isdir() for m in members), 'Unexpected archive entry'
+              assert all(not pathlib.PurePosixPath(m.name).is_absolute() and '..' not in pathlib.PurePosixPath(m.name).parts for m in members), 'Unsafe archive path'
+              assert len({m.name for m in members})==len(members), 'Duplicate archive entry'
+              files={m.name:t.extractfile(m).read() for m in members if m.isfile()}
+          sums=json.loads(files['package-sha256.json'])
+          assert set(sums)==set(files)-{'package-sha256.json'}, 'Incomplete package manifest'
+          assert all(hashlib.sha256(files[n]).hexdigest()==h for n,h in sums.items()), 'Package member mismatch'
+          build=json.loads(files['BUILD.json'])
+          assert files['VERSION'].decode().strip()==os.environ['RELEASE_TAG']==build['version'], 'Package version does not match release tag'
+          assert build['git_head']==pathlib.Path('source-sha').read_text().strip(), 'Package is from another commit'
+          assert build['source_dirty'] is False and build['manager_origin']=='built_from_source', 'Release requires a clean source build'
+          PYCODE
+          if gh release view "$RELEASE_TAG" --json isDraft > existing-release.json 2>/dev/null; then
+            python3 - <<'PYCODE'
+          import json
+          assert json.load(open('existing-release.json'))['isDraft'], 'Refusing to overwrite a published release'
+          PYCODE
+          fi
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --target "$(cat source-sha)" --draft --title "xnvgatebox $RELEASE_TAG" --notes 'VPS Standalone. See repository README for installation and validation limits.'
           fi

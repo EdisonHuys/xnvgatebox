@@ -62,6 +62,9 @@ func NewAuth(dir string) (*Auth, bool, error) {
 	} else if err != nil {
 		return nil, false, err
 	}
+	if strings.TrimSpace(string(blob)) == "" {
+		return nil, false, fmt.Errorf("已有管理口令文件为空，拒绝无口令启动")
+	}
 
 	return &Auth{
 		dir:      dir,

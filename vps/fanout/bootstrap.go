@@ -30,12 +30,13 @@ func startConfiguredSlot(m *Manager) {
 			}
 		}
 	} else {
-		picks, err := m.pickNodes(region, 1, nil)
-		if err != nil {
-			log.Printf("初始 Exit Slot 没有候选: %v", err)
-			return
+		picks := m.policyCandidates(defaultSlotPolicy(region), nil, 0)
+		if len(picks) > 0 {
+			selected = picks[0]
+		} else {
+			selected = Node{CountryCode: region, Country: region}
 		}
-		selected, found = picks[0], true
+		found = true
 	}
 	if !found {
 		log.Printf("初始 Exit Slot 找不到节点: region=%s host=%s", region, host)

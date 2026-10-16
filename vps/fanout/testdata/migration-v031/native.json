@@ -1,0 +1,104 @@
+{
+  "next_id": 4,
+  "inbounds": [
+    {
+      "id": 1,
+      "port": 30001,
+      "protocol": "vless",
+      "network": "tcp",
+      "path": "",
+      "host": "",
+      "security": "reality",
+      "reality": {
+        "dest": "127.0.0.1:443",
+        "server_names": [
+          "fixture.example.invalid"
+        ],
+        "private_key": "dwdtCnMYpX08FsFyUbJmRd9ML4frwJkqsXf7pR25LCo",
+        "public_key": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo",
+        "short_ids": [
+          "0123456789abcdef"
+        ],
+        "fingerprint": "chrome"
+      },
+      "remark": "fixture-1",
+      "enable": true,
+      "clients": [
+        {
+          "email": "fixture-client-1",
+          "id": "12345678-1234-4123-8123-123456789ab1",
+          "password": "fixture-unused-password-1",
+          "enable": true,
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "bound_to": "fixture-node-1"
+    },
+    {
+      "id": 2,
+      "port": 30002,
+      "protocol": "vless",
+      "network": "tcp",
+      "path": "",
+      "host": "",
+      "security": "reality",
+      "reality": {
+        "dest": "127.0.0.1:443",
+        "server_names": [
+          "fixture.example.invalid"
+        ],
+        "private_key": "dwdtCnMYpX08FsFyUbJmRd9ML4frwJkqsXf7pR25LCo",
+        "public_key": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo",
+        "short_ids": [
+          "0123456789abcdef"
+        ],
+        "fingerprint": "chrome"
+      },
+      "remark": "fixture-2",
+      "enable": true,
+      "clients": [
+        {
+          "email": "fixture-client-2",
+          "id": "12345678-1234-4123-8123-123456789ab2",
+          "password": "fixture-unused-password-2",
+          "enable": true,
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "bound_to": "fixture-previous-node"
+    },
+    {
+      "id": 3,
+      "port": 30003,
+      "protocol": "vless",
+      "network": "tcp",
+      "path": "",
+      "host": "",
+      "security": "reality",
+      "reality": {
+        "dest": "127.0.0.1:443",
+        "server_names": [
+          "fixture.example.invalid"
+        ],
+        "private_key": "dwdtCnMYpX08FsFyUbJmRd9ML4frwJkqsXf7pR25LCo",
+        "public_key": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo",
+        "short_ids": [
+          "0123456789abcdef"
+        ],
+        "fingerprint": "chrome"
+      },
+      "remark": "fixture-3",
+      "enable": true,
+      "clients": [
+        {
+          "email": "fixture-client-3",
+          "id": "12345678-1234-4123-8123-123456789ab3",
+          "password": "fixture-unused-password-3",
+          "enable": true,
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "bound_to": "fixture-node-3"
+    }
+  ]
+}

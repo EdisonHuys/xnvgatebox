@@ -1,0 +1,866 @@
+{
+  "scope": "mac_and_authorized_linux_vps_standalone_acceptance_tcp_ipv4",
+  "status": "functional_checks_passed_with_retained_transient_failures",
+  "recorded_at": "2026-10-15T11:45:20.092444+00:00",
+  "branch": "codex/standalone-migration-20261015",
+  "deployed_build": {
+    "git_head": "389288dbfa683210d1e0e9dfbb4137cb5960ec5f",
+    "manager_origin": "built_from_source",
+    "source_dirty": true,
+    "source_snapshot_sha256": "8151f5974fcd4d6d62da685a9641a431de24903ea4222a7399f379fb1b3e7018",
+    "version": "dev-20261015-migration-acceptance-fix",
+    "xray_version": "v26.3.27"
+  },
+  "package_sha256": "160b3e3213c4cf0c59345a69143332c29a96d3fc9a2e357db71cb3858b80f95d",
+  "complete_backup_sha256": "eaf2ee31538b1cb1bafaceffd704808ed51c2b9a58e3c1bf77038624f6514b10",
+  "checks": {
+    "offline_migration": {
+      "config_valid": true,
+      "scope": "native_persisted_structure_only",
+      "live_validation_required": true,
+      "slots": [
+        {
+          "slot": 1,
+          "port": 17928,
+          "stopped": false,
+          "legacy_policy": true,
+          "country": "JP",
+          "allowed_ip_types": [
+            "strict_residential",
+            "likely_residential",
+            "mobile",
+            "datacenter",
+            "business_isp",
+            "unknown"
+          ],
+          "generate_credentials_on_start": false
+        },
+        {
+          "slot": 2,
+          "port": 17929,
+          "stopped": false,
+          "legacy_policy": true,
+          "country": "KR",
+          "allowed_ip_types": [
+            "strict_residential",
+            "likely_residential",
+            "mobile",
+            "datacenter",
+            "business_isp",
+            "unknown"
+          ],
+          "generate_credentials_on_start": false
+        },
+        {
+          "slot": 3,
+          "port": 17930,
+          "stopped": false,
+          "legacy_policy": true,
+          "country": "RU",
+          "allowed_ip_types": [
+            "strict_residential",
+            "likely_residential",
+            "mobile",
+            "datacenter",
+            "business_isp",
+            "unknown"
+          ],
+          "generate_credentials_on_start": false
+        }
+      ],
+      "inbound_count": 3,
+      "issues": []
+    },
+    "missing_intelligence_blocks": {
+      "status": "passed",
+      "verified_at": "2026-10-15T11:03:34.320955Z",
+      "source": "server-local-public-client",
+      "scenario": "no_intelligence_preserves_country_and_blocks",
+      "default_subscription_http_status": 404,
+      "client_profiles_source": "actual_subscription_bound_0",
+      "slots": [
+        {
+          "slot": 1,
+          "port": 17928,
+          "status": "starting",
+          "policy": {
+            "country": "JP",
+            "allowed_ip_types": [
+              "strict_residential",
+              "likely_residential",
+              "mobile",
+              "datacenter",
+              "business_isp",
+              "unknown"
+            ],
+            "preferred_isp": null,
+            "allowed_isp": null,
+            "blocked_isp": null,
+            "allowed_asn": null,
+            "blocked_asn": null,
+            "maximum_latency_ms": 0
+          },
+          "egress": null,
+          "socks_failure_codes": [
+            "curl_failed_97",
+            "curl_failed_97"
+          ],
+          "public_failure_codes": [
+            "curl_failed_35",
+            "curl_failed_35"
+          ],
+          "blocked": true
+        },
+        {
+          "slot": 2,
+          "port": 17929,
+          "status": "starting",
+          "policy": {
+            "country": "KR",
+            "allowed_ip_types": [
+              "strict_residential",
+              "likely_residential",
+              "mobile",
+              "datacenter",
+              "business_isp",
+              "unknown"
+            ],
+            "preferred_isp": null,
+            "allowed_isp": null,
+            "blocked_isp": null,
+            "allowed_asn": null,
+            "blocked_asn": null,
+            "maximum_latency_ms": 0
+          },
+          "egress": null,
+          "socks_failure_codes": [
+            "curl_failed_97",
+            "curl_failed_97"
+          ],
+          "public_failure_codes": [
+            "curl_failed_35",
+            "curl_failed_35"
+          ],
+          "blocked": true
+        },
+        {
+          "slot": 3,
+          "port": 17930,
+          "status": "starting",
+          "policy": {
+            "country": "RU",
+            "allowed_ip_types": [
+              "strict_residential",
+              "likely_residential",
+              "mobile",
+              "datacenter",
+              "business_isp",
+              "unknown"
+            ],
+            "preferred_isp": null,
+            "allowed_isp": null,
+            "blocked_isp": null,
+            "allowed_asn": null,
+            "blocked_asn": null,
+            "maximum_latency_ms": 0
+          },
+          "egress": null,
+          "socks_failure_codes": [
+            "curl_failed_7",
+            "curl_failed_7"
+          ],
+          "public_failure_codes": [
+            "curl_failed_35",
+            "curl_failed_35"
+          ],
+          "blocked": true
+        }
+      ],
+      "outbounds": [
+        {
+          "tag": "block",
+          "protocol": "blackhole"
+        },
+        {
+          "tag": "slot-01",
+          "protocol": "socks"
+        },
+        {
+          "tag": "slot-02",
+          "protocol": "socks"
+        },
+        {
+          "tag": "slot-03",
+          "protocol": "socks"
+        }
+      ],
+      "country_evidence_rejections_seen": true
+    },
+    "migration_preservation_before_restore": {
+      "status": "passed",
+      "verified_at": "2026-10-15T11:30:24.708561Z",
+      "checks": {
+        "management_password_preserved": true,
+        "management_path_preserved": true,
+        "subscription_token_preserved": true,
+        "default_type_policy_preserved": true,
+        "management_listener_preserved": true,
+        "slot_identity_and_credentials_preserved": true,
+        "inbound_clients_and_keys_preserved": true,
+        "explicit_slot_policies_preserved": true
+      }
+    },
+    "complete_backup_restore": {
+      "status": "passed",
+      "restored_version": "v0.3.1",
+      "project_paths_restored_from_complete_backup": true,
+      "xui_files_unchanged": {
+        "/etc/x-ui/x-ui.db": true,
+        "/usr/local/x-ui/bin/config.json": true
+      },
+      "xui_active": true
+    },
+    "backup_restore_preservation": {
+      "status": "passed",
+      "verified_at": "2026-10-15T11:30:37.951014Z",
+      "checks": {
+        "management_password_preserved": true,
+        "management_path_preserved": true,
+        "subscription_token_preserved": true,
+        "default_type_policy_preserved": true,
+        "management_listener_preserved": true,
+        "slot_identity_and_credentials_preserved": true,
+        "inbound_clients_and_keys_preserved": true,
+        "explicit_slot_policies_preserved": true
+      }
+    },
+    "reinstalled_migration_preservation": {
+      "status": "passed",
+      "verified_at": "2026-10-15T11:33:13.389176Z",
+      "checks": {
+        "management_password_preserved": true,
+        "management_path_preserved": true,
+        "subscription_token_preserved": true,
+        "default_type_policy_preserved": true,
+        "management_listener_preserved": true,
+        "slot_identity_and_credentials_preserved": true,
+        "inbound_clients_and_keys_preserved": true,
+        "explicit_slot_policies_preserved": true
+      }
+    },
+    "final_automatic_replacement_preservation": {
+      "status": "passed",
+      "verified_at": "2026-10-15T11:39:43.564317Z",
+      "checks": {
+        "management_password_preserved": true,
+        "management_path_preserved": true,
+        "subscription_token_preserved": true,
+        "default_type_policy_preserved": true,
+        "management_listener_preserved": true,
+        "slot_identity_and_credentials_preserved": true,
+        "inbound_clients_and_keys_preserved": true,
+        "explicit_slot_policies_preserved": true
+      }
+    },
+    "initial_server_local_subscription": {
+      "status": "passed",
+      "source": "server-local-public-client",
+      "verified_at": "2026-10-15T11:19:24.610233Z",
+      "nodes": [
+        {
+          "slot": 1,
+          "socks_port": 17928,
+          "public_port": 30001,
+          "expected_exit_ip": "219.107.54.157",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157"
+          ],
+          "socks_exit_ips": [
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 2,
+          "socks_port": 17929,
+          "public_port": 30002,
+          "expected_exit_ip": "121.130.89.23",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23"
+          ],
+          "socks_exit_ips": [
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 3,
+          "socks_port": 17930,
+          "public_port": 30003,
+          "expected_exit_ip": "77.35.247.38",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "77.35.247.38",
+            "77.35.247.38",
+            "77.35.247.38",
+            "77.35.247.38"
+          ],
+          "socks_exit_ips": [
+            "77.35.247.38",
+            "77.35.247.38",
+            "77.35.247.38",
+            "77.35.247.38"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    "initial_mac_external_subscription": {
+      "status": "passed",
+      "source": "external-client",
+      "verified_at": "2026-10-15T11:22:28.428619Z",
+      "nodes": [
+        {
+          "slot": 1,
+          "socks_port": 17928,
+          "public_port": 30001,
+          "expected_exit_ip": "219.107.54.157",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 2,
+          "socks_port": 17929,
+          "public_port": 30002,
+          "expected_exit_ip": "121.130.89.23",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 3,
+          "socks_port": 17930,
+          "public_port": 30003,
+          "expected_exit_ip": "77.35.247.38",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "77.35.247.38",
+            "77.35.247.38",
+            "77.35.247.38",
+            "77.35.247.38"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    "server_local_fault_and_recovery": {
+      "status": "passed",
+      "source": "server-local-public-client",
+      "slot": 1,
+      "verified_at": "2026-10-15T11:23:32.302061Z",
+      "baseline": {
+        "status": "passed",
+        "source": "server-local-public-client",
+        "verified_at": "2026-10-15T11:22:44.885447Z",
+        "nodes": [
+          {
+            "slot": 1,
+            "socks_port": 17928,
+            "public_port": 30001,
+            "expected_exit_ip": "219.107.54.157",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157"
+            ],
+            "socks_exit_ips": [
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157"
+            ],
+            "status": "passed"
+          },
+          {
+            "slot": 2,
+            "socks_port": 17929,
+            "public_port": 30002,
+            "expected_exit_ip": "121.130.89.23",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23"
+            ],
+            "socks_exit_ips": [
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23"
+            ],
+            "status": "passed"
+          },
+          {
+            "slot": 3,
+            "socks_port": 17930,
+            "public_port": 30003,
+            "expected_exit_ip": "77.35.247.38",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38"
+            ],
+            "socks_exit_ips": [
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38"
+            ],
+            "status": "passed"
+          }
+        ]
+      },
+      "fault_injected": true,
+      "blocked_public": {
+        "status": "passed",
+        "failure_codes": [
+          "curl_failed_35",
+          "curl_failed_35"
+        ]
+      },
+      "blocked_socks": {
+        "status": "passed",
+        "failure_codes": [
+          "curl_failed_97",
+          "curl_failed_97"
+        ]
+      },
+      "recovery": {
+        "status": "passed",
+        "source": "server-local-public-client",
+        "verified_at": "2026-10-15T11:24:13.405827Z",
+        "nodes": [
+          {
+            "slot": 1,
+            "socks_port": 17928,
+            "public_port": 30001,
+            "expected_exit_ip": "219.107.54.157",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157"
+            ],
+            "socks_exit_ips": [
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157"
+            ],
+            "status": "passed"
+          },
+          {
+            "slot": 2,
+            "socks_port": 17929,
+            "public_port": 30002,
+            "expected_exit_ip": "121.130.89.23",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23"
+            ],
+            "socks_exit_ips": [
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23"
+            ],
+            "status": "passed"
+          },
+          {
+            "slot": 3,
+            "socks_port": 17930,
+            "public_port": 30003,
+            "expected_exit_ip": "77.35.247.38",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38"
+            ],
+            "socks_exit_ips": [
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38",
+              "77.35.247.38"
+            ],
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "mac_external_fault_window": {
+      "status": "passed",
+      "source": "mac-external-client",
+      "slot": 1,
+      "verified_at": "2026-10-15T11:23:57.055783Z",
+      "fault_injected_observed": true,
+      "baseline_exit_ips": [
+        "219.107.54.157",
+        "219.107.54.157",
+        "219.107.54.157",
+        "219.107.54.157"
+      ],
+      "fault_observed_at": "2026-10-15T11:25:14.903455Z",
+      "failure_codes": [
+        "curl_failed_35",
+        "curl_failed_35"
+      ],
+      "blocked_status": "passed",
+      "server_fault_result": {
+        "status": "passed",
+        "fault_injected": true,
+        "failure_code": null
+      },
+      "remote_process_exit_code": 0
+    },
+    "mac_external_recovery_attempt_1_retained_failure": {
+      "status": "failed",
+      "source": "external-client",
+      "verified_at": "2026-10-15T11:27:58.934066Z",
+      "nodes": [
+        {
+          "slot": 1,
+          "socks_port": 17928,
+          "public_port": 30001,
+          "expected_exit_ip": "219.107.54.157",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 2,
+          "socks_port": 17929,
+          "public_port": 30002,
+          "expected_exit_ip": "121.130.89.23",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 3,
+          "socks_port": 17930,
+          "public_port": 30003,
+          "expected_exit_ip": "77.35.247.38",
+          "ip_type": "unknown",
+          "status": "failed",
+          "failure_code": "curl_failed_28"
+        }
+      ]
+    },
+    "stopped_policy_and_resume_retained_failure": {
+      "status": "failed",
+      "source": "server-local-management-and-public-client",
+      "verified_at": "2026-10-15T11:28:46.991603Z",
+      "slot": 1,
+      "stopped_policy_persisted": true,
+      "rollback_kept_stopped_intent": true,
+      "original_policy_restored": true,
+      "client_configuration_preserved": true,
+      "positive_after_resume": {
+        "status": "failed",
+        "source": "server-local-public-client",
+        "verified_at": "2026-10-15T11:28:59.872581Z",
+        "nodes": [
+          {
+            "slot": 1,
+            "socks_port": 17928,
+            "public_port": 30001,
+            "expected_exit_ip": "219.107.54.157",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157"
+            ],
+            "socks_exit_ips": [
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157",
+              "219.107.54.157"
+            ],
+            "status": "passed"
+          },
+          {
+            "slot": 2,
+            "socks_port": 17929,
+            "public_port": 30002,
+            "expected_exit_ip": "121.130.89.23",
+            "ip_type": "unknown",
+            "actual_exit_ips": [
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23"
+            ],
+            "socks_exit_ips": [
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23",
+              "121.130.89.23"
+            ],
+            "status": "passed"
+          },
+          {
+            "slot": 3,
+            "socks_port": 17930,
+            "public_port": 30003,
+            "expected_exit_ip": "77.35.247.38",
+            "ip_type": "unknown",
+            "status": "failed",
+            "failure_code": "curl_failed_35"
+          }
+        ]
+      }
+    },
+    "source_failure_keeps_previous_pool": {
+      "status": "passed",
+      "verified_at": "2026-10-15T11:23:55.155118Z",
+      "source_fetch_failed": true,
+      "old_pool_and_profiles_unchanged": true,
+      "pool_sha256": "a7f284cb39363705f6c84376ffa1436628d0f1d86656fdf123c521f1faea3ce7"
+    },
+    "final_server_local_subscription": {
+      "status": "passed",
+      "source": "server-local-public-client",
+      "verified_at": "2026-10-15T11:35:19.509034Z",
+      "nodes": [
+        {
+          "slot": 1,
+          "socks_port": 17928,
+          "public_port": 30001,
+          "expected_exit_ip": "219.107.54.157",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157"
+          ],
+          "socks_exit_ips": [
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 2,
+          "socks_port": 17929,
+          "public_port": 30002,
+          "expected_exit_ip": "121.130.89.23",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23"
+          ],
+          "socks_exit_ips": [
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 3,
+          "socks_port": 17930,
+          "public_port": 30003,
+          "expected_exit_ip": "5.143.104.161",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "5.143.104.161",
+            "5.143.104.161",
+            "5.143.104.161",
+            "5.143.104.161"
+          ],
+          "socks_exit_ips": [
+            "5.143.104.161",
+            "5.143.104.161",
+            "5.143.104.161",
+            "5.143.104.161"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    "final_mac_external_subscription": {
+      "status": "passed",
+      "source": "external-client",
+      "verified_at": "2026-10-15T11:41:12.152251Z",
+      "nodes": [
+        {
+          "slot": 1,
+          "socks_port": 17928,
+          "public_port": 30001,
+          "expected_exit_ip": "219.107.54.157",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157",
+            "219.107.54.157"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 2,
+          "socks_port": 17929,
+          "public_port": 30002,
+          "expected_exit_ip": "121.130.89.23",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23",
+            "121.130.89.23"
+          ],
+          "status": "passed"
+        },
+        {
+          "slot": 3,
+          "socks_port": 17930,
+          "public_port": 30003,
+          "expected_exit_ip": "5.143.104.161",
+          "ip_type": "unknown",
+          "actual_exit_ips": [
+            "5.143.104.161",
+            "5.143.104.161",
+            "5.143.104.161",
+            "5.143.104.161"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    "original_subscription_client_parameters_preserved": true,
+    "final_guardrails": {
+      "status": "passed",
+      "xui_active": true,
+      "xui_files_unchanged": {
+        "/etc/x-ui/x-ui.db": true,
+        "/usr/local/x-ui/bin/config.json": true
+      },
+      "version": "xnvgatebox dev-20261015-migration-acceptance-fix",
+      "pool_timer_active": true,
+      "outbounds": [
+        {
+          "tag": "block",
+          "protocol": "blackhole"
+        },
+        {
+          "tag": "slot-01",
+          "protocol": "socks"
+        },
+        {
+          "tag": "slot-02",
+          "protocol": "socks"
+        },
+        {
+          "tag": "slot-03",
+          "protocol": "socks"
+        }
+      ],
+      "effective_countries": [
+        "JP",
+        "KR",
+        "RU"
+      ],
+      "pending_transactions": []
+    }
+  },
+  "regressions": {
+    "python_tests_passed": 62,
+    "node_boundary_checks_passed": 29,
+    "node_unified_worker_unit_tests": "passed",
+    "linux_top_level_passed": 188,
+    "linux_pass_events": 244,
+    "linux_fail_events": 0,
+    "linux_skips": [
+      "--- SKIP: TestLiveNativeInterruptedChild (0.00s)"
+    ],
+    "real_configuration_acceptance_cases": [
+      "--- PASS: TestLiveNativeTransactions (2.82s)",
+      "--- PASS: TestLiveNativeTransactions/static_rejection_preserves_process_and_files (0.02s)",
+      "--- PASS: TestLiveNativeTransactions/occupied_port_restores_previous_runtime (0.47s)",
+      "--- PASS: TestLiveNativeTransactions/manual_rollback_uses_current_blackhole_routes (0.88s)",
+      "--- PASS: TestLiveNativeTransactions/real_commit_failure_blocks_then_recovers_from_journal (0.88s)",
+      "--- PASS: TestLiveNativeSIGKILLRecovery (1.40s)",
+      "--- PASS: TestLiveManagementFailures (0.03s)"
+    ]
+  },
+  "cloudflare": {
+    "left_paused": true,
+    "deployment_or_schedule_enable_operations": 0,
+    "shared_pool_workflow": "manual_only"
+  },
+  "classification": {
+    "actual_ip_type": "unknown",
+    "country_evidence_only": true,
+    "residential_acceptance": false,
+    "isp_asn_acceptance": false
+  },
+  "limits": [
+    "Retained RU curl 28 and curl 35 failures precede successful final automatic replacement and three-slot retest.",
+    "The stopped-policy report retains failed aggregate connectivity while its policy and stop-intent checks passed.",
+    "No phone-network, UDP or IPv6 acceptance is claimed."
+  ]
+}

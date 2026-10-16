@@ -104,14 +104,33 @@ func loadNativeStore(dir string) (*nativeStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	var st nativeStore
-	if err := json.Unmarshal(blob, &st); err != nil {
-		return nil, fmt.Errorf("解析 %s 失败: %w", nativeStatePath(dir), err)
+	return decodeNativeStore(blob)
+}
+
+func decodeNativeStore(blob []byte) (*nativeStore, error) {
+	var st *nativeStore
+	if err := json.Unmarshal(blob, &st); err != nil || st == nil {
+		return nil, fmt.Errorf("解析内置配置失败")
 	}
 	if st.NextID < 1 {
 		st.NextID = 1
 	}
-	return &st, nil
+	if err := validateNativeStore(st); err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
+func validateNativeStore(st *nativeStore) error {
+	ids, ports := map[int]bool{}, map[int]bool{}
+	for _, ib := range st.Inbounds {
+		if ib == nil || ib.ID < 1 || ib.ID >= st.NextID || ib.Port < 1 || ib.Port > 65535 || ids[ib.ID] || ports[ib.Port] {
+			return fmt.Errorf("内置配置的入站标识或端口无效")
+		}
+		ids[ib.ID] = true
+		ports[ib.Port] = true
+	}
+	return nil
 }
 
 func (s *nativeStore) save(dir string) error {

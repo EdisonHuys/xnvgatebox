@@ -45,10 +45,11 @@ func residentialOnly() bool { return getWebSettings().residentialOnly() }
 
 // setResidentialOnly 改"只用家宽"开关并落盘。
 func setResidentialOnly(v bool) error {
-	webSettingsMu.Lock()
-	webSettingsCur.ResidentialOnly = &v
-	webSettingsMu.Unlock()
-	return saveWebSettings()
+	managementMu.Lock()
+	defer managementMu.Unlock()
+	next := getWebSettings()
+	next.ResidentialOnly = &v
+	return commitManagementSettings(nil, &webServer{}, next, nil, nil)
 }
 
 var (
@@ -78,11 +79,9 @@ func loadWebSettings(dir string, defaultPort int, portExplicit bool) (WebSetting
 	case err != nil:
 		return s, err
 	}
-	if err := json.Unmarshal(blob, &s); err != nil {
+	s, err = decodeWebSettings(blob, defaultPort)
+	if err != nil {
 		return s, err
-	}
-	if s.Port == 0 {
-		s.Port = defaultPort
 	}
 	changed := false
 	if portExplicit && s.Port != defaultPort {
@@ -96,6 +95,25 @@ func loadWebSettings(dir string, defaultPort int, portExplicit bool) (WebSetting
 		return s, saveWebSettings()
 	}
 	return s, nil
+}
+
+func decodeWebSettings(blob []byte, defaultPort int) (WebSettings, error) {
+	var s *WebSettings
+	if err := json.Unmarshal(blob, &s); err != nil || s == nil {
+		return WebSettings{}, fmt.Errorf("管理设置无法解析")
+	}
+	if s.Port == 0 {
+		s.Port = defaultPort
+	}
+	if err := validatePort(s.Port); err != nil {
+		return WebSettings{}, err
+	}
+	addr, err := normalizeListenAddr(s.ListenAddr)
+	if err != nil {
+		return WebSettings{}, err
+	}
+	s.ListenAddr = addr
+	return *s, nil
 }
 
 func getWebSettings() WebSettings {

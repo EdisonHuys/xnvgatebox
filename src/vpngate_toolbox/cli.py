@@ -12,14 +12,15 @@ from .common import ToolError, atomic_write, utc_now, write_json
 from .config import load_env, load_settings, mode_a_environment
 from .pipeline import clear_publication, publish, run_mode_a
 from .pool import build_pool
+from .intelligence import profile_openvpn_exit
 
 
 @contextmanager
-def output_lock(output: Path):
+def output_lock(output: Path, wait=False):
     output.mkdir(parents=True, exist_ok=True)
     with (output / ".build.lock").open("w") as handle:
         try:
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(handle, fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
         except BlockingIOError:
             raise ToolError("another_build_is_running") from None
         try:
@@ -42,8 +43,20 @@ def main(argv=None):
     export.add_argument("--view", type=Path, default=Path("data/mode_a_validated.json"))
     export.add_argument("--output", type=Path, default=Path("data"))
     export.add_argument("--runtime", type=Path, default=Path("runtime"))
+    profile = sub.add_parser("profile-openvpn", help="Profile a measured OpenVPN exit IP; does not verify a tunnel")
+    profile.add_argument("--ip", required=True)
+    profile.add_argument("--cache", type=Path, default=Path("runtime/intelligence/cache.json"))
     args = parser.parse_args(argv)
     try:
+        if args.command == "profile-openvpn":
+            settings = load_settings(args.config)
+            load_env(args.env_file)
+            # Multiple Slots can finish their baselines concurrently. Serialize
+            # cache read/query/write without locking or rewriting the node pool.
+            with output_lock(args.cache.parent, wait=True):
+                image = profile_openvpn_exit(args.ip, settings, args.cache)
+            print(json.dumps(image, ensure_ascii=False))
+            return 0
         with output_lock(args.output):
             if args.command == "mode-a":
                 clear_publication(args.output, args.runtime)
