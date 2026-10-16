@@ -4,6 +4,8 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
+最新发布：[v0.4.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.4.0)，已完成干净源码构建及 VPS/Mac 候选升级实测，见 [发布验收记录](docs/evidence/vps-release-20261016.json)。
+
 ## VPS 一条命令安装
 
 目前支持 Debian / Ubuntu、Linux amd64、systemd，以 root 执行：

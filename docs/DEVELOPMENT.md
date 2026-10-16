@@ -1,5 +1,7 @@
 # 当前开发方向（2026-10-16）
 
+2026-10-16 发布收尾：PR #1 已合入 main，正式 [v0.4.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.4.0) 已发布。原始候选来自干净提交 `371174d`，GitHub CI、测试 VPS 原安装入口升级、15 项保留检查及 VPS/Mac 三节点订阅冒烟均通过；公开下载摘要与该候选一致。详见 [发布证据](evidence/vps-release-20261016.json)。下文保留开发及验收过程。
+
 2026-10-15 Mac 接续：已拉取指定 `389288d`，保留本机私有运行文件并实测备份、开发包升级、三节点真实订阅、Slot 1 强杀恢复和完整备份还原。发现并修复 Echo 换行解析、候选重试饥饿及未绑定入站验收崩溃；当前为开发测试版。RU 多轮出现超时，末轮保持 RU 策略自动换点后，三个节点的本机和 Mac 外部复验均通过；详细范围和保留的失败记录见 [Mac 实测](VPS_UPGRADE_VALIDATION.md#2026-10-15-mac-实测)。CF 仍暂停，3x-ui 未修改，unknown 仍不称家宽。
 
 
@@ -21,7 +23,7 @@
 4. 内置 Xray 无可用绑定时默认 blackhole；换节点不改变 Slot 标签和 SOCKS 端口。管理页导出标准 Xray JSON，第一版本不写 3x-ui 数据库。
 5. 真实订阅经内置 Xray 出网，出口与对应 Slot 一致；掉线请求失败，不回落 VPS IP。
 
-当前进入代码复核、开发分支提交及版本发布准备。OpenVPN 出口国家证据、Slot 策略、配置回滚及真实迁移/故障链路已完成本轮实测，详细范围见顶部记录；住宅类型、ISP/ASN 仍未验收。下文云端进度保留为开发历史，不作为当前待办。
+当前版本已完成代码复核、开发分支提交、PR 合并及正式发布。OpenVPN 出口国家证据、Slot 策略、配置回滚及真实迁移/故障链路已完成本轮实测，详细范围见顶部记录；住宅类型、ISP/ASN 仍未验收。下文云端进度保留为开发历史，不作为当前待办。
 
 2026-10-15 云端开发进度（未发布、未升级 VPS）：已接入实际 OpenVPN 基线 IP → 统一 Python intelligence adapter/classifier → 固定 SOCKS actual 独立核验，新增私有 `slot_health.json` 画像证据及 Slot 展示。候选展示不再沿用 SSTP 的住宅/ISP/ASN 画像；未配置服务、查询失败或过期保持 unknown。实现与配置见 [vps/README.md](../vps/README.md#openvpn-出口画像)。画像模拟回归和普通单元测试已验证，真实 API、namespace/SOCKS 与公开订阅链路仍需有权限环境实测，不能视为已完成住宅类型验收。该轮仅完成画像；后续策略与回滚进度见下文。
 

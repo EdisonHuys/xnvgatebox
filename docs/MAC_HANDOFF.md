@@ -1,12 +1,14 @@
 # Mac 开发交接（2026-10-15）
 
+2026-10-16 更新：本轮成果已合入 main 并发布 [v0.4.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.4.0)，干净候选包经测试 VPS 升级和 Mac 外部复验，公开附件与已验收候选一致。见 [发布证据](evidence/vps-release-20261016.json)。
+
 本机已接续 `389288d` 并进行了真实 VPS 升级、订阅、故障及完整备份恢复测试；修复和保留的失败记录见 [Mac 实测](VPS_UPGRADE_VALIDATION.md#2026-10-15-mac-实测)。云端限制仅描述最初交接环境；当前以最新实测章节为准。
 
 后续用户明确授权第三 Slot 换其他国家，当前为 JP/KR/KR；换国家后的三个独立出口已完成本机及 Mac 真实订阅、第三 Slot 强杀阻断与恢复复验；原端口、订阅和客户端凭据保留。最新追加验收见 [授权换国家记录](VPS_UPGRADE_VALIDATION.md#2026-10-15-用户授权第三-slot-换国家)。
 
 后续验收不强求指定国家当时必须有合适 IP。上游候选不足时，确认程序正确提示、保留策略和端口、等待重试及阻断回落即可；该国连通项记为上游条件不足，稍后有节点再测或由用户选择其他国家。三个独立出口可以来自同一国家，不因某国暂不可用而判定程序验收失败。
 
-接续分支：`codex/standalone-migration-20261015`。该分支包含云端开发和后续 Mac 实测修复，测试 VPS 已升级并完成验收；当前进入 PR 与版本发布准备。请先读取 [DEVELOPMENT.md 顶部](DEVELOPMENT.md) 和 [历史 VPS 实测记录](VPS_STANDALONE_VALIDATION.md)。
+接续分支：`codex/standalone-migration-20261015`。该分支包含云端开发和后续 Mac 实测修复，测试 VPS 已升级并完成验收；已合入 main 并发布 v0.4.0，以下保留接续及复验说明。请先读取 [DEVELOPMENT.md 顶部](DEVELOPMENT.md) 和 [历史 VPS 实测记录](VPS_STANDALONE_VALIDATION.md)。
 
 ## 在 Mac 建立独立开发目录
 
