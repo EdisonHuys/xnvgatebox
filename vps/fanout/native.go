@@ -460,13 +460,16 @@ func visionFlow(ib *nativeInbound) string {
 // 留空的字段都有合理默认：端口随机、备注按协议加端口自动生成、
 // 路径随机、REALITY 的密钥与 shortId 自动生成。
 type NewInboundSpec struct {
-	Protocol string
-	Network  string
-	Port     int
-	Remark   string
-	Path     string
-	Host     string
-	Security string
+	// Internal batch provisioning may reuse one successful check of the exact
+	// same destination. This field cannot be set by HTTP/JSON input.
+	realityChecked bool
+	Protocol       string
+	Network        string
+	Port           int
+	Remark         string
+	Path           string
+	Host           string
+	Security       string
 	// Vision 请求给 VLESS 客户端启用 xtls-rprx-vision
 	Vision bool
 
@@ -650,8 +653,10 @@ func buildReality(xrayBin string, spec NewInboundSpec) (*realityConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := checkRealityDest(dest, names[0]); err != nil {
-		return nil, fmt.Errorf("REALITY 目标站点不可用，换一个 dest: %w", err)
+	if !spec.realityChecked {
+		if err := checkRealityDest(dest, names[0]); err != nil {
+			return nil, fmt.Errorf("REALITY 目标站点不可用，换一个 dest: %w", err)
+		}
 	}
 
 	short := strings.TrimSpace(spec.ShortID)

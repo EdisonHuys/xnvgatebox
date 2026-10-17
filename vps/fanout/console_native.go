@@ -13,6 +13,7 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 	defer finish()
 	changed := false
 	used := n.store.usedPorts()
+	checkedReality := false
 	for _, t := range tunnels {
 		v := t.snapshot()
 		found := false
@@ -28,6 +29,12 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 		if found {
 			continue
 		}
+		if !checkedReality {
+			if err := checkRealityDest(serverName+":443", serverName); err != nil {
+				return fmt.Errorf("REALITY 目标站点不可用: %w", err)
+			}
+			checkedReality = true
+		}
 		port := 30000 + v.Slot
 		if used[port] || !portAvailable(port) {
 			var err error
@@ -36,7 +43,7 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 				return err
 			}
 		}
-		ib, err := n.prepareInbound(NewInboundSpec{Protocol: "vless", Network: "tcp", Security: "reality", Port: port,
+		ib, err := n.prepareInbound(NewInboundSpec{realityChecked: true, Protocol: "vless", Network: "tcp", Security: "reality", Port: port,
 			Remark: fmt.Sprintf("出口 %02d", v.Slot), Dest: serverName + ":443", ServerNames: serverName, Fingerprint: "chrome"}, used)
 		if err != nil {
 			return err

@@ -29,14 +29,15 @@ type CheckResult struct {
 }
 
 type CheckRun struct {
-	mu     sync.Mutex
-	ID     string        `json:"id"`
-	Status string        `json:"status"`
-	Kind   string        `json:"kind"`
-	Items  []CheckResult `json:"items"`
-	Done   int           `json:"done"`
-	Total  int           `json:"total"`
-	cancel context.CancelFunc
+	finished chan struct{}
+	mu       sync.Mutex
+	ID       string        `json:"id"`
+	Status   string        `json:"status"`
+	Kind     string        `json:"kind"`
+	Items    []CheckResult `json:"items"`
+	Done     int           `json:"done"`
+	Total    int           `json:"total"`
+	cancel   context.CancelFunc
 }
 
 func (j *CheckRun) view() any {
@@ -136,7 +137,15 @@ func (c *Console) checkExit(ctx context.Context, slot int) CheckResult {
 	if t == nil {
 		return result
 	}
-	t.opMu.Lock()
+	for !t.opMu.TryLock() {
+		select {
+		case <-ctx.Done():
+			result.Status = "cancelled"
+			result.Code = "cancelled"
+			return result
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
 	defer t.opMu.Unlock()
 	v := t.snapshot()
 	result.Host = v.Node.HostName
@@ -224,6 +233,9 @@ func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 	}
 	c.checksMu.Lock()
 	defer c.checksMu.Unlock()
+	if c.ctx.Err() != nil {
+		return nil, fmt.Errorf("管理服务正在停止")
+	}
 	if c.check != nil {
 		c.check.mu.Lock()
 		running := c.check.Status == "running"
@@ -236,14 +248,15 @@ func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 	if _, err := rand.Read(buf); err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	job := &CheckRun{ID: hex.EncodeToString(buf), Status: "running", Kind: in.Kind, Items: items, Total: len(items), cancel: cancel}
+	ctx, cancel := context.WithCancel(c.ctx)
+	job := &CheckRun{ID: hex.EncodeToString(buf), Status: "running", Kind: in.Kind, Items: items, Total: len(items), cancel: cancel, finished: make(chan struct{})}
 	c.check = job
 	go c.runChecks(ctx, job, byHost)
 	return job, nil
 }
 
 func (c *Console) runChecks(ctx context.Context, j *CheckRun, nodes map[string]Node) {
+	defer close(j.finished)
 	defer j.cancel()
 	for i := range j.Items {
 		j.mu.Lock()

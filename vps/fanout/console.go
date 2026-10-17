@@ -30,6 +30,9 @@ type ExitPlan struct {
 }
 
 type Console struct {
+	ctx          context.Context
+	cancel       context.CancelFunc
+	refreshDone  chan struct{}
 	m            *Manager
 	targetMu     sync.Mutex
 	plan         *ExitPlan
@@ -50,6 +53,7 @@ type Console struct {
 
 func newConsole(m *Manager) (*Console, error) {
 	c := &Console{m: m, results: map[string]CheckResult{}, start: m.StartWithPolicy, remove: m.deleteSlot}
+	c.ctx, c.cancel = context.WithCancel(context.Background())
 	c.ensure = func(ts []*Tunnel, host string) error {
 		p, err := openPanel()
 		if err != nil {
@@ -142,6 +146,9 @@ func (c *Console) applyTarget(p ExitPlan) error {
 	}
 	c.targetMu.Lock()
 	defer c.targetMu.Unlock()
+	if c.ctx.Err() != nil {
+		return fmt.Errorf("管理服务正在停止")
+	}
 	if err := c.savePlan(p); err != nil {
 		return fmt.Errorf("无法保存出口计划")
 	}
@@ -149,6 +156,9 @@ func (c *Console) applyTarget(p ExitPlan) error {
 }
 
 func (c *Console) reconcile() error {
+	if c.ctx.Err() != nil {
+		return c.ctx.Err()
+	}
 	if c.plan == nil {
 		return nil
 	}
@@ -224,12 +234,19 @@ func (c *Console) deleteSlot(slot int) error {
 
 func (c *Console) watch() {
 	for {
+		if c.ctx.Err() != nil {
+			return
+		}
 		c.targetMu.Lock()
 		if err := c.reconcile(); err != nil {
 			log.Printf("出口计划等待重试: %v", err)
 		}
 		c.targetMu.Unlock()
-		time.Sleep(15 * time.Second)
+		select {
+		case <-c.ctx.Done():
+			return
+		case <-time.After(15 * time.Second):
+		}
 	}
 }
 
@@ -325,6 +342,11 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 	}
 	c.targetMu.Unlock()
 	c.refreshMu.Lock()
+	if c.ctx.Err() != nil {
+		c.refreshMu.Unlock()
+		w.WriteHeader(503)
+		return
+	}
 	refresh := map[string]string{"status": c.refreshState, "checked_at": c.refreshAt, "error": c.refreshError}
 	c.refreshMu.Unlock()
 	c.checksMu.Lock()
@@ -386,15 +408,23 @@ func (c *Console) apiPoolRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.refreshMu.Lock()
+	if c.ctx.Err() != nil {
+		c.refreshMu.Unlock()
+		w.WriteHeader(503)
+		return
+	}
 	if c.refreshState == "running" {
 		c.refreshMu.Unlock()
 		writeJSON(w, 202, map[string]string{"status": "running"})
 		return
 	}
 	c.refreshState, c.refreshError = "running", ""
+	finished := make(chan struct{})
+	c.refreshDone = finished
 	c.refreshMu.Unlock()
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		defer close(finished)
+		ctx, cancel := context.WithTimeout(c.ctx, 90*time.Second)
 		defer cancel()
 		pool := envOr("FANOUT_VALIDATED_POOL_FILE", "/var/lib/xnvgatebox/pool/node_pool.json")
 		cmd := exec.CommandContext(ctx, "python3", envOr("FANOUT_TOOLBOX_SCRIPT", "/usr/local/lib/xnvgatebox/scripts/toolbox.py"), "--config", envOr("FANOUT_POOL_CONFIG", "/etc/xnvgatebox/pool.json"), "pool", "--output", filepath.Dir(pool))

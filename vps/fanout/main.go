@@ -124,6 +124,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("加载出口计划失败: %v", err)
 	}
+	if err := console.cleanupDiagnostics(); err != nil {
+		log.Fatalf("临时检测清理失败: %v", err)
+	}
 	go console.watch()
 
 	go mgr.WatchHealth()
@@ -134,6 +137,7 @@ func main() {
 	go func() {
 		<-stop
 		log.Println("正在清理所有隧道...")
+		console.shutdown()
 		mgr.Shutdown()
 		closePanel()
 		unlock() // os.Exit 会绕过 defer，这里手动放锁

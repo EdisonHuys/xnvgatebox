@@ -326,6 +326,66 @@ func TestConsoleRunningCandidateUsesExistingSocksWithoutSecondDial(t *testing.T)
 	}
 }
 
+func TestConsoleShutdownCancelsJobsAndStopsReconciliation(t *testing.T) {
+	c := consoleFixture(t)
+	c.m.nodes = []Node{{HostName: "cancel-at-stop"}}
+	started := make(chan struct{})
+	c.probe = func(ctx context.Context, n Node) CheckResult {
+		close(started)
+		<-ctx.Done()
+		return CheckResult{Host: n.HostName, Status: "cancelled"}
+	}
+	job, err := c.startCheck(CheckRequest{Kind: "candidates", Hosts: []string{"cancel-at-stop"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-started
+	script := filepath.Join(t.TempDir(), "slow.py")
+	os.WriteFile(script, []byte("import time;time.sleep(60)\n"), 0600)
+	t.Setenv("FANOUT_TOOLBOX_SCRIPT", script)
+	c.apiPoolRefresh(httptest.NewRecorder(), httptest.NewRequest("POST", "/", nil))
+	watched := make(chan struct{})
+	go func() { c.watch(); close(watched) }()
+	closed := make(chan struct{})
+	go func() { c.shutdown(); close(closed) }()
+	select {
+	case <-closed:
+	case <-time.After(3 * time.Second):
+		t.Fatal("shutdown did not wait for bounded cancellation")
+	}
+	select {
+	case <-watched:
+	case <-time.After(time.Second):
+		t.Fatal("controller continued after shutdown")
+	}
+	if job.Status != "cancelled" {
+		t.Fatal("diagnostic not cancelled at shutdown")
+	}
+	if c.applyTarget(ExitPlan{Count: 1, Policy: defaultSlotPolicyForMode("", false)}) == nil {
+		t.Fatal("quantity allocation accepted after shutdown")
+	}
+	if _, err := c.startCheck(CheckRequest{Kind: "candidates", Hosts: []string{"cancel-at-stop"}}); err == nil {
+		t.Fatal("new diagnostic accepted after shutdown")
+	}
+}
+
+func TestConsoleDiagnosticCleanupOwnershipIsNarrow(t *testing.T) {
+	root := "/var/lib/xnvgatebox/fanout"
+	ns := "foabcd240"
+	config := root + "/.connectivity-fixture/" + ns + ".ovpn"
+	if !diagnosticConfigOwned(root, ns, "/usr/sbin/openvpn", config) {
+		t.Fatal("owned diagnostic rejected")
+	}
+	for _, path := range []string{root + "/" + ns + ".ovpn", root + "/.connectivity-fixture/foabcd1.ovpn", "/tmp/.connectivity-fixture/" + ns + ".ovpn", root + "/.connectivity-fixture/../../" + ns + ".ovpn"} {
+		if diagnosticConfigOwned(root, ns, "/usr/sbin/openvpn", path) {
+			t.Fatal("foreign process could be killed")
+		}
+	}
+	if diagnosticConfigOwned(root, ns, "/usr/bin/sleep", config) {
+		t.Fatal("non-OpenVPN process accepted")
+	}
+}
+
 func TestConsoleQRLocalPNGAndValidation(t *testing.T) {
 	useSettings(t)
 	c := consoleFixture(t)
