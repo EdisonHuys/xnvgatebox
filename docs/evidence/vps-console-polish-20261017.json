@@ -1,0 +1,109 @@
+{
+  "scope": "login_and_connection_ui_legacy_slot_name_compatibility",
+  "verified_at": "2026-10-17T15:49:28.661868Z",
+  "build": {
+    "git_head": "95cd217608680b167580342458ada184c76c2af3",
+    "manager_origin": "built_from_source",
+    "source_dirty": false,
+    "source_snapshot_sha256": "67c568dd15b291d2ca8e946086ae272488034740a66187dc62f4306110e88c29",
+    "version": "dev-console-polish-20261017",
+    "xray_version": "v26.3.27",
+    "package_sha256": "ffb6c967aa232624a5645fe3b69f094bd8378f9a47377704944220582102d974"
+  },
+  "backup": {
+    "consistent_project_backup_on_vps_and_mac": true,
+    "archive_sha256": "cf635194f46b4d729658245c8ced1c80536649a236c570fc20c1e463c5fd1c7c"
+  },
+  "tests": {
+    "go_linux": {
+      "passed": true,
+      "top_level_pass": 206,
+      "all_pass_events": 262,
+      "live_transaction_tests_enabled": true,
+      "skipped_child_helper": 1
+    },
+    "go_vet": "passed",
+    "embedded_page_js_syntax": [
+      "console",
+      "advanced",
+      "login"
+    ],
+    "browser_demo_checks": [
+      "desktop_light_and_dark",
+      "390px_phone_layout",
+      "login_error_and_password_visibility",
+      "connection_dialog_and_protocol_fields",
+      "auto_custom_name_switch",
+      "port_save_keeps_auto_mode"
+    ],
+    "github_checks": "passed"
+  },
+  "deployment_checks": {
+    "all_saved_connections_and_credentials_preserved": true,
+    "management_settings_preserved": true,
+    "quantity_plan_preserved": true,
+    "slot_ports_socks_credentials_and_policies_preserved": true,
+    "xui_runtime_config_preserved": true,
+    "xui_original_process_preserved": true,
+    "clean_source_installed": true,
+    "native_backend": true,
+    "target_preserved": true,
+    "one_connection_per_slot": true,
+    "legacy_slot_01_inferred_auto": true,
+    "legacy_slot_03_inferred_auto": true,
+    "new_login_served": true,
+    "new_connection_page_served": true,
+    "internal_binary_path_removed": true,
+    "direct_api_describe_has_no_binary_path": true,
+    "real_subscription_country_names": true
+  },
+  "snapshot": {
+    "observed_at": "2026-10-17T15:45:56.125987Z",
+    "target_preserved": 32,
+    "ready_at_observation": 5,
+    "waiting_at_observation": 27,
+    "availability_depends_on_upstream": true
+  },
+  "real_subscription_names": [
+    {
+      "slot": 1,
+      "name": "🇯🇵 日本 · 01"
+    },
+    {
+      "slot": 2,
+      "name": "🇰🇷 韩国 · 02"
+    },
+    {
+      "slot": 3,
+      "name": "🇰🇷 韩国 · 03"
+    }
+  ],
+  "real_subscription": {
+    "server_local_public_and_socks": {
+      "status": "passed",
+      "slots": [
+        1,
+        2,
+        3
+      ]
+    },
+    "mac_external_client": {
+      "status": "passed",
+      "slots": [
+        1,
+        2,
+        3
+      ]
+    },
+    "ip_types": [
+      "unknown"
+    ]
+  },
+  "constraints": {
+    "no_cloudflare_operations": true,
+    "native_backend_only": true,
+    "xui_runtime_config_and_original_process_preserved": true,
+    "unknown_is_not_residential": true
+  },
+  "previous_capacity_and_fault_acceptance": "vps-console-20261017.json"
+}
