@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>xnvgatebox · 连接配置</title>
+    <title>xnvgatebox · 接入管理</title>
     <style>
       :root {
         --bg: #f4f6f8;
@@ -743,7 +743,7 @@
       <div class="header-inner">
         <a class="brand" href="./"
           ><span class="mark" aria-hidden="true">×</span>xnvgatebox</a
-        ><span class="crumb">连接配置</span><span class="spacer"></span
+        ><span class="crumb">接入管理</span><span class="spacer"></span
         ><button
           class="icon"
           id="theme"
@@ -759,23 +759,23 @@
         <div>
           <div class="eyebrow">CONNECTION STUDIO</div>
           <h1>每条连接，尽在掌握。</h1>
-          <p>管理连接协议、公开端口和客户端访问。</p>
+          <p>设置客户端接入协议、端口，并选择已有出口。</p>
         </div>
         <div class="hero-actions">
           <button id="settingsBtn">维护设置</button
-          ><button class="primary" id="newnode">＋ 新建连接</button>
+          ><button class="primary" id="newnode">＋ 新增接入入口</button>
         </div>
       </div>
       <div class="helpbar">
         <div>
           <b>日常管理，从控制台开始</b
-          >这里用于调整连接细节。出口数量、国家策略和连通性检测可在出口管理中完成。
+          >这里管理客户端如何接入。出口数量、国家策略和连通性检测可在出口管理中完成。
         </div>
         <span class="spacer"></span><a href="./#exits">管理出口 →</a>
       </div>
       <div id="loadError" class="notice" role="alert" hidden></div>
       <div class="tools">
-        <h2>出口与连接</h2>
+        <h2>出口与接入入口</h2>
         <span class="count" id="ecount"></span><span class="spacer"></span
         ><button id="subBtn">订阅口令</button
         ><button id="exportAll">导出链接</button
@@ -785,14 +785,14 @@
       <div id="list"><div class="empty">正在读取连接…</div></div>
       <div id="orphans"></div>
       <p class="footnote">
-        修改连接配置可能短暂中断客户端连接。缺少可信国家证据时显示“待验证”；出口类型
+        修改接入配置可能短暂中断客户端连接。缺少可信国家证据时显示“待验证”；出口类型
         unknown 不代表家宽。
       </p>
     </main>
     <dialog class="modal" id="newnodebox">
       <div class="sheet">
         <div class="head">
-          <h2>新建连接</h2>
+          <h2>新增接入入口</h2>
           <span class="spacer"></span>
           <button class="icon" data-close="newnodebox" title="关闭">
             <svg viewBox="0 0 24 24">
@@ -802,6 +802,10 @@
           </button>
         </div>
         <div class="body">
+          <p class="hint" style="margin: 0 0 20px">
+            创建后，在该入口的“配置 →
+            出口”中选择已有的就绪出口。此操作不会增加出口数量；未绑定时流量保持阻断。
+          </p>
           <label class="f">
             <span>协议</span>
             <select id="nproto">
@@ -1405,7 +1409,7 @@
         modalFocus.set(id, document.activeElement);
         m.setAttribute(
           "aria-label",
-          m.querySelector("h2")?.textContent || "连接配置",
+          m.querySelector("h2")?.textContent || "接入管理",
         );
         m.showModal();
         m.classList.add("open");
