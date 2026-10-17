@@ -1,0 +1,177 @@
+{
+  "scope": "standalone_console_development_candidate",
+  "verified_at": "2026-10-17T15:17:38.671327+00:00",
+  "formal_release_created": false,
+  "build": {
+    "git_head": "42b3537a2f17716f95b335e4096ba4726807165f",
+    "manager_origin": "built_from_source",
+    "source_dirty": false,
+    "source_snapshot_sha256": "6ffb6445210965a64aacb6330b71fd76d1459b1cba885c20de8c2c68eed4dbb2",
+    "version": "dev-console-20261017",
+    "xray_version": "v26.3.27"
+  },
+  "package_sha256": "0c6d04bbdea987be3fe28ca999d1834424ecd5b2ed05175db5ca400e5fdaf51b",
+  "regression": {
+    "python_passed": 63,
+    "go_top_level_passed": 205,
+    "go_pass_events": 261,
+    "go_skipped_events": 1,
+    "go_live_acceptance_enabled": true,
+    "skip_reason": "child helper executes only in its intentional crash subprocess",
+    "go_vet": "passed",
+    "worker_boundary_checks": 29,
+    "unified_worker_tests": "passed",
+    "console_javascript_syntax": "passed",
+    "browser_layout_and_filters": "passed_with_synthetic_display_data"
+  },
+  "functional_checks": {
+    "capacity_32": true,
+    "four_slots_allocated": true,
+    "unavailable_country_waits": true,
+    "waiting_slot_blackhole": true,
+    "waiting_slot_auto_bound": true,
+    "original_inbound_credentials_preserved": true,
+    "decrease_to_three": true,
+    "readded_slot_reuses_public_credentials": true,
+    "local_qr_png": true,
+    "qr_requires_login": true,
+    "refresh_runs_real_builder": true,
+    "running_checks_keep_openvpn_processes": true,
+    "subscription_subset_one_entry": true,
+    "automatic_country_name_in_real_subscription": true,
+    "custom_name_in_real_subscription": true,
+    "candidate_cancel_completes": true,
+    "candidate_cancel_keeps_existing_openvpn": true,
+    "candidate_namespace_cleaned": true,
+    "candidate_files_cleaned": true,
+    "completed_candidate_namespace_cleaned": true,
+    "xui_runtime_config_preserved": true,
+    "xui_not_restarted_during_test": true,
+    "management_and_subscription_preserved": true
+  },
+  "quantity_tests": {
+    "capacity_logic": 32,
+    "allocated_slots_tested": 6,
+    "two_waiting_inbounds_have_independent_keys": true,
+    "no_eligible_country_waits_and_blocks": true,
+    "fourth_exit_initial_state": "starting",
+    "fourth_exit_later_connected_without_relaxing_policy": true,
+    "final_target": 3
+  },
+  "real_subscription": {
+    "vps_four": {
+      "status": "passed",
+      "slots": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "all_entries_passed": true,
+      "ip_types": [
+        "unknown"
+      ]
+    },
+    "mac_four": {
+      "status": "passed",
+      "slots": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "all_entries_passed": true,
+      "ip_types": [
+        "unknown"
+      ]
+    },
+    "vps_three_after_recovery": {
+      "status": "passed",
+      "slots": [
+        1,
+        2,
+        3
+      ],
+      "all_entries_passed": true,
+      "ip_types": [
+        "unknown"
+      ]
+    },
+    "mac_three_after_recovery": {
+      "status": "passed",
+      "slots": [
+        1,
+        2,
+        3
+      ],
+      "all_entries_passed": true,
+      "ip_types": [
+        "unknown"
+      ]
+    }
+  },
+  "manager_sigkill_recovery": {
+    "status": "passed",
+    "sigkill_manager_auto_recovered": true,
+    "diagnostic_namespace_cleaned_on_start": true,
+    "diagnostic_directories_cleaned_on_start": true,
+    "target_restored": 3,
+    "original_slot_credentials_and_policies_preserved": true
+  },
+  "final_preservation": {
+    "status": "passed",
+    "checks": {
+      "original_inbound_credentials_preserved": true,
+      "management_settings_preserved": true,
+      "xui_runtime_config_preserved": true,
+      "xui_not_restarted_during_test": true,
+      "target_three_restored": true,
+      "one_inbound_per_slot": true,
+      "default_new_country_automatic": true,
+      "reviewed_source_installed": true
+    },
+    "ready_slots": [
+      1,
+      2,
+      3
+    ],
+    "waiting_slots": [],
+    "ip_types": [
+      "unknown",
+      "unknown",
+      "unknown"
+    ]
+  },
+  "duplicate_migration_regression": {
+    "status": "passed",
+    "candidate_duplicate_found": true,
+    "only_candidate_created_duplicate_removed": true,
+    "original_inbounds_preserved": true,
+    "inbound_counts": [
+      1,
+      1,
+      1
+    ]
+  },
+  "candidate_diagnostic": {
+    "status": "failed",
+    "code": "openvpn_timeout",
+    "cleanup_verified": true,
+    "cancel_cleanup_verified": true,
+    "running_candidate_uses_existing_socks": true
+  },
+  "validation_notes": [
+    "The first whole-file 3x-ui database hash assertion differed during runtime; its original failure record is retained privately. Runtime configuration hash and original process start time match; all management writes used the forced native backend.",
+    "An initial development candidate created a duplicate Slot 1 inbound during pending legacy replacement. The mapping race is fixed, covered by regression, and only the candidate-created duplicate was removed after a private backup. Final original slots each have one original inbound.",
+    "32 is a software capacity limit tested in allocation logic, not a claim of 32 simultaneous real VPN tunnels.",
+    "Pool counts represent the complete current public response, not all worldwide VPN Gate servers. Upstream country supply is not guaranteed.",
+    "Residential type, ISP and ASN have not been positively validated; live exit types remain unknown."
+  ],
+  "constraints": {
+    "cloudflare_remains_paused": true,
+    "three_x_ui_write_operations": false,
+    "three_x_ui_restart_operations": false,
+    "unknown_called_residential": false
+  },
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/3"
+}

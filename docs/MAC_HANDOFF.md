@@ -1,6 +1,6 @@
 # Mac 开发交接（2026-10-15）
 
-2026-10-17 控制台开发接续：本机分支 `codex/console-capacity-20261017` 保留所有私有运行文件；新控制台、出口数量和独立检测说明见 [CONSOLE.md](CONSOLE.md)。正式版仍是下述 v0.4.0，开发候选验收另行记录。
+2026-10-17 控制台开发接续：本机分支 `codex/console-capacity-20261017` 保留所有私有运行文件；新控制台、出口数量和独立检测说明见 [CONSOLE.md](CONSOLE.md)。正式版仍是下述 v0.4.0，开发候选已完成 VPS/Mac 四出口订阅和恢复三个原出口后的强杀复验，见 [控制台验收](evidence/vps-console-20261017.json)。
 
 2026-10-16 更新：本轮成果已合入 main 并发布 [v0.4.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.4.0)，干净候选包经测试 VPS 升级和 Mac 外部复验，公开附件与已验收候选一致。见 [发布证据](evidence/vps-release-20261016.json)。
 
