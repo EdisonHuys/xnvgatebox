@@ -87,7 +87,7 @@ func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 		out = append(out, Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			BoundTo: ib.BoundTo, BoundUp: boundUp, BoundSlot: ib.BoundSlot, NameMode: ib.NameMode,
+			BoundTo: ib.BoundTo, BoundUp: boundUp, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		})
 	}
 	return out, nil
@@ -108,7 +108,7 @@ func (n *Native) InboundDetail(id int, publicHost string) (*InboundDetail, error
 		Inbound: Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			BoundTo: ib.BoundTo, BoundSlot: ib.BoundSlot, NameMode: ib.NameMode,
+			BoundTo: ib.BoundTo, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		},
 		Listen:  "0.0.0.0",
 		Network: ib.netOrTCP(),
@@ -686,6 +686,7 @@ func (n *Native) prepareInbound(spec NewInboundSpec, used map[int]bool) (*native
 	proto, network, security, port := ns.Protocol, ns.Network, ns.Security, ns.Port
 
 	ib := &nativeInbound{
+		NameMode: "custom",
 		ID:       n.store.NextID,
 		Port:     port,
 		Protocol: proto,

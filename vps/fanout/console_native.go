@@ -14,16 +14,51 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 	changed := false
 	used := n.store.usedPorts()
 	checkedReality := false
+	// A restored Slot can already be dialing a new host while its legacy
+	// inbound still names the previous host. Migrate all previous bindings
+	// first, before another Slot can reuse that hostname or create a duplicate.
+	previous, current := map[string]int{}, map[string]int{}
+	put := func(table map[string]int, host string, slot int) {
+		if host == "" {
+			return
+		}
+		host = sanitizeTag(host)
+		if old, ok := table[host]; ok && old != slot {
+			table[host] = 0
+		} else {
+			table[host] = slot
+		}
+	}
+	for _, t := range tunnels {
+		t.mu.Lock()
+		put(previous, t.prevHost, t.Slot)
+		put(current, t.Node.HostName, t.Slot)
+		t.mu.Unlock()
+	}
+	for _, ib := range n.store.Inbounds {
+		if ib.BoundSlot != 0 || ib.BoundTo == "" {
+			continue
+		}
+		slot, ok := previous[ib.BoundTo]
+		if !ok {
+			slot, ok = current[ib.BoundTo]
+		}
+		if !ok {
+			continue
+		}
+		if slot == 0 {
+			return fmt.Errorf("旧入站绑定存在多个出口身份，保留配置等待明确绑定")
+		}
+		ib.BoundSlot = slot
+		changed = true
+	}
 	for _, t := range tunnels {
 		v := t.snapshot()
 		found := false
 		for _, ib := range n.store.Inbounds {
-			if ib.BoundSlot == v.Slot || (ib.BoundSlot == 0 && v.Node.HostName != "" && ib.BoundTo == sanitizeTag(v.Node.HostName)) {
+			if ib.BoundSlot == v.Slot {
 				found = true
-				if ib.BoundSlot != v.Slot {
-					ib.BoundSlot = v.Slot
-					changed = true
-				}
+				break
 			}
 		}
 		if found {
@@ -63,10 +98,17 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 }
 
 func automaticName(ib ExitInbound) bool {
-	if ib.NameMode != "" {
-		return ib.NameMode == "auto"
+	return inboundNameMode(ib.NameMode, ib.Remark) == "auto"
+}
+
+func inboundNameMode(mode, remark string) string {
+	if mode != "" {
+		return mode
 	}
-	return true
+	if remark == "" || isGeneratedLabel(remark) {
+		return "auto"
+	}
+	return "custom"
 }
 
 func subscriptionExitName(e Exit) string {

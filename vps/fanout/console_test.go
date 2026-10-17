@@ -206,6 +206,30 @@ func TestConsoleRebindCannotStealArchivedSlotWithReusedHostname(t *testing.T) {
 	}
 }
 
+func TestConsoleLegacyMigrationDuringReplacementDoesNotCreateDuplicate(t *testing.T) {
+	n, _, ts := rollbackFixture(t)
+	second := *n.store.Inbounds[0]
+	second.ID = 2
+	second.Port = 30002
+	second.BoundTo = "b"
+	n.store.NextID = 3
+	n.store.Inbounds = append(n.store.Inbounds, &second)
+	// Slot 1 has begun using the old hostname of Slot 2. Pending previous
+	// bindings are authoritative, even before either rebind has completed.
+	ts[0].Node.HostName = "b"
+	ts[0].setPrevHost("a")
+	ts = append(ts, &Tunnel{Slot: 2, Port: 17929, Status: "starting", Node: Node{HostName: "c"}, prevHost: "b"})
+	if err := n.ensureSlotInbounds(ts, "fixture.example.invalid"); err != nil {
+		t.Fatal(err)
+	}
+	if len(n.store.Inbounds) != 2 || n.store.NextID != 3 || n.store.Inbounds[0].BoundSlot != 1 || n.store.Inbounds[1].BoundSlot != 2 {
+		t.Fatal("replacement duplicated or stole legacy inbounds")
+	}
+	if n.store.Inbounds[0].Port != 30001 || n.store.Inbounds[0].Clients[0].ID != rollbackFixtureClientID {
+		t.Fatal("legacy credentials changed")
+	}
+}
+
 func TestConsoleSubscriptionActualCountrySelectionCustomNames(t *testing.T) {
 	n, _, ts := rollbackFixture(t)
 	n.proc = &xrayProc{bin: "fixture-only"}
@@ -214,7 +238,7 @@ func TestConsoleSubscriptionActualCountrySelectionCustomNames(t *testing.T) {
 	ts[0].acceptExitEvidence(ts[0].ExitIP, ts[0].ExitIP, EgressProfile{Protocol: "openvpn", IP: ts[0].ExitIP, Country: &jp, IntelligenceStatus: "passed", IPType: "unknown", ExpiresAt: time.Now().Add(time.Hour).UTC().Format(time.RFC3339)})
 	n.store.Inbounds[0].BoundSlot = 1
 	n.store.Inbounds[0].NameMode = "auto"
-	n.store.Inbounds = append(n.store.Inbounds, &nativeInbound{ID: 2, Port: 30002, Protocol: "vless", Enable: true, BoundSlot: 2, Remark: "自定义 🇰🇷", NameMode: "custom", Clients: []nativeClient{{ID: rollbackFixtureClientID, Enable: true}}}, &nativeInbound{ID: 3, Port: 30003, Protocol: "vless", Enable: true, BoundSlot: 3, Clients: []nativeClient{{ID: rollbackFixtureClientID, Enable: true}}})
+	n.store.Inbounds = append(n.store.Inbounds, &nativeInbound{ID: 2, Port: 30002, Protocol: "vless", Enable: true, BoundSlot: 2, Remark: "自定义 🇰🇷", NameMode: "", Clients: []nativeClient{{ID: rollbackFixtureClientID, Enable: true}}}, &nativeInbound{ID: 3, Port: 30003, Protocol: "vless", Enable: true, BoundSlot: 3, Clients: []nativeClient{{ID: rollbackFixtureClientID, Enable: true}}})
 	usePanel(t, n)
 	m := NewManager(32, t.TempDir())
 	m.tunnels[1] = ts[0]
