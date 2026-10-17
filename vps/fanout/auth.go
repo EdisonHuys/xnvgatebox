@@ -257,30 +257,30 @@ const loginHTML = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VPN Gate Box</title>
+<title>xnvgatebox · 登录</title>
 <style>
 body{margin:0;height:100vh;display:flex;flex-direction:column;gap:16px;
   align-items:center;justify-content:center;
-  background:#12151a;color:#dde3ec;
-  font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  background:#f4f6f8;color:#182c34;
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
 .links{display:flex;gap:16px}
 .links a{color:#8b95a5;text-decoration:none;font-size:12px}
-.links a:hover{color:#4a9eda}
-form{background:#181c23;border:1px solid #262c36;border-radius:6px;
-  padding:22px 24px;width:300px}
-h1{font-size:13px;font-weight:600;margin:0 0 16px}
+.links a:hover{color:#117b68}
+form{background:#fff;border:1px solid #e4ebee;border-radius:20px;
+  padding:36px;width:300px;max-width:calc(100vw - 100px);box-shadow:0 12px 50px #1b35450a}
+h1{font-size:25px;font-weight:750;letter-spacing:-.5px;margin:0 0 6px}
 label{display:block;color:#8b95a5;font-size:11px;margin-bottom:6px}
-input{width:100%;box-sizing:border-box;background:#0e1116;border:1px solid #262c36;
-  color:#dde3ec;border-radius:4px;padding:7px 9px;font:inherit}
-input:focus{outline:none;border-color:#4a9eda}
-button{width:100%;margin-top:14px;background:#4a9eda;border:0;color:#0b0e12;
-  font:inherit;font-weight:600;border-radius:4px;padding:8px;cursor:pointer}
+input{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e4ebee;
+  color:#182c34;border-radius:9px;padding:11px 12px;font:inherit}
+input:focus{outline:2px solid #cce8df;border-color:#117b68}
+button{width:100%;margin-top:16px;background:#117b68;border:0;color:#fff;
+  font:inherit;font-weight:600;border-radius:9px;padding:11px;cursor:pointer}
 .err{color:#c25450;font-size:11px;margin-top:10px;min-height:14px}
 </style>
 </head>
 <body>
 <form id="f">
-  <h1>VPN Gate Box</h1>
+  <h1>xnvgatebox</h1><p style="color:#72828c;margin:0 0 27px">欢迎回来，管理你的独立出口。</p>
   <label for="pw">访问口令</label>
   <input type="password" id="pw" autofocus autocomplete="current-password">
   <button type="submit">进入</button>

@@ -350,14 +350,16 @@ func (x *XUI) saveXray(setting map[string]any, testURL string) error {
 
 // Inbound 是面板里已有的一个入站。
 type Inbound struct {
-	ID       int    `json:"id"`
-	Port     int    `json:"port"`
-	Protocol string `json:"protocol"`
-	Remark   string `json:"remark"`
-	Enable   bool   `json:"enable"`
-	Tag      string `json:"tag"`      // Xray 里的 inboundTag
-	BoundTo  string `json:"bound_to"` // 已绑定的节点主机名，空表示未绑定
-	BoundUp  bool   `json:"bound_up"` // 绑定的节点当前是否有运行中的隧道
+	ID        int    `json:"id"`
+	Port      int    `json:"port"`
+	Protocol  string `json:"protocol"`
+	Remark    string `json:"remark"`
+	Enable    bool   `json:"enable"`
+	Tag       string `json:"tag"`      // Xray 里的 inboundTag
+	BoundTo   string `json:"bound_to"` // 已绑定的节点主机名，空表示未绑定
+	BoundSlot int    `json:"bound_slot,omitempty"`
+	NameMode  string `json:"name_mode,omitempty"`
+	BoundUp   bool   `json:"bound_up"` // 绑定的节点当前是否有运行中的隧道
 }
 
 // Inbounds 列出面板里已有的入站。

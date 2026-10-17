@@ -40,8 +40,10 @@ type nativeInbound struct {
 	Remark   string         `json:"remark"`
 	Enable   bool           `json:"enable"`
 	Clients  []nativeClient `json:"clients"`
-	// BoundTo 是绑定的节点主机名经 sanitizeTag 后的形式，空表示直连
-	BoundTo string `json:"bound_to"`
+	// BoundTo 保留旧版主机名绑定；BoundSlot 存在时以稳定编号为准。空绑定默认阻断
+	BoundTo   string `json:"bound_to"`
+	BoundSlot int    `json:"bound_slot,omitempty"`
+	NameMode  string `json:"name_mode,omitempty"`
 }
 
 // tlsConfig 是标准 TLS 的配置。证书要么由用户提供路径，要么 fanout 生成自签的。
@@ -126,6 +128,9 @@ func validateNativeStore(st *nativeStore) error {
 	for _, ib := range st.Inbounds {
 		if ib == nil || ib.ID < 1 || ib.ID >= st.NextID || ib.Port < 1 || ib.Port > 65535 || ids[ib.ID] || ports[ib.Port] {
 			return fmt.Errorf("内置配置的入站标识或端口无效")
+		}
+		if ib.BoundSlot < 0 || ib.BoundSlot > maximumSlots || (ib.NameMode != "" && ib.NameMode != "auto" && ib.NameMode != "custom") {
+			return fmt.Errorf("内置入站的出口编号或命名模式无效")
 		}
 		ids[ib.ID] = true
 		ports[ib.Port] = true

@@ -21,7 +21,7 @@ var version = "dev"
 func main() {
 	var (
 		webPort  = flag.Int("web", 8899, "Web 管理端口")
-		maxSlots = flag.Int("max", 3, "最多同时运行的隧道数")
+		maxSlots = flag.Int("max", maximumSlots, "最多同时运行的隧道数")
 		workDir  = flag.String("dir", "/var/lib/xnvgatebox/fanout", "工作目录")
 	)
 	panelMode := flag.String("panel", "", "节点链接后端: 留空按界面设置/自动探测, 3x-ui, native, xray-cf-lite")
@@ -29,6 +29,9 @@ func main() {
 	showVersion := flag.Bool("version", false, "显示版本后退出")
 	checkState := flag.Bool("check-state", false, "只读检查内置模式状态副本的迁移配置，不启动服务")
 	flag.Parse()
+	if *maxSlots < 1 || *maxSlots > maximumSlots {
+		log.Fatalf("出口容量范围为 1-%d", maximumSlots)
+	}
 
 	if *publicIP == "" {
 		*publicIP = os.Getenv("FANOUT_PUBLIC_IP")
@@ -117,6 +120,12 @@ func main() {
 	}
 	startConfiguredSlot(mgr)
 
+	console, err := newConsole(mgr)
+	if err != nil {
+		log.Fatalf("加载出口计划失败: %v", err)
+	}
+	go console.watch()
+
 	go mgr.WatchHealth()
 	go mgr.WatchNodePool()
 
@@ -133,6 +142,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
+	console.routes(mux)
 	mux.HandleFunc("/api/nodes", apiNodes(mgr))
 	mux.HandleFunc("/api/tunnels", apiTunnels(mgr))
 	mux.HandleFunc("/api/start", apiStart(mgr))
@@ -574,8 +584,10 @@ func apiXUIInbounds(m *Manager) http.HandlerFunc {
 func liveHosts(m *Manager) map[string]bool {
 	live := map[string]bool{}
 	for _, t := range m.Tunnels() {
-		if t.Status == "up" {
-			live[sanitizeTag(t.Node.HostName)] = true
+		v := t.snapshot()
+		if v.Status == "up" {
+			live[sanitizeTag(v.Node.HostName)] = true
+			live[slotOutboundTag(v.Slot)] = true
 		}
 	}
 	return live
@@ -778,6 +790,9 @@ func apiInboundUpdate(m *Manager) http.HandlerFunc {
 
 		// 只有真正传了的参数才改，没传的保持原样
 		var patch InboundPatch
+		if mode := q.Get("name_mode"); mode != "" {
+			patch.NameMode = &mode
+		}
 		if v := q.Get("port"); v != "" {
 			port, err := strconv.Atoi(v)
 			if err != nil {

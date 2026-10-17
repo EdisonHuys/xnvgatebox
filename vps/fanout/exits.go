@@ -5,14 +5,16 @@ import (
 	"time"
 )
 
-// ExitInbound 是挂在某个出口上的一个 3x-ui 入站。
+// ExitInbound 是挂在某个出口上的一个受管入站。
 type ExitInbound struct {
-	ID       int    `json:"id"`
-	Port     int    `json:"port"`
-	Remark   string `json:"remark"`
-	Protocol string `json:"protocol"`
-	Enable   bool   `json:"enable"`
-	Tag      string `json:"tag"`
+	BoundSlot int    `json:"bound_slot,omitempty"`
+	NameMode  string `json:"name_mode,omitempty"`
+	ID        int    `json:"id"`
+	Port      int    `json:"port"`
+	Remark    string `json:"remark"`
+	Protocol  string `json:"protocol"`
+	Enable    bool   `json:"enable"`
+	Tag       string `json:"tag"`
 }
 
 // Exit 是界面上的一行：一条隧道加上挂在它出口的所有入站。
@@ -104,13 +106,18 @@ func (m *Manager) ExitsOf() ExitsView {
 		snapshot := t.snapshot()
 		if snapshot.Status == "up" {
 			live[sanitizeTag(snapshot.Node.HostName)] = true
+			live[slotOutboundTag(snapshot.Slot)] = true
 		}
 	}
 
 	byHost := map[string]int{}
+	bySlot := map[int]int{}
 	for i, t := range tunnels {
 		snapshot := t.snapshot()
-		byHost[sanitizeTag(snapshot.Node.HostName)] = i
+		bySlot[snapshot.Slot] = i
+		if snapshot.Node.HostName != "" {
+			byHost[sanitizeTag(snapshot.Node.HostName)] = i
+		}
 		cred := snapshot.Cred
 		view.Exits = append(view.Exits, Exit{
 			Slot: snapshot.Slot, Port: snapshot.Port, Host: snapshot.Node.HostName,
@@ -132,7 +139,15 @@ func (m *Manager) ExitsOf() ExitsView {
 	for _, ib := range list {
 		row := ExitInbound{
 			ID: ib.ID, Port: ib.Port, Remark: ib.Remark,
-			Protocol: ib.Protocol, Enable: ib.Enable, Tag: ib.Tag,
+			Protocol: ib.Protocol, Enable: ib.Enable, Tag: ib.Tag, BoundSlot: ib.BoundSlot, NameMode: ib.NameMode,
+		}
+		if ib.BoundSlot > 0 {
+			if i, ok := bySlot[ib.BoundSlot]; ok {
+				view.Exits[i].Inbounds = append(view.Exits[i].Inbounds, row)
+			} else {
+				view.Direct = append(view.Direct, row)
+			}
+			continue
 		}
 		if i, ok := byHost[ib.BoundTo]; ib.BoundTo != "" && ok {
 			view.Exits[i].Inbounds = append(view.Exits[i].Inbounds, row)

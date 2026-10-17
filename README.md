@@ -6,6 +6,8 @@
 
 最新发布：[v0.4.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.4.0)，已完成干净源码构建及 VPS/Mac 候选升级实测，见 [发布验收记录](docs/evidence/vps-release-20261016.json)。
 
+开发中的新版控制台与可配置出口数量见 [控制台说明](docs/CONSOLE.md)，发布版操作流程见下文。
+
 ## VPS 一条命令安装
 
 目前支持 Debian / Ubuntu、Linux amd64、systemd，以 root 执行：
@@ -14,11 +16,11 @@
 curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/main/vps/install.sh | bash
 ```
 
-安装包包含本项目管理程序、统一 Pool Builder 和校验固定版本的 Xray。安装后由 VPS 自己从官方全量清单构建候选池，每十分钟刷新，无需 GitHub/Cloudflare 账号或远程节点池。再次安装前自动备份已有项目状态。
+安装包包含本项目管理程序、统一 Pool Builder 和校验固定版本的 Xray。安装后由 VPS 自己完整解析官方当次公开清单并构建候选池，每十分钟刷新，无需 GitHub/Cloudflare 账号或远程节点池。再次安装前自动备份已有项目状态。
 
-运行 `xnvgatebox access` 查看直接访问 VPS 的管理地址和密码。界面操作：新建出口 → 新建 VLESS/REALITY 节点 → 绑定出口 → 复制订阅。一个订阅包含所有已绑定入站，各入站使用独立公开端口和对应固定 SOCKS Slot。不要把本地 SOCKS 端口当作客户端的 VLESS 端口。
+运行 `xnvgatebox access` 查看直接访问 VPS 的管理地址和密码。v0.4.0 发布版界面操作：新建出口 → 新建 VLESS/REALITY 节点 → 绑定出口 → 复制订阅。一个订阅包含所有已绑定入站，各入站使用独立公开端口和对应固定 SOCKS Slot。不要把本地 SOCKS 端口当作客户端的 VLESS 端口。
 
-`xnvgatebox refresh` 立即刷新候选池，`xnvgatebox status` 查看服务；`xnvgatebox install --mode vps` 更新完整部署包。默认最多三个 Slot，国家可在界面选择。未绑定或失效出口的内置 Xray 流量被阻断。
+`xnvgatebox refresh` 立即刷新候选池，`xnvgatebox status` 查看服务；`xnvgatebox install --mode vps` 更新完整部署包。v0.4.0 发布版默认最多三个 Slot，国家可在界面选择；本开发分支改为 0–32 个目标出口，自动建立并绑定入站。未绑定或失效出口的内置 Xray 流量被阻断。
 
 指定国家能否建立出口，取决于 VPN Gate 上游当时提供的节点及其可达性。暂时没有合适 IP 时，如实提示暂不可用或等待，不要求每个国家随时有出口，也不因此判定本程序故障。功能验收可使用当时可用的国家；三个独立出口可以来自同一国家。
 

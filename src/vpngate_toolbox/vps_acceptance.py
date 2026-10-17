@@ -108,7 +108,7 @@ def parse_subscription(blob):
         # The service defaults to base64; do not substitute a hand-built profile.
         text = base64.b64decode(blob.strip(), validate=True).decode("utf-8")
         profiles = [connection_from_native_link(line.strip()) for line in text.splitlines() if line.strip()]
-        if not profiles or len(profiles) > 3 or len({(p.host, p.port) for p in profiles}) != len(profiles):
+        if not profiles or len(profiles) > 32 or len({(p.host, p.port) for p in profiles}) != len(profiles):
             raise ValueError()
         return profiles
     except (ValueError, UnicodeError):
@@ -142,22 +142,22 @@ class LocalManager:
 
     def plan(self):
         view = json.loads(request_bytes(self.opener, self.base + "api/exits"))
-        if view.get("backend") != "native" or view.get("panel") or len(view.get("exits", [])) != 3:
-            raise ToolError("three_native_slots_required")
+        if view.get("backend") != "native" or view.get("panel") or not 1 <= len(view.get("exits", [])) <= 32:
+            raise ToolError("native_slots_required")
         host = public_ipv4(view["public_ip"])
         rows = []
         for e in sorted(view["exits"], key=lambda e: e["slot"]):
             inbounds = [i for i in (e.get("inbounds") or []) if i.get("enable")]
             if e.get("status") != "up" or len(inbounds) != 1 or inbounds[0].get("protocol") != "vless":
-                raise ToolError("three_live_bound_vless_slots_required")
+                raise ToolError("live_bound_vless_slots_required")
             expected = public_ipv4(e["exit_ip"])
             if expected == host:
                 raise ToolError("host_exit_detected")
             rows.append({"slot": e["slot"], "socks_port": e["port"], "public_port": inbounds[0]["port"],
                          "expected_exit_ip": expected, "ip_type": (e.get("egress") or {}).get("ip_type", "unknown"),
                          "socks_user": e["socks_user"], "socks_pass": e["socks_pass"]})
-        if [r["slot"] for r in rows] != [1, 2, 3] or len({r["expected_exit_ip"] for r in rows}) != 3:
-            raise ToolError("three_independent_slot_exits_required")
+        if len({r["slot"] for r in rows}) != len(rows) or len({r["expected_exit_ip"] for r in rows}) != len(rows):
+            raise ToolError("independent_slot_exits_required")
         path = urllib.parse.urlsplit(self.base).path.rstrip("/")
         url = f"http://{host}:{urllib.parse.urlsplit(self.base).port}{path}/sub?" + urllib.parse.urlencode({"token": self.token})
         captured = request_bytes(self.opener, self.base + "sub?" + urllib.parse.urlencode({"token": self.token}))
@@ -168,15 +168,15 @@ class LocalManager:
 
 
 def match_profiles(plan, profiles):
-    if plan.get("version") != 1 or len(plan.get("slots", [])) != 3:
-        raise ToolError("three_slot_plan_required")
-    if {r["slot"] for r in plan["slots"]} != {1, 2, 3} or len({r["public_port"] for r in plan["slots"]}) != 3:
+    if plan.get("version") != 1 or not 1 <= len(plan.get("slots", [])) <= 32:
+        raise ToolError("slot_plan_required")
+    if len({r["slot"] for r in plan["slots"]}) != len(plan["slots"]) or len({r["public_port"] for r in plan["slots"]}) != len(plan["slots"]):
         raise ToolError("unique_slot_plan_required")
-    if any(r["socks_port"] != 17927 + r["slot"] or not 1 <= r["public_port"] <= 65535 for r in plan["slots"]):
+    if any(r["socks_port"] != 17927 + r["slot"] or not 1 <= r["public_port"] <= 65535 or not 1 <= r["slot"] <= 32 for r in plan["slots"]):
         raise ToolError("fixed_slot_port_mismatch")
     host = public_ipv4(plan["host_ip"])
     ips = [public_ipv4(r["expected_exit_ip"]) for r in plan["slots"]]
-    if host in ips or len(set(ips)) != 3:
+    if host in ips or len(set(ips)) != len(ips):
         raise ToolError("independent_non_host_exits_required")
     by_port = {p.port: p for p in profiles}
     if len(profiles) != len(plan["slots"]) or set(by_port) != {r["public_port"] for r in plan["slots"]}:
@@ -404,7 +404,7 @@ def compare_state(before, after):
             "slot_identity_and_credentials_preserved": sorted(
                 (r["slot"], r["port"], r.get("socks_user"), r.get("socks_pass"), r.get("stopped", False)) for r in state["tunnels"]),
             "inbound_clients_and_keys_preserved": sorted(
-                ({k: v for k, v in r.items() if k != "bound_to"} for r in native["inbounds"]), key=lambda r: r["id"])}
+                ({k: v for k, v in r.items() if k not in {"bound_to", "bound_slot", "name_mode"}} for r in native["inbounds"]), key=lambda r: r["id"])}
     a, b = facts(before), facts(after)
     checks = {k: a[k] == b[k] for k in a}
     before_policies = {r["slot"]: r.get("policy") for r in json.loads((Path(before)/"state.json").read_text())["tunnels"]}
@@ -428,7 +428,7 @@ def main(argv=None):
     fault = sub.add_parser("fault", help="Kill only an owned test Slot OpenVPN and verify recovery")
     fault.add_argument("--state-dir", type=Path, required=True)
     fault.add_argument("--xray", required=True)
-    fault.add_argument("--slot", type=int, choices=[1, 2, 3], required=True)
+    fault.add_argument("--slot", type=int, choices=range(1, 33), required=True)
     fault.add_argument("--recovery-timeout", type=int, default=300)
     fault.add_argument("--output", type=Path, required=True)
     compare = sub.add_parser("compare-state", help="Compare consistent private snapshots without exposing values")

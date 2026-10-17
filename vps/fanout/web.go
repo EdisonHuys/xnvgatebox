@@ -1,8 +1,19 @@
 package main
 
-import "net/http"
+import (
+	_ "embed"
+	"net/http"
+)
+
+//go:embed console.html
+var indexHTML string
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/advanced" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(legacyHTML))
+		return
+	}
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -11,12 +22,12 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(indexHTML))
 }
 
-const indexHTML = `<!DOCTYPE html>
+const legacyHTML = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VPN Gate Box</title>
+<title>xnvgatebox · 高级管理</title>
 <style>
 :root{
   --bg:#12151a; --panel:#181c23; --line:#262c36; --text:#dde3ec;
@@ -214,7 +225,7 @@ textarea:focus{outline:none;border-color:var(--accent)}
 </head>
 <body>
 <header>
-  <h1>VPN Gate Box</h1>
+  <h1>xnvgatebox · 高级管理</h1>
   <span class="count" id="panel"></span>
   <span class="spacer"></span>
   <button class="icon" id="settingsBtn" title="设置">

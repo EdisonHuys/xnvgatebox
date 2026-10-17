@@ -58,9 +58,10 @@ type Panel interface {
 
 // InboundPatch 描述对入站的一次局部修改。指针为 nil 表示该字段不动。
 type InboundPatch struct {
-	Port   *int
-	Remark *string
-	Enable *bool
+	Port     *int
+	Remark   *string
+	NameMode *string
+	Enable   *bool
 }
 
 // CreatedInbound 是新建入站后回给界面的摘要。

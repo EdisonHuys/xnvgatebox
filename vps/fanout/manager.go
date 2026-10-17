@@ -25,6 +25,8 @@ type Manager struct {
 	localEvidence   map[string]Node
 	stateWriteHook  func(string) error
 	credentialApply func(*Tunnel) error
+	connectSem      chan struct{}
+	console         *Console
 }
 
 func NewManager(maxSlots int, workDir string) *Manager {
@@ -34,6 +36,7 @@ func NewManager(maxSlots int, workDir string) *Manager {
 		maxSlots:      maxSlots,
 		deletedSlots:  map[int]bool{},
 		localEvidence: map[string]Node{},
+		connectSem:    make(chan struct{}, 2),
 	}
 }
 
@@ -326,6 +329,12 @@ func (m *Manager) tunnelActive(t *Tunnel) bool {
 
 // tryNode 尝试用当前节点把隧道拉起来。
 func (m *Manager) tryNode(t *Tunnel) error {
+	select {
+	case m.connectSem <- struct{}{}:
+		defer func() { <-m.connectSem }()
+	case <-t.workContext().Done():
+		return t.workContext().Err()
+	}
 	t.clearEgress()
 	if err := t.setupNetns(); err != nil {
 		return err
@@ -469,6 +478,13 @@ func (m *Manager) Stop(slot int) error {
 // Delete is explicit: stopping reserves the Slot; deletion frees its identity.
 // Export retains a block tombstone until that Slot is deliberately recreated.
 func (m *Manager) Delete(slot int) error {
+	if m.console != nil {
+		return m.console.deleteSlot(slot)
+	}
+	return m.deleteSlot(slot)
+}
+
+func (m *Manager) deleteSlot(slot int) error {
 	m.mu.RLock()
 	t := m.tunnels[slot]
 	m.mu.RUnlock()

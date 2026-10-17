@@ -1,0 +1,2017 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>xnvgatebox · 控制台</title>
+    <style>
+      :root {
+        --bg: #f4f6f8;
+        --card: #fff;
+        --text: #182c34;
+        --muted: #72828c;
+        --line: #e4ebee;
+        --accent: #117b68;
+        --soft: #e7f4ef;
+        --amber: #a77317;
+        --red: #b34d4d;
+        --shadow: 0 5px 24px #1b354506;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "PingFang SC",
+          "Microsoft YaHei",
+          sans-serif;
+      }
+      body.dark {
+        --bg: #101b22;
+        --card: #192830;
+        --text: #e6edf0;
+        --muted: #98aab5;
+        --line: #2c3d45;
+        --accent: #75d5b9;
+        --soft: #203f39;
+        --amber: #eac17b;
+        --red: #ef9898;
+        --shadow: none;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button,
+      a,
+      input,
+      select,
+      textarea {
+        outline-offset: 4px;
+      }
+      button {
+        cursor: pointer;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        border-radius: 9px;
+        padding: 9px 15px;
+        transition: 0.15s;
+      }
+      button:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--card);
+      }
+      body.dark .primary {
+        color: #102b24;
+      }
+      .primary:hover {
+        opacity: 0.85;
+        color: var(--card);
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      input,
+      select,
+      textarea {
+        color: var(--text);
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        max-width: 100%;
+      }
+      input[type="checkbox"] {
+        accent-color: var(--accent);
+        width: 16px;
+        height: 16px;
+        vertical-align: middle;
+      }
+      textarea {
+        width: 100%;
+        resize: vertical;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+        letter-spacing: -0.7px;
+      }
+      h2 {
+        font-size: 17px;
+      }
+      h3 {
+        font-size: 15px;
+      }
+      .muted,
+      small {
+        color: var(--muted);
+      }
+      small {
+        font-size: 12px;
+      }
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 224px;
+        background: var(--card);
+        border-right: 1px solid var(--line);
+        padding: 30px 20px;
+        display: flex;
+        flex-direction: column;
+        z-index: 4;
+      }
+      .brand {
+        display: flex;
+        gap: 11px;
+        align-items: center;
+        font-size: 19px;
+        font-weight: 750;
+        letter-spacing: -0.5px;
+      }
+      .mark {
+        display: grid;
+        place-items: center;
+        background: var(--accent);
+        color: var(--card);
+        width: 33px;
+        height: 33px;
+        border-radius: 11px;
+        font-size: 26px;
+        font-weight: 500;
+      }
+      .sidebar nav {
+        margin-top: 50px;
+        display: grid;
+        gap: 8px;
+      }
+      .nav {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        text-align: left;
+        border: 0;
+        background: none;
+        padding: 12px 15px;
+        color: var(--muted);
+      }
+      .nav.active {
+        background: var(--soft);
+        color: var(--accent);
+        font-weight: 650;
+      }
+      .nav span:first-child {
+        font-size: 19px;
+        width: 22px;
+        text-align: center;
+      }
+      .sidefoot {
+        margin-top: auto;
+        font-size: 11px;
+        color: var(--muted);
+        padding: 18px 12px 0;
+        border-top: 1px solid var(--line);
+      }
+      .workspace {
+        margin-left: 224px;
+      }
+      .topbar {
+        height: 80px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 40px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--card);
+      }
+      .topbar .right,
+      .actions,
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .topbar .right {
+        gap: 18px;
+      }
+      .dot {
+        display: inline-block;
+        background: var(--accent);
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        margin-right: 7px;
+      }
+      .avatar {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--soft);
+        color: var(--accent);
+        font-weight: 700;
+      }
+      main {
+        padding: 35px 40px 50px;
+        max-width: 1600px;
+        margin: auto;
+      }
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
+      .pagehead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 27px;
+      }
+      .pagehead p {
+        margin-top: 5px;
+        color: var(--muted);
+      }
+      .eyebrow {
+        font-size: 11px;
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 2px;
+        margin-bottom: 7px;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+        margin-bottom: 30px;
+      }
+      .stat,
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      .stat {
+        padding: 20px 23px;
+      }
+      .stat label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .number {
+        font-size: 32px;
+        font-weight: 650;
+        line-height: 1.6;
+        letter-spacing: -1px;
+      }
+      .stat:first-child .number {
+        color: var(--accent);
+      }
+      .sectionhead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 25px 0 14px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+      .exit {
+        padding: 23px;
+      }
+      .exithead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .country {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .flag {
+        font-size: 29px;
+      }
+      .badge {
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 11px;
+        background: var(--bg);
+        color: var(--muted);
+      }
+      .badge.up,
+      .badge.passed {
+        background: var(--soft);
+        color: var(--accent);
+      }
+      .badge.waiting_for_nodes,
+      .badge.blocked,
+      .badge.waiting,
+      .badge.starting,
+      .badge.running,
+      .badge.queued,
+      .badge.stale {
+        color: var(--amber);
+      }
+      .badge.failed,
+      .badge.error {
+        color: var(--red);
+      }
+      .ip {
+        font-size: 23px;
+        letter-spacing: 0.2px;
+        font-weight: 600;
+        margin: 21px 0 3px;
+        font-variant-numeric: tabular-nums;
+      }
+      .details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 23px;
+        margin: 19px 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .details b {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .exitfoot {
+        border-top: 1px solid var(--line);
+        padding-top: 15px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+      .exitfoot button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .bottomgrid {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 18px;
+        margin-top: 22px;
+      }
+      .pad {
+        padding: 24px;
+      }
+      .callout {
+        background: var(--soft);
+        border-color: transparent;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+      }
+      .callout p {
+        margin: 8px 0 15px;
+        color: var(--muted);
+        max-width: 390px;
+      }
+      .ring {
+        font-size: 43px;
+        color: var(--accent);
+        padding: 0 10px;
+      }
+      .meter {
+        height: 7px;
+        background: var(--bg);
+        border-radius: 9px;
+        overflow: hidden;
+        margin: 20px 0 10px;
+      }
+      .meter span {
+        height: 100%;
+        display: block;
+        background: var(--accent);
+        border-radius: 9px;
+      }
+      .notice {
+        background: var(--soft);
+        color: var(--accent);
+        padding: 13px 17px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 12px;
+      }
+      .notice.error {
+        color: var(--red);
+        background: var(--card);
+        border: 1px solid var(--red);
+      }
+      .empty {
+        padding: 38px;
+        text-align: center;
+        color: var(--muted);
+        grid-column: 1/-1;
+      }
+      .tools {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .tools input[type="search"] {
+        flex: 1;
+        min-width: 190px;
+      }
+      .tablewrap {
+        overflow: auto;
+      }
+      .tablecard {
+        padding: 0;
+        overflow: hidden;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        white-space: nowrap;
+        text-align: left;
+      }
+      th {
+        font-weight: 500;
+        color: var(--muted);
+        font-size: 11px;
+        background: var(--bg);
+      }
+      th,
+      td {
+        padding: 14px 17px;
+        border-bottom: 1px solid var(--line);
+      }
+      td {
+        font-size: 12px;
+      }
+      tbody tr:last-child td {
+        border: 0;
+      }
+      td button {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+      td small {
+        display: block;
+        max-width: 230px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .progress {
+        margin-bottom: 20px;
+      }
+      .progress .meter {
+        margin: 10px 0;
+      }
+      .jobitems {
+        max-height: 180px;
+        overflow: auto;
+      }
+      .jobitem {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 5px 0;
+        font-size: 12px;
+      }
+      .subgrid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(230px, 1fr);
+        gap: 20px;
+      }
+      .choice {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .choice:last-child {
+        border: 0;
+      }
+      .qr {
+        text-align: center;
+      }
+      .qr img {
+        display: block;
+        max-width: 100%;
+        width: 220px;
+        margin: 25px auto;
+        background: #fff;
+        border: 14px solid #fff;
+        border-radius: 12px;
+      }
+      .formgrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 16px 0;
+      }
+      .field label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .field input,
+      .field select {
+        width: 100%;
+      }
+      .full {
+        grid-column: 1/-1;
+      }
+      details {
+        margin-top: 15px;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--muted);
+      }
+      dialog {
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        border-radius: 20px;
+        padding: 28px;
+        width: 540px;
+        max-width: calc(100% - 30px);
+        max-height: 88vh;
+        overflow: auto;
+        box-shadow: 0 20px 90px #0003;
+      }
+      dialog::backdrop {
+        background: #0b263c66;
+        backdrop-filter: blur(4px);
+      }
+      .dialoghead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .dialoghead button {
+        padding: 3px 10px;
+        border: 0;
+        font-size: 23px;
+      }
+      .dialogfoot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+      }
+      .checks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+      }
+      .checks label {
+        font-size: 12px;
+      }
+      .nameedit {
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+      }
+      .nameedit .row {
+        margin-top: 7px;
+      }
+      .nameedit input {
+        width: 100%;
+        min-width: 0;
+      }
+      .toast {
+        position: fixed;
+        bottom: 25px;
+        left: calc(50% + 112px);
+        transform: translateX(-50%);
+        z-index: 30;
+        max-width: 85vw;
+        background: var(--text);
+        color: var(--card);
+        padding: 12px 22px;
+        border-radius: 11px;
+        box-shadow: 0 8px 25px #0002;
+      }
+      .loading {
+        color: var(--muted);
+      }
+      button.busy {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (min-width: 1500px) {
+        .grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 1100px) {
+        .sidebar {
+          width: 78px;
+          padding: 28px 14px;
+        }
+        .brand .brandtext,
+        .nav .navtext,
+        .sidefoot {
+          display: none;
+        }
+        .brand {
+          justify-content: center;
+        }
+        .nav {
+          padding: 12px;
+          justify-content: center;
+        }
+        .sidebar nav {
+          margin-top: 45px;
+        }
+        .workspace {
+          margin-left: 78px;
+        }
+        main {
+          padding: 28px 25px;
+        }
+        .topbar {
+          padding: 0 25px;
+        }
+        .toast {
+          left: calc(50% + 39px);
+        }
+        .stats {
+          gap: 12px;
+        }
+        .stat {
+          padding: 16px;
+        }
+        .bottomgrid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 720px) {
+        .grid,
+        .bottomgrid,
+        .subgrid {
+          grid-template-columns: 1fr;
+        }
+        .pagehead {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .topbar {
+          height: 65px;
+        }
+        .topbar small {
+          display: none;
+        }
+        .number {
+          font-size: 28px;
+        }
+        .pagehead h1 {
+          font-size: 25px;
+        }
+        .pagehead .actions {
+          width: 100%;
+        }
+        .pagehead .actions button {
+          flex: 1;
+        }
+        .formgrid {
+          grid-template-columns: 1fr;
+        }
+        .callout {
+          padding: 22px;
+        }
+        .tablewrap {
+          max-height: 65vh;
+        }
+      }
+      @media (max-width: 520px) {
+        .sidebar {
+          inset: auto 0 0;
+          width: 100%;
+          height: 68px;
+          padding: 5px;
+          border: 0;
+          border-top: 1px solid var(--line);
+        }
+        .brand {
+          display: none;
+        }
+        .sidebar nav {
+          display: flex;
+          justify-content: space-around;
+          margin: 0;
+          gap: 2px;
+        }
+        .nav {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          padding: 4px 12px;
+          font-size: 10px;
+        }
+        .nav .navtext {
+          display: block;
+        }
+        .nav span:first-child {
+          font-size: 18px;
+        }
+        .workspace {
+          margin-left: 0;
+        }
+        .topbar {
+          padding: 0 18px;
+        }
+        main {
+          padding: 24px 16px 90px;
+        }
+        .topbar .right {
+          gap: 11px;
+        }
+        .toast {
+          left: 50%;
+          bottom: 80px;
+        }
+        .exit {
+          padding: 19px;
+        }
+        .ip {
+          font-size: 22px;
+        }
+        .stat {
+          padding: 15px 18px;
+        }
+        .actions {
+          flex-wrap: wrap;
+        }
+        .tools {
+          gap: 7px;
+        }
+        .tools select {
+          flex: 1;
+        }
+        .formgrid {
+          gap: 0;
+        }
+        .pad {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="mark">×</span><span class="brandtext">xnvgatebox</span>
+      </div>
+      <nav aria-label="主导航">
+        <button class="nav active" data-page="overview">
+          <span>◫</span><span class="navtext">出口总览</span></button
+        ><button class="nav" data-page="exits">
+          <span>⇄</span><span class="navtext">出口管理</span></button
+        ><button class="nav" data-page="subscription">
+          <span>⌁</span><span class="navtext">我的订阅</span></button
+        ><button class="nav" data-page="candidates">
+          <span>◎</span><span class="navtext">候选节点</span></button
+        ><button class="nav" data-page="settings">
+          <span>⚙</span><span class="navtext">设置</span>
+        </button>
+      </nav>
+      <div class="sidefoot">独立出口 · 自主管理<br />xnvgatebox Console</div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span
+          ><span class="dot"></span><b>xnvgatebox</b>
+          <small> / 独立管理控制台</small></span
+        >
+        <div class="right">
+          <small id="version">正在连接</small
+          ><button id="theme" aria-label="切换明暗主题" title="切换明暗主题">
+            ◐</button
+          ><span class="avatar" title="管理员">X</span>
+        </div>
+      </header>
+      <main>
+        <div id="globalNotice" class="notice error" hidden></div>
+        <section class="page active" id="overview">
+          <div class="pagehead">
+            <div>
+              <div class="eyebrow">YOUR NETWORK, AT A GLANCE</div>
+              <h1>出口总览</h1>
+              <p>每一条连接，都有清晰的去向。</p>
+            </div>
+            <div class="actions">
+              <button data-action="refresh">↻ 刷新候选池</button
+              ><button class="primary" data-action="target">
+                管理出口数量
+              </button>
+            </div>
+          </div>
+          <div class="stats" id="stats">
+            <div class="stat loading">正在读取运行状态…</div>
+          </div>
+          <div class="sectionhead">
+            <h2>我的出口</h2>
+            <button data-page="exits">查看全部 →</button>
+          </div>
+          <div class="grid" id="overviewExits"></div>
+          <div class="bottomgrid">
+            <div class="card pad callout">
+              <div>
+                <h2>一个订阅，连接所有出口</h2>
+                <p>
+                  就绪出口会自动加入原订阅。国家与名称同步更新，无需反复导入。
+                </p>
+                <button data-page="subscription">管理我的订阅 →</button>
+              </div>
+              <div class="ring">⌁</div>
+            </div>
+            <div class="card pad">
+              <h2>主机资源</h2>
+              <div class="meter">
+                <span id="memoryBar" style="width: 0"></span>
+              </div>
+              <div class="row" style="justify-content: space-between">
+                <small>内存使用</small><b id="memoryText">—</b>
+              </div>
+              <small
+                >增加出口会占用更多资源，软件数量上限不代表主机承载能力。</small
+              >
+            </div>
+          </div>
+        </section>
+        <section class="page" id="exits">
+          <div class="pagehead">
+            <div>
+              <div class="eyebrow">EXIT MANAGEMENT</div>
+              <h1>出口管理</h1>
+              <p>调整数量、选择地区，或检查正在使用的连接。</p>
+            </div>
+            <div class="actions">
+              <button data-action="checkAll">检测当前出口</button
+              ><button class="primary" data-action="target">调整数量</button>
+            </div>
+          </div>
+          <div class="notice" id="targetInfo"></div>
+          <div class="progressMount"></div>
+          <div class="grid" id="allExits"></div>
+        </section>
+        <section class="page" id="subscription">
+          <div class="pagehead">
+            <div>
+              <div class="eyebrow">ONE LINK, ALL EXITS</div>
+              <h1>我的订阅</h1>
+              <p>复制到支持 VLESS / REALITY 的客户端，刷新订阅即可同步变化。</p>
+            </div>
+          </div>
+          <div class="subgrid">
+            <div>
+              <div class="card pad">
+                <h2>订阅链接</h2>
+                <p class="muted" style="margin: 8px 0 16px">
+                  只输出已就绪且启用的入站；等待或停止的出口会暂时移出。
+                </p>
+                <textarea
+                  id="subURL"
+                  rows="3"
+                  readonly
+                  aria-label="订阅链接"
+                ></textarea>
+                <div class="actions" style="margin-top: 12px">
+                  <button class="primary" id="copySub">复制订阅链接</button
+                  ><button id="copyLinks">复制节点链接</button>
+                </div>
+                <small id="subCount"></small>
+              </div>
+              <div class="card pad" style="margin-top: 20px">
+                <h2>选择订阅范围</h2>
+                <label class="choice"
+                  ><input
+                    type="checkbox"
+                    id="subAll"
+                    checked
+                  />所有出口（包括今后新增的出口）</label
+                >
+                <div id="subSlots"></div>
+              </div>
+            </div>
+            <div class="card pad qr">
+              <h2>扫码订阅</h2>
+              <img id="qr" alt="订阅二维码" hidden />
+              <p class="muted">
+                二维码在本机服务生成。<br />订阅链接包含访问口令，请妥善保存。
+              </p>
+            </div>
+          </div>
+        </section>
+        <section class="page" id="candidates">
+          <div class="pagehead">
+            <div>
+              <div class="eyebrow">DISCOVER & VERIFY</div>
+              <h1>候选节点</h1>
+              <p id="poolSummary">正在读取来源清单…</p>
+            </div>
+            <div class="actions">
+              <button data-action="refresh">↻ 刷新来源</button
+              ><button class="primary" id="testSelected">检测所选节点</button>
+            </div>
+          </div>
+          <div class="notice">
+            清单数量是官方本次返回的候选数量，可能随时间变化。未测试不等于不可用；来源地区与实际出口地区分开展示。检测会建立临时连接并核验
+            HTTPS 出口。
+          </div>
+          <div class="progressMount"></div>
+          <div class="tools">
+            <input
+              type="search"
+              id="search"
+              placeholder="搜索 IP、主机名或国家"
+              aria-label="搜索候选"
+            /><select id="countryFilter" aria-label="筛选来源国家">
+              <option value="">所有来源国家</option></select
+            ><select id="statusFilter" aria-label="筛选检测状态">
+              <option value="">所有状态</option>
+              <option value="passed">通过</option>
+              <option value="failed">未通过</option>
+              <option value="not_tested">未检测</option>
+              <option value="stale">结果已过期</option></select
+            ><small id="selectionCount"></small>
+          </div>
+          <div class="card tablecard tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      id="selectVisible"
+                      type="checkbox"
+                      aria-label="选择当前筛选结果"
+                    />
+                  </th>
+                  <th>来源节点</th>
+                  <th>来源地区</th>
+                  <th>实际出口</th>
+                  <th>检测结果</th>
+                  <th>HTTPS 延迟</th>
+                  <th>检测时间</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="nodeRows"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="page" id="settings">
+          <div class="pagehead">
+            <div>
+              <div class="eyebrow">MAKE IT YOURS</div>
+              <h1>设置</h1>
+              <p>管理访问入口和显示偏好。</p>
+            </div>
+          </div>
+          <div class="subgrid">
+            <form class="card pad" id="settingsForm">
+              <h2>管理入口</h2>
+              <div class="formgrid">
+                <div class="field">
+                  <label for="settingPort">管理端口</label
+                  ><input
+                    id="settingPort"
+                    type="number"
+                    min="1"
+                    max="65535"
+                    required
+                  />
+                </div>
+                <div class="field">
+                  <label for="settingListen">监听地址</label
+                  ><input id="settingListen" required />
+                </div>
+                <div class="field full">
+                  <label for="settingPath">管理路径</label
+                  ><input id="settingPath" required />
+                </div>
+                <div class="field full">
+                  <label for="settingPassword">新密码（留空保留原密码）</label
+                  ><input
+                    id="settingPassword"
+                    type="password"
+                    autocomplete="new-password"
+                  />
+                </div>
+              </div>
+              <button class="primary" type="submit">保存设置</button>
+              <p><small>改变端口或路径后，请使用新的管理地址登录。</small></p>
+            </form>
+            <div class="card pad">
+              <span class="mark" style="margin-bottom: 17px">×</span>
+              <h2>xnvgatebox</h2>
+              <p class="muted" style="margin: 10px 0">
+                从候选发现到独立出口和订阅，在同一个控制台完成。
+              </p>
+              <p>
+                <a
+                  href="https://github.com/hanhaoops/xnvgatebox"
+                  target="_blank"
+                  rel="noopener"
+                  >项目与更新 ↗</a
+                >
+                · <a href="advanced">高级管理 ↗</a>
+              </p>
+              <details>
+                <summary>开源组件与致谢</summary>
+                <p>
+                  <small
+                    >节点来源 VPN Gate；隧道 OpenVPN；数据面 Xray-core；二维码
+                    go-qrcode（MIT）。各组件许可证保留在安装包 licenses
+                    目录。</small
+                  >
+                </p>
+              </details>
+              <p style="margin-top: 20px">
+                <small
+                  >缺少可信画像时，出口类型显示 unknown，不会标为家宽。</small
+                >
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <dialog id="targetDialog" aria-labelledby="targetTitle">
+      <form id="targetForm">
+        <div class="dialoghead">
+          <h2 id="targetTitle">管理出口数量</h2>
+          <button type="button" data-close="targetDialog" aria-label="关闭">
+            ×
+          </button>
+        </div>
+        <div class="field">
+          <label for="targetCount">目标数量</label
+          ><input
+            id="targetCount"
+            type="number"
+            min="0"
+            max="32"
+            required
+          /><small id="targetHelp"></small>
+        </div>
+        <div class="field">
+          <label for="targetCountry">新增出口的国家代码（留空自动选择）</label
+          ><input
+            id="targetCountry"
+            maxlength="2"
+            placeholder="例如 JP、KR、US"
+            list="countries"
+          /><datalist id="countries">
+            <option value="JP">日本</option>
+            <option value="KR">韩国</option>
+            <option value="US">美国</option>
+            <option value="GB">英国</option>
+            <option value="DE">德国</option>
+            <option value="RU">俄罗斯</option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="targetServer">新增入站的 REALITY 目标域名</label
+          ><input id="targetServer" required />
+        </div>
+        <div class="notice">
+          已有出口保留原策略、端口及凭据。增加数量会自动建立出口和入站；暂无合适候选时等待。减少数量会从编号最大的出口开始移除，已保存的入站凭据保留供以后复用。
+        </div>
+        <div class="dialogfoot">
+          <button type="button" data-close="targetDialog">取消</button
+          ><button class="primary" type="submit">保存数量</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="exitDialog" aria-labelledby="exitTitle">
+      <div class="dialoghead">
+        <h2 id="exitTitle">出口设置</h2>
+        <button type="button" data-close="exitDialog" aria-label="关闭">
+          ×
+        </button>
+      </div>
+      <form id="policyForm">
+        <div class="formgrid">
+          <div class="field">
+            <label for="exitCountry">目标国家（留空不限）</label
+            ><input id="exitCountry" maxlength="2" list="countries" />
+          </div>
+          <div class="field">
+            <label for="exitLatency">HTTPS 延迟上限（毫秒，0 不限）</label
+            ><input id="exitLatency" min="0" type="number" required />
+          </div>
+        </div>
+        <div class="field">
+          <label>允许的出口类型</label>
+          <div class="checks" id="typeChoices"></div>
+          <small>unknown 表示缺少可信类型证据，不等于家宽。</small>
+        </div>
+        <details>
+          <summary>ISP / ASN 约束</summary>
+          <div class="field">
+            <label for="allowedISP">允许 ISP（逗号分隔）</label
+            ><input id="allowedISP" />
+          </div>
+          <div class="field">
+            <label for="blockedISP">排除 ISP（逗号分隔）</label
+            ><input id="blockedISP" />
+          </div>
+          <div class="field">
+            <label for="allowedASN">允许 ASN（如 AS123，逗号分隔）</label
+            ><input id="allowedASN" />
+          </div>
+          <div class="field">
+            <label for="blockedASN">排除 ASN（如 AS123，逗号分隔）</label
+            ><input id="blockedASN" />
+          </div>
+        </details>
+        <div class="dialogfoot">
+          <button type="button" id="swapExit">更换 IP</button
+          ><button type="button" id="rollbackPolicy">恢复上次策略</button
+          ><button type="submit" class="primary">保存策略</button>
+        </div>
+        <small
+          >更换 IP 或策略会重新连接该出口；订阅地址和客户端凭据保留。</small
+        >
+      </form>
+      <h3 style="margin: 25px 0 10px">订阅显示名称</h3>
+      <div id="nameEdits"></div>
+    </dialog>
+    <div class="toast" id="toast" role="status" hidden></div>
+    <script>
+      "use strict";
+      const $ = (id) => document.getElementById(id),
+        esc = (s) =>
+          String(s ?? "").replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+      let summary = {},
+        exits = [],
+        nodes = [],
+        subscription = {},
+        selected = new Set(),
+        subSelected = new Set(),
+        currentExit = null,
+        polling = false,
+        settingsLoaded = false,
+        currentPage = "overview",
+        toastTimer;
+      const types = {
+        strict_residential: "确认住宅",
+        likely_residential: "疑似住宅",
+        mobile: "移动网络",
+        datacenter: "数据中心",
+        business_isp: "商业 ISP",
+        unknown: "未知 / unknown",
+      };
+      const labels = {
+        up: "已就绪",
+        starting: "连接中",
+        waiting: "等待候选",
+        waiting_for_nodes: "等待候选",
+        blocked: "已阻断",
+        stopped: "已停止",
+        error: "连接异常",
+        passed: "通过",
+        failed: "未通过",
+        not_tested: "未检测",
+        stale: "结果已过期",
+        queued: "排队中",
+        running: "检测中",
+        done: "已完成",
+        cancelled: "已取消",
+      };
+      const errors = {
+        check_timeout: "检测超时",
+        openvpn_timeout: "隧道连接超时",
+        openvpn_failed: "隧道连接失败",
+        evidence_unavailable: "出口证据暂不可用",
+        exit_ip_mismatch: "实际出口不一致，已阻断",
+        probe_environment_failed: "检测环境初始化失败",
+        https_unreachable: "HTTPS 暂不可达",
+        exit_not_ready: "出口尚未就绪",
+        policy_latency_exceeded: "超过策略延迟上限",
+        cancelled: "已取消",
+        pool_refresh_failed_previous_pool_retained: "来源刷新失败，保留旧清单",
+        allocation_failed: "出口分配等待重试",
+        auto_binding_failed: "入站绑定等待重试",
+        remove_failed: "出口移除等待重试",
+      };
+      let countryNames;
+      try {
+        countryNames = new Intl.DisplayNames(["zh-CN"], { type: "region" });
+      } catch {}
+      function country(code) {
+        if (!/^[A-Z]{2}$/.test(code || "")) return "待验证";
+        return (
+          String.fromCodePoint(
+            ...[...code].map((c) => 127397 + c.charCodeAt(0)),
+          ) +
+          " " +
+          (countryNames ? countryNames.of(code) : code)
+        );
+      }
+      function verified(e) {
+        return e.status === "up" && e.egress?.intelligence_status === "passed"
+          ? e.egress.country
+          : "";
+      }
+      function name(e) {
+        const enabled = (e.inbounds || []).filter((i) => i.enable);
+        if (enabled.length === 1 && enabled[0].name_mode === "custom") {
+          return enabled[0].remark;
+        }
+        return country(verified(e)) + " · " + String(e.slot).padStart(2, "0");
+      }
+      function badge(status) {
+        return (
+          '<span class="badge ' +
+          esc(status) +
+          '">' +
+          esc(labels[status] || status || "—") +
+          "</span>"
+        );
+      }
+      function date(t) {
+        if (!t || String(t).startsWith("0001")) return "—";
+        const d = new Date(t);
+        return isNaN(+d)
+          ? "—"
+          : d.toLocaleString("zh-CN", {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+      }
+      function toast(text) {
+        const dialog = document.querySelector("dialog[open]");
+        (dialog || document.body).append($("toast"));
+        $("toast").style.left = dialog ? "50%" : "";
+        $("toast").textContent = text;
+        $("toast").hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => ($("toast").hidden = true), 4500);
+      }
+      async function api(path, body) {
+        const r = await fetch(path.replace(/^\//, ""), {
+          cache: "no-store",
+          ...(body !== undefined
+            ? {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              }
+            : {}),
+        });
+        if (r.status === 401) {
+          location.reload();
+          throw Error("需要重新登录");
+        }
+        let data;
+        try {
+          data = await r.json();
+        } catch {
+          throw Error("服务暂未返回有效响应");
+        }
+        if (!r.ok) throw Error(data.error || "操作失败");
+        return data;
+      }
+      async function action(fn, button) {
+        if (button) button.classList.add("busy");
+        try {
+          await fn();
+        } catch (e) {
+          toast(e.message);
+        } finally {
+          if (button) button.classList.remove("busy");
+        }
+      }
+      async function copy(text) {
+        if (!text) throw Error("请至少选择一个出口");
+        if (navigator.clipboard && window.isSecureContext)
+          await navigator.clipboard.writeText(text);
+        else {
+          const t = document.createElement("textarea");
+          t.value = text;
+          t.style.position = "fixed";
+          t.style.opacity = "0";
+          document.body.append(t);
+          t.select();
+          const ok = document.execCommand("copy");
+          t.remove();
+          if (!ok) throw Error("浏览器不允许自动复制，请手动选择链接");
+        }
+        toast("已复制");
+      }
+      function showPage(page) {
+        if (
+          ![
+            "overview",
+            "exits",
+            "subscription",
+            "candidates",
+            "settings",
+          ].includes(page)
+        )
+          page = "overview";
+        currentPage = page;
+        document
+          .querySelectorAll(".page")
+          .forEach((n) => n.classList.toggle("active", n.id === page));
+        document
+          .querySelectorAll(".nav")
+          .forEach((n) =>
+            n.classList.toggle("active", n.dataset.page === page),
+          );
+        if (location.hash.slice(1) !== page)
+          history.replaceState(null, "", "#" + page);
+        if (page === "settings" && !settingsLoaded) action(loadSettings);
+        if (page === "subscription") renderSubscription();
+      }
+      function exitCards(list) {
+        return list.length
+          ? list
+              .map((e) => {
+                const code = verified(e),
+                  lat =
+                    e.latency_ms > 0 ? Math.round(e.latency_ms) + " ms" : "—",
+                  ib = e.inbounds || [];
+                return (
+                  '<article class="card exit"><div class="exithead"><div class="country"><span class="flag">' +
+                  (code ? country(code).split(" ")[0] : "◎") +
+                  "</span><div><h2>" +
+                  esc(
+                    code
+                      ? country(code).split(" ").slice(1).join(" ")
+                      : "待验证",
+                  ) +
+                  "</h2><small>出口 " +
+                  String(e.slot).padStart(2, "0") +
+                  "</small></div></div>" +
+                  badge(e.status) +
+                  '</div><div class="ip">' +
+                  esc(e.status === "up" ? e.exit_ip || "核验中" : "等待连接") +
+                  "</div><small>" +
+                  esc(types[e.egress?.ip_type] || "未知 / unknown") +
+                  '</small><div class="details"><span>HTTPS <b>' +
+                  lat +
+                  "</b></span><span>目标 <b>" +
+                  esc(
+                    e.policy?.country ? country(e.policy.country) : "自动选择",
+                  ) +
+                  "</b></span><span>入站 <b>" +
+                  esc(ib.map((i) => i.port).join(" / ") || "等待绑定") +
+                  '</b></span></div><div class="exitfoot"><small>SOCKS · ' +
+                  esc(e.port) +
+                  '</small><div class="actions"><button data-action="check" data-slot="' +
+                  e.slot +
+                  '" ' +
+                  (e.status === "up" ? "" : "disabled") +
+                  '>检测</button><button data-action="edit" data-slot="' +
+                  e.slot +
+                  '">管理</button><button data-action="' +
+                  (e.status === "stopped" ? "resume" : "pause") +
+                  '" data-slot="' +
+                  e.slot +
+                  '">' +
+                  (e.status === "stopped" ? "启动" : "停止") +
+                  "</button></div></div></article>"
+                );
+              })
+              .join("")
+          : '<div class="card empty">还没有出口。点击“管理出口数量”开始创建。</div>';
+      }
+      function render() {
+        const s = summary;
+        $("version").textContent = s.version || "开发版";
+        $("stats").innerHTML = [
+          ["已就绪", s.ready || 0, "可加入订阅"],
+          ["目标出口", s.target || 0, "独立出口数量"],
+          ["等待连接", s.waiting || 0, (s.stopped || 0) + " 个已停止"],
+          ["来源候选", s.candidates || 0, "候选数量 ≠ 可用数量"],
+        ]
+          .map(
+            (v) =>
+              '<div class="stat"><label>' +
+              v[0] +
+              '</label><div class="number">' +
+              v[1] +
+              "</div><small>" +
+              v[2] +
+              "</small></div>",
+          )
+          .join("");
+        $("overviewExits").innerHTML = exitCards(exits.slice(0, 6));
+        $("allExits").innerHTML = exitCards(exits);
+        $("targetInfo").textContent =
+          "目标 " +
+          (s.target || 0) +
+          " 个 · 就绪 " +
+          (s.ready || 0) +
+          " 个 · 等待 " +
+          (s.waiting || 0) +
+          " 个 · 停止 " +
+          (s.stopped || 0) +
+          " 个。候选不足时保留策略等待，不强求指定国家当时必须有节点。" +
+          (s.plan_error ? " " + (errors[s.plan_error] || "计划等待重试") : "");
+        const m = s.memory || {},
+          used = Math.max(0, (m.MemTotal || 0) - (m.MemAvailable || 0)),
+          pct = m.MemTotal ? Math.round((used / m.MemTotal) * 100) : 0;
+        $("memoryBar").style.width = pct + "%";
+        $("memoryText").textContent = m.MemTotal
+          ? pct +
+            "% · " +
+            (used / 1073741824).toFixed(1) +
+            " / " +
+            (m.MemTotal / 1073741824).toFixed(1) +
+            " GB"
+          : "暂不可用";
+        $("poolSummary").textContent =
+          nodes.length +
+          " 个来源候选 · 清单更新 " +
+          date(s.pool_generated_at || s.pool_read_at);
+        document.querySelectorAll("[data-action=refresh]").forEach((b) => {
+          b.disabled = s.refresh?.status === "running";
+          b.textContent = b.disabled ? "↻ 正在刷新…" : "↻ 刷新候选池";
+        });
+        const warning =
+          s.refresh?.status === "failed"
+            ? errors[s.refresh.error] || "刷新失败，保留旧池"
+            : "";
+        $("globalNotice").hidden = !warning;
+        $("globalNotice").textContent = warning;
+        renderProgress();
+        renderNodes();
+        renderSubscription();
+      }
+      function renderProgress() {
+        const j = summary.check;
+        document.querySelectorAll(".progressMount").forEach((m) => {
+          if (!j) {
+            m.innerHTML = "";
+            return;
+          }
+          m.innerHTML =
+            '<div class="card pad progress"><div class="row" style="justify-content:space-between"><h3>' +
+            (j.kind === "exits" ? "当前出口检测" : "候选连通性检测") +
+            " · " +
+            j.done +
+            " / " +
+            j.total +
+            "</h3>" +
+            (j.status === "running"
+              ? '<button data-action="cancelCheck">取消检测</button>'
+              : badge(j.status)) +
+            '</div><div class="meter"><span style="width:' +
+            (j.total ? (j.done / j.total) * 100 : 0) +
+            '%"></span></div><div class="jobitems">' +
+            (j.items || [])
+              .map(
+                (i) =>
+                  '<div class="jobitem"><span>' +
+                  esc(i.slot ? "出口 " + i.slot : i.host) +
+                  "</span><span>" +
+                  badge(i.status) +
+                  " " +
+                  esc(errors[i.code] || "") +
+                  "</span></div>",
+              )
+              .join("") +
+            "</div></div>";
+        });
+      }
+      function nodeResult(n) {
+        const r = summary.results?.[n.hostname];
+        return r
+          ? { ...r, status: r.stale ? "stale" : r.status }
+          : { status: "not_tested" };
+      }
+      function filteredNodes() {
+        const q = $("search").value.trim().toLowerCase(),
+          c = $("countryFilter").value,
+          s = $("statusFilter").value;
+        return nodes.filter(
+          (n) =>
+            (!q ||
+              (n.hostname + " " + n.ip + " " + country(n.country_code))
+                .toLowerCase()
+                .includes(q)) &&
+            (!c || n.country_code === c) &&
+            (!s || nodeResult(n).status === s),
+        );
+      }
+      function renderNodes() {
+        const known = new Set(nodes.map((n) => n.hostname));
+        selected = new Set([...selected].filter((host) => known.has(host)));
+        const codes = [
+            ...new Set(nodes.map((n) => n.country_code).filter(Boolean)),
+          ].sort(),
+          old = $("countryFilter").value,
+          options =
+            '<option value="">所有来源国家</option>' +
+            codes
+              .map(
+                (c) =>
+                  '<option value="' +
+                  esc(c) +
+                  '">' +
+                  esc(country(c)) +
+                  "</option>",
+              )
+              .join("");
+        if ($("countryFilter").innerHTML !== options) {
+          $("countryFilter").innerHTML = options;
+          $("countryFilter").value = old;
+        }
+        const visible = filteredNodes();
+        $("nodeRows").innerHTML = visible.length
+          ? visible
+              .map((n) => {
+                const r = nodeResult(n),
+                  live = exits.find(
+                    (e) => e.host === n.hostname && e.status === "up",
+                  );
+                return (
+                  '<tr><td><input type="checkbox" data-node="' +
+                  esc(n.hostname) +
+                  '" ' +
+                  (selected.has(n.hostname) ? "checked" : "") +
+                  ' aria-label="选择 ' +
+                  esc(n.hostname) +
+                  '"></td><td>' +
+                  esc(n.ip || n.hostname) +
+                  "<small>" +
+                  esc(n.hostname) +
+                  "</small></td><td>" +
+                  esc(country(n.country_code)) +
+                  "</td><td>" +
+                  esc(r.actual_ip || live?.exit_ip || "—") +
+                  "<small>" +
+                  esc(
+                    r.country
+                      ? country(r.country)
+                      : live
+                        ? country(verified(live))
+                        : "",
+                  ) +
+                  "</small></td><td>" +
+                  badge(r.status) +
+                  (live ? " <small>运行出口</small>" : "") +
+                  "</td><td>" +
+                  (r.latency_ms > 0 ? Math.round(r.latency_ms) + " ms" : "—") +
+                  "</td><td>" +
+                  date(r.checked_at) +
+                  '</td><td><button data-action="testNode" data-host="' +
+                  esc(n.hostname) +
+                  '">检测</button></td></tr>'
+                );
+              })
+              .join("")
+          : '<tr><td colspan="8" class="empty">没有匹配的候选节点</td></tr>';
+        $("selectionCount").textContent = "已选 " + selected.size + " 个";
+        $("selectVisible").checked =
+          visible.length > 0 && visible.every((n) => selected.has(n.hostname));
+        $("testSelected").disabled =
+          !selected.size || summary.check?.status === "running";
+      }
+      function selectedSubURL() {
+        if (!subscription.url) return "";
+        if ($("subAll").checked) return subscription.url;
+        const ids = exits
+          .filter((e) => subSelected.has(e.slot))
+          .map((e) => e.slot);
+        if (!ids.length) return "";
+        const u = new URL(subscription.url, location.href);
+        u.searchParams.set("slots", ids.join(","));
+        return u.href;
+      }
+      function renderSubscription() {
+        if (!subscription.url) return;
+        const u = selectedSubURL();
+        $("subURL").value = u;
+        $("copySub").disabled = !u;
+        $("copyLinks").disabled = !u;
+        const all = $("subAll").checked,
+          ready = exits.filter(
+            (e) => e.status === "up" && (all || subSelected.has(e.slot)),
+          );
+        $("subCount").textContent =
+          "当前范围：" +
+          ready.length +
+          " 个就绪出口 · " +
+          ready.reduce(
+            (s, e) => s + (e.inbounds || []).filter((i) => i.enable).length,
+            0,
+          ) +
+          " 个启用入站";
+        $("subSlots").innerHTML = exits
+          .map(
+            (e) =>
+              '<label class="choice"><input type="checkbox" data-sub-slot="' +
+              e.slot +
+              '" ' +
+              (all || subSelected.has(e.slot) ? "checked" : "") +
+              " " +
+              (all ? "disabled" : "") +
+              ">" +
+              esc(name(e)) +
+              " " +
+              badge(e.status) +
+              "</label>",
+          )
+          .join("");
+        const qr = $("qr");
+        qr.hidden = !u;
+        if (u) {
+          const path =
+            "api/console/qr" +
+            (all
+              ? ""
+              : "?slots=" +
+                encodeURIComponent(
+                  exits
+                    .filter((e) => subSelected.has(e.slot))
+                    .map((e) => e.slot)
+                    .join(","),
+                ));
+          if (qr.getAttribute("src") !== path) qr.src = path;
+        }
+      }
+      async function poll() {
+        if (polling) return;
+        polling = true;
+        try {
+          const [s, e, n, sub] = await Promise.all([
+            api("api/console"),
+            api("api/exits"),
+            api("api/nodes?all=1"),
+            api("api/sub"),
+          ]);
+          summary = s;
+          exits = (e.exits || []).sort((a, b) => a.slot - b.slot);
+          nodes = n.nodes || [];
+          subscription = sub;
+          render();
+        } catch (e) {
+          $("globalNotice").hidden = false;
+          $("globalNotice").textContent = "连接暂时中断：" + e.message;
+        } finally {
+          polling = false;
+        }
+      }
+      function openTarget() {
+        if (summary.capacity === undefined) {
+          toast("请等待状态读取完成");
+          return;
+        }
+        $("targetCount").value = summary.target;
+        $("targetCount").max = summary.capacity;
+        $("targetCountry").value = summary.plan?.policy?.country || "";
+        $("targetServer").value =
+          summary.plan?.server_name ||
+          summary.default_server_name ||
+          "www.tesla.com";
+        $("targetHelp").textContent =
+          "软件上限 " + summary.capacity + " 个。设为 0 会移除全部活动出口。";
+        $("targetDialog").showModal();
+      }
+      function openExit(slot) {
+        currentExit = exits.find((e) => e.slot === slot);
+        if (!currentExit) return;
+        const p = currentExit.policy || {};
+        $("exitTitle").textContent =
+          "出口 " + String(slot).padStart(2, "0") + " 设置";
+        $("exitCountry").value = p.country || "";
+        $("exitLatency").value = p.maximum_latency_ms || 0;
+        $("typeChoices").innerHTML = Object.entries(types)
+          .map(
+            ([k, v]) =>
+              '<label><input type="checkbox" name="ip_type" value="' +
+              k +
+              '" ' +
+              ((p.allowed_ip_types || []).includes(k) ? "checked" : "") +
+              "> " +
+              esc(v) +
+              "</label>",
+          )
+          .join("");
+        for (const [id, key] of [
+          ["allowedISP", "allowed_isp"],
+          ["blockedISP", "blocked_isp"],
+          ["allowedASN", "allowed_asn"],
+          ["blockedASN", "blocked_asn"],
+        ])
+          $(id).value = (p[key] || []).join(", ");
+        $("rollbackPolicy").hidden = !currentExit.can_rollback_policy;
+        $("nameEdits").innerHTML =
+          (currentExit.inbounds || [])
+            .map(
+              (i) =>
+                '<div class="nameedit" data-inbound="' +
+                i.id +
+                '"><small>' +
+                esc(i.protocol.toUpperCase()) +
+                " · " +
+                i.port +
+                '</small><div class="row"><select aria-label="名称模式"><option value="auto" ' +
+                (i.name_mode !== "custom" ? "selected" : "") +
+                '>国旗 + 国家 + 编号</option><option value="custom" ' +
+                (i.name_mode === "custom" ? "selected" : "") +
+                '>自定义名称</option></select><input aria-label="自定义名称" value="' +
+                esc(i.remark) +
+                '"><button type="button" data-action="saveName" data-id="' +
+                i.id +
+                '">保存</button></div></div>',
+            )
+            .join("") || "<small>等待自动绑定入站</small>";
+        $("exitDialog").showModal();
+      }
+      async function check(req) {
+        await api("api/console/check", req);
+        toast("检测任务已加入队列");
+        await poll();
+      }
+      document.addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        if (b.dataset.page) {
+          showPage(b.dataset.page);
+          return;
+        }
+        if (b.dataset.close) {
+          $(b.dataset.close).close();
+          return;
+        }
+        if (!b.dataset.action) return;
+        action(async () => {
+          const a = b.dataset.action,
+            slot = Number(b.dataset.slot);
+          if (a === "target") openTarget();
+          if (a === "edit") openExit(slot);
+          if (a === "refresh") {
+            await api("api/console/refresh", {});
+            toast("正在从官方来源刷新候选");
+            await poll();
+          }
+          if (a === "check") await check({ kind: "exits", slots: [slot] });
+          if (a === "checkAll") {
+            const slots = exits
+              .filter((e) => e.status === "up")
+              .map((e) => e.slot);
+            if (!slots.length) throw Error("当前没有就绪出口");
+            await check({ kind: "exits", slots });
+          }
+          if (a === "testNode")
+            await check({ kind: "candidates", hosts: [b.dataset.host] });
+          if (a === "cancelCheck") {
+            await api("api/console/check/cancel", {});
+            toast("正在取消并清理临时连接");
+            await poll();
+          }
+          if (a === "pause" || a === "resume") {
+            await api(
+              (a === "pause" ? "api/stop" : "api/slot/resume") +
+                "?slot=" +
+                slot,
+              {},
+            );
+            await poll();
+          }
+          if (a === "saveName") {
+            const row = b.closest(".nameedit"),
+              mode = row.querySelector("select").value,
+              remark = row.querySelector("input").value.trim();
+            if (mode === "custom" && !remark) throw Error("请输入自定义名称");
+            await api(
+              "api/panel/inbound/update?id=" +
+                b.dataset.id +
+                "&name_mode=" +
+                mode +
+                (mode === "custom"
+                  ? "&remark=" + encodeURIComponent(remark)
+                  : ""),
+              {},
+            );
+            toast("订阅名称已更新");
+            await poll();
+          }
+        }, b);
+      });
+      $("targetForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        action(async () => {
+          const count = Number($("targetCount").value);
+          if (
+            count < (summary.allocated || 0) &&
+            !confirm(
+              "将从编号最大的出口开始移除，相关连接会中断。确认调整为 " +
+                count +
+                " 个？",
+            )
+          )
+            return;
+          const policy = structuredClone(
+            summary.plan?.policy || { allowed_ip_types: Object.keys(types) },
+          );
+          policy.country = $("targetCountry").value.trim().toUpperCase();
+          await api("api/console/target", {
+            count,
+            policy,
+            server_name: $("targetServer").value.trim(),
+          });
+          $("targetDialog").close();
+          toast("目标数量已保存，正在按策略连接");
+          await poll();
+        }, e.submitter);
+      });
+      function split(id, numeric = false) {
+        const v = $(id)
+          .value.split(/[,，\n]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (!numeric) return v;
+        if (v.some((s) => !/^(AS)?\d+$/i.test(s)))
+          throw Error("ASN 请填写 AS 加数字");
+        return v.map((s) => "AS" + s.replace(/^AS/i, ""));
+      }
+      $("policyForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        action(async () => {
+          if (!confirm("保存策略将重新核验并连接该出口。继续？")) return;
+          const p = structuredClone(currentExit.policy || {});
+          p.country = $("exitCountry").value.trim().toUpperCase();
+          p.maximum_latency_ms = Number($("exitLatency").value);
+          p.allowed_ip_types = [
+            ...document.querySelectorAll("[name=ip_type]:checked"),
+          ].map((n) => n.value);
+          p.allowed_isp = split("allowedISP");
+          p.blocked_isp = split("blockedISP");
+          p.allowed_asn = split("allowedASN", true);
+          p.blocked_asn = split("blockedASN", true);
+          await api("api/slot/policy?slot=" + currentExit.slot, p);
+          $("exitDialog").close();
+          toast("出口策略已保存");
+          await poll();
+        }, e.submitter);
+      });
+      $("swapExit").onclick = () =>
+        action(async () => {
+          if (
+            !confirm("更换 IP 会中断该出口当前连接，保留原策略和凭据。继续？")
+          )
+            return;
+          await api("api/swap?slot=" + currentExit.slot, {});
+          $("exitDialog").close();
+          toast("正在寻找符合策略的新出口");
+          await poll();
+        }, $("swapExit"));
+      $("rollbackPolicy").onclick = () =>
+        action(async () => {
+          if (!confirm("恢复上次策略并重新连接该出口？")) return;
+          await api("api/slot/policy/rollback?slot=" + currentExit.slot, {});
+          $("exitDialog").close();
+          await poll();
+        }, $("rollbackPolicy"));
+      $("testSelected").onclick = () =>
+        action(
+          () => check({ kind: "candidates", hosts: [...selected] }),
+          $("testSelected"),
+        );
+      for (const id of ["search", "countryFilter", "statusFilter"])
+        $(id).addEventListener(
+          id === "search" ? "input" : "change",
+          renderNodes,
+        );
+      $("selectVisible").onchange = (e) => {
+        for (const n of filteredNodes())
+          e.target.checked
+            ? selected.add(n.hostname)
+            : selected.delete(n.hostname);
+        renderNodes();
+      };
+      document.addEventListener("change", (e) => {
+        if (e.target.dataset.node) {
+          e.target.checked
+            ? selected.add(e.target.dataset.node)
+            : selected.delete(e.target.dataset.node);
+          renderNodes();
+        }
+        if (e.target.dataset.subSlot) {
+          const slot = Number(e.target.dataset.subSlot);
+          e.target.checked ? subSelected.add(slot) : subSelected.delete(slot);
+          renderSubscription();
+        }
+      });
+      $("subAll").onchange = () => {
+        if (!$("subAll").checked && !subSelected.size)
+          exits.forEach((e) => subSelected.add(e.slot));
+        renderSubscription();
+      };
+      $("copySub").onclick = () => action(() => copy(selectedSubURL()));
+      $("copyLinks").onclick = () =>
+        action(async () => {
+          const u = new URL(selectedSubURL() || location.href);
+          u.searchParams.set("target", "links");
+          const r = await fetch(u, { cache: "no-store" });
+          if (!r.ok) throw Error("读取节点链接失败");
+          const t = await r.text();
+          if (!t.trim()) throw Error("当前范围暂无就绪入站");
+          await copy(t);
+        });
+      async function loadSettings() {
+        const s = await api("api/settings");
+        $("settingPort").value = s.port;
+        $("settingListen").value = s.listen_addr;
+        $("settingPath").value = s.base_path;
+        settingsLoaded = true;
+      }
+      $("settingsForm").onsubmit = (e) => {
+        e.preventDefault();
+        action(async () => {
+          const data = {
+            port: Number($("settingPort").value),
+            listen_addr: $("settingListen").value.trim(),
+            base_path: $("settingPath").value.trim(),
+          };
+          if ($("settingPassword").value)
+            data.password = $("settingPassword").value;
+          const r = await api("api/settings", data);
+          $("settingPassword").value = "";
+          toast("设置已保存");
+          const u = new URL(location.href);
+          u.port = String(r.port);
+          u.pathname = r.base_path + "/";
+          if (u.href !== location.href) location.href = u.href;
+        }, e.submitter);
+      };
+      try {
+        if (localStorage.getItem("xnvgatebox-theme") === "dark")
+          document.body.classList.add("dark");
+      } catch {}
+      $("theme").onclick = () => {
+        document.body.classList.toggle("dark");
+        try {
+          localStorage.setItem(
+            "xnvgatebox-theme",
+            document.body.classList.contains("dark") ? "dark" : "light",
+          );
+        } catch {}
+      };
+      window.addEventListener("hashchange", () =>
+        showPage(location.hash.slice(1)),
+      );
+      showPage(location.hash.slice(1));
+      poll();
+      setInterval(poll, 4000);
+    </script>
+  </body>
+</html>

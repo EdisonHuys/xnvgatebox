@@ -47,7 +47,7 @@ func checkMigrationState(dir string, maxSlots, defaultPort int) migrationReport 
 	}
 	// A journal means files may represent different points in a transaction.
 	// Do not guess the intended version or perform recovery in a read-only mode.
-	for _, name := range []string{managementJournal, stateJournal, nativeJournal} {
+	for _, name := range []string{managementJournal, stateJournal, nativeJournal, consoleJournal} {
 		if _, err := os.Lstat(filepath.Join(dir, name)); err == nil {
 			issue(name, "pending_transaction")
 		} else if !os.IsNotExist(err) {
@@ -77,6 +77,12 @@ func checkMigrationState(dir string, maxSlots, defaultPort int) migrationReport 
 			return nil, false
 		}
 		return blob, true
+	}
+	if blob, ok := read("console.json", true); ok {
+		var plan *ExitPlan
+		if json.Unmarshal(blob, &plan) != nil || plan == nil || validateExitPlan(plan, maxSlots) != nil {
+			issue("console.json", "invalid_exit_plan")
+		}
 	}
 	settings := WebSettings{Port: defaultPort}
 	if blob, ok := read("settings.json", false); ok {

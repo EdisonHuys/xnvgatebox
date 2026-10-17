@@ -16,3 +16,5 @@ The xnvgatebox integration and subsequent VPS changes include:
 - disable upstream single-binary updates in favor of whole-project package updates.
 
 The upstream source remains identifiable so license obligations and future diff review are clear.
+
+The redesigned xnvgatebox console and quantity/diagnostic controller are project changes. Local QR generation uses github.com/skip2/go-qrcode (MIT); its license is retained as vps/licenses/LICENSE.go-qrcode.

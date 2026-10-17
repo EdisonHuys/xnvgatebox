@@ -60,6 +60,15 @@ def passing_factory(profile, binary, timeout):
 
 
 class VpsAcceptanceTests(unittest.TestCase):
+    def test_subscription_accepts_configurable_independent_slot_count(self):
+        for count in (1, 5, 32):
+            with self.subTest(count=count):
+                p = plan()
+                p["slots"] = [dict(p["slots"][0], slot=i, public_port=30000+i, socks_port=17927+i,
+                                   expected_exit_ip=f"73.1.1.{i}") for i in range(1, count+1)]
+                profiles = a.parse_subscription(base64.b64encode("\n".join(link().replace(":30001?", f":{30000+i}?") for i in range(1, count+1)).encode()))
+                self.assertEqual(len(a.match_profiles(p, profiles)), count)
+
     def test_unbound_slot_null_inbounds_reports_not_ready(self):
         manager = a.LocalManager.__new__(a.LocalManager)
         manager.opener = object()
@@ -67,7 +76,7 @@ class VpsAcceptanceTests(unittest.TestCase):
         view = {"backend": "native", "panel": "", "public_ip": "8.8.8.8",
                 "exits": [{"slot": i, "status": "starting", "inbounds": None} for i in range(1, 4)]}
         with patch.object(a, "request_bytes", return_value=json.dumps(view).encode()) as fetch:
-            with self.assertRaisesRegex(ToolError, "three_live_bound_vless_slots_required"):
+            with self.assertRaisesRegex(ToolError, "live_bound_vless_slots_required"):
                 manager.plan()
             self.assertEqual(fetch.call_count, 1)
 

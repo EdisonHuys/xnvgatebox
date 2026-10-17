@@ -60,9 +60,13 @@ func findXray(workDir string) (string, error) {
 // Unbound, unavailable and stale bindings are blocked, never sent via the host.
 func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]any {
 	bound := map[string]string{}
+	slots := map[int]bool{}
 	for _, t := range tunnels {
 		if t.Slot > 0 {
-			bound[sanitizeTag(t.snapshot().Node.HostName)] = slotOutboundTag(t.Slot)
+			slots[t.Slot] = true
+			if host := t.snapshot().Node.HostName; host != "" {
+				bound[sanitizeTag(host)] = slotOutboundTag(t.Slot)
+			}
 		}
 	}
 
@@ -82,6 +86,12 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 			continue
 		}
 		tag := bound[ib.BoundTo]
+		if ib.BoundSlot > 0 {
+			tag = ""
+			if slots[ib.BoundSlot] {
+				tag = slotOutboundTag(ib.BoundSlot)
+			}
+		}
 		if tag == "" {
 			tag = "block"
 		}

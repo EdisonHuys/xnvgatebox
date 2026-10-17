@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -105,14 +107,58 @@ func apiSubReset(w http.ResponseWriter, r *http.Request) {
 // boundOnly=true 只要绑在出口上的入站。这是默认行为：订阅的意义是
 // "一条地址拿到我所有家宽出口"，把走直连的入站混进去会让人以为那些也是家宽。
 func subLinks(m *Manager, host string, boundOnly bool) ([]string, error) {
+	return subLinksSelected(m, host, boundOnly, nil)
+}
+
+func subLinksSelected(m *Manager, host string, boundOnly bool, selected map[int]bool) ([]string, error) {
 	p, err := openPanel()
 	if err != nil {
 		return nil, err
 	}
 
 	var ids []int
+	if _, native := p.(*Native); native && boundOnly {
+		var links []string
+		names := map[string]bool{}
+		for _, e := range m.ExitsOf().Exits {
+			if e.Status != "up" || (selected != nil && !selected[e.Slot]) {
+				continue
+			}
+			for _, ib := range e.Inbounds {
+				if !ib.Enable {
+					continue
+				}
+				rows, err := p.InboundLinks([]int{ib.ID}, host)
+				if err != nil {
+					return nil, err
+				}
+				label := ib.Remark
+				if automaticName(ib) {
+					label = subscriptionExitName(e)
+					if len(e.Inbounds) > 1 {
+						label += fmt.Sprintf(" · %d", ib.Port)
+					}
+				}
+				for _, link := range rows {
+					name := uniqueRemark(label, names)
+					names[name] = true
+					u, err := url.Parse(link)
+					if err != nil {
+						return nil, fmt.Errorf("节点链接无效")
+					}
+					u.Fragment = name
+					u.RawFragment = ""
+					links = append(links, u.String())
+				}
+			}
+		}
+		return links, nil
+	}
 	if boundOnly {
 		for _, e := range m.ExitsOf().Exits {
+			if selected != nil && !selected[e.Slot] {
+				continue
+			}
 			for _, ib := range e.Inbounds {
 				if ib.Enable {
 					ids = append(ids, ib.ID)
@@ -175,7 +221,12 @@ func handleSub(m *Manager) http.HandlerFunc {
 		if host == "" {
 			host = publicHost(r)
 		}
-		links, err := subLinks(m, host, q.Get("bound") != "0")
+		selected, selectErr := subscriptionSlots(q.Get("slots"))
+		if selectErr != nil || (selected != nil && q.Get("bound") == "0") {
+			http.Error(w, "出口选择无效", 400)
+			return
+		}
+		links, err := subLinksSelected(m, host, q.Get("bound") != "0", selected)
 		if err != nil {
 			// 节点后端不给链接（xray-cf-lite 模式下链接由它自己的订阅负责）
 			http.Error(w, "生成订阅失败: "+firstLine(err.Error()), http.StatusBadGateway)
@@ -206,4 +257,19 @@ func encodeSub(links []string, target string) string {
 		return base64.StdEncoding.EncodeToString([]byte(body))
 	}
 	return body
+}
+
+func subscriptionSlots(text string) (map[int]bool, error) {
+	if text == "" {
+		return nil, nil
+	}
+	out := map[int]bool{}
+	for _, v := range strings.Split(text, ",") {
+		slot, err := strconv.Atoi(v)
+		if err != nil || slot < 1 || slot > maximumSlots || out[slot] {
+			return nil, fmt.Errorf("出口选择无效")
+		}
+		out[slot] = true
+	}
+	return out, nil
 }

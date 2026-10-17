@@ -12,7 +12,9 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/main/vps/insta
 
 本地包安装：`bash vps/install.sh --mode vps --package /path/xnvgatebox-linux-amd64.tar.gz`，相邻目录必须有 `checksums.txt`。更新前在 `/var/backups/xnvgatebox/` 备份旧二进制、服务环境和项目状态。独立管理采用 native 后端；保留旧管理路径、密码和订阅 token。原 3x-ui 入站不会自动转成内置 Xray 入站，需在管理页新建并绑定。
 
-## 管理和订阅
+本分支开发中的新版控制台改为 0–32 个目标出口，支持自动入站、订阅命名与范围选择、真实来源刷新和检测；见 [控制台说明](../docs/CONSOLE.md)。下述旧界面流程适用于正式 v0.4.0。
+
+## 管理和订阅（v0.4.0）
 
 `xnvgatebox access` 打印管理地址格式和密码。管理 UI 默认直接监听 VPS `8899`，使用随机访问路径和登录密码；SOCKS 仅在 `127.0.0.1` 监听。
 
@@ -26,9 +28,9 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/main/vps/insta
 
 ## 本地刷新
 
-`xnvgatebox-pool.timer` 每十分钟运行同一个 Python Pool Builder，输出 `/var/lib/xnvgatebox/pool/node_pool.json`；管理进程每三十秒检查新快照。`xnvgatebox refresh` 手动立即执行，界面的“刷新节点池”只重新读取本地快照。采集失败保留上一份完整快照。国家等来源配置在 `/etc/xnvgatebox/pool.json`。
+`xnvgatebox-pool.timer` 每十分钟运行同一个 Python Pool Builder，输出 `/var/lib/xnvgatebox/pool/node_pool.json`；管理进程每三十秒检查新快照。`xnvgatebox refresh` 手动立即执行，v0.4.0 旧界面的“刷新节点池”只重新读取本地快照，新控制台会触发真实采集。采集失败保留上一份完整快照。国家等来源配置在 `/etc/xnvgatebox/pool.json`。
 
-没有 GitHub Actions、Cloudflare、远程 node_pool 也可独立运行。抓取阶段全量发现，昂贵协议探测另行限额；配置存在不表示节点可用。
+没有 GitHub Actions、Cloudflare、远程 node_pool 也可独立运行。抓取阶段完整解析官方当次公开响应，昂贵协议探测另行限额；配置存在不表示节点可用。
 
 ## OpenVPN 出口画像
 
