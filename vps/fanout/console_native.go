@@ -105,10 +105,21 @@ func inboundNameMode(mode, remark string) string {
 	if mode != "" {
 		return mode
 	}
-	if remark == "" || isGeneratedLabel(remark) {
+	if remark == "" || isGeneratedLabel(remark) || isLegacySlotName(remark) {
 		return "auto"
 	}
 	return "custom"
+}
+
+// Old standalone installs used slot-01..32 before name_mode existed. Only
+// these exact placeholders are inferred; an explicit custom mode always wins.
+func isLegacySlotName(remark string) bool {
+	for slot := 1; slot <= maximumSlots; slot++ {
+		if remark == fmt.Sprintf("slot-%02d", slot) {
+			return true
+		}
+	}
+	return false
 }
 
 func subscriptionExitName(e Exit) string {

@@ -52,7 +52,7 @@ func openNative(workDir string) (*Native, error) {
 func (n *Native) Kind() string { return "native" }
 
 func (n *Native) Describe() string {
-	return fmt.Sprintf("xnvgatebox 内置 Xray（%s）", n.proc.bin)
+	return "xnvgatebox"
 }
 
 // OnTunnelsChanged 在隧道集合变化后重建配置。自建模式下出站直接由隧道列表

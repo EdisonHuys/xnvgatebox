@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
+	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -252,53 +253,5 @@ func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"ok": "已登录"})
 }
 
-const loginHTML = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>xnvgatebox · 登录</title>
-<style>
-body{margin:0;height:100vh;display:flex;flex-direction:column;gap:16px;
-  align-items:center;justify-content:center;
-  background:#f4f6f8;color:#182c34;
-  font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
-.links{display:flex;gap:16px}
-.links a{color:#8b95a5;text-decoration:none;font-size:12px}
-.links a:hover{color:#117b68}
-form{background:#fff;border:1px solid #e4ebee;border-radius:20px;
-  padding:36px;width:300px;max-width:calc(100vw - 100px);box-shadow:0 12px 50px #1b35450a}
-h1{font-size:25px;font-weight:750;letter-spacing:-.5px;margin:0 0 6px}
-label{display:block;color:#8b95a5;font-size:11px;margin-bottom:6px}
-input{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e4ebee;
-  color:#182c34;border-radius:9px;padding:11px 12px;font:inherit}
-input:focus{outline:2px solid #cce8df;border-color:#117b68}
-button{width:100%;margin-top:16px;background:#117b68;border:0;color:#fff;
-  font:inherit;font-weight:600;border-radius:9px;padding:11px;cursor:pointer}
-.err{color:#c25450;font-size:11px;margin-top:10px;min-height:14px}
-</style>
-</head>
-<body>
-<form id="f">
-  <h1>xnvgatebox</h1><p style="color:#72828c;margin:0 0 27px">欢迎回来，管理你的独立出口。</p>
-  <label for="pw">访问口令</label>
-  <input type="password" id="pw" autofocus autocomplete="current-password">
-  <button type="submit">进入</button>
-  <div class="err" id="err"></div>
-</form>
-<div class="links">
-  <a href="https://github.com/hanhaoops/xnvgatebox" target="_blank" rel="noopener">项目 GitHub</a>
-  <a href="https://github.com/hanhaoops/xnvgatebox/blob/main/vps/README.md" target="_blank" rel="noopener">使用说明</a>
-</div>
-<script>
-document.getElementById('f').onsubmit = async e => {
-  e.preventDefault();
-  const body = new URLSearchParams({password: document.getElementById('pw').value});
-  const r = await fetch('login', {method:'POST', body});
-  if(r.ok){ location.reload(); return; }
-  const d = await r.json().catch(()=>({}));
-  document.getElementById('err').textContent = d.error || '登录失败';
-};
-</script>
-</body>
-</html>`
+//go:embed login.html
+var loginHTML string

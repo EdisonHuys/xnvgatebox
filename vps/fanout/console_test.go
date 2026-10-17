@@ -237,7 +237,8 @@ func TestConsoleSubscriptionActualCountrySelectionCustomNames(t *testing.T) {
 	ts[0].ExitIP = "192.0.2.1"
 	ts[0].acceptExitEvidence(ts[0].ExitIP, ts[0].ExitIP, EgressProfile{Protocol: "openvpn", IP: ts[0].ExitIP, Country: &jp, IntelligenceStatus: "passed", IPType: "unknown", ExpiresAt: time.Now().Add(time.Hour).UTC().Format(time.RFC3339)})
 	n.store.Inbounds[0].BoundSlot = 1
-	n.store.Inbounds[0].NameMode = "auto"
+	n.store.Inbounds[0].NameMode = ""
+	n.store.Inbounds[0].Remark = "slot-01"
 	n.store.Inbounds = append(n.store.Inbounds, &nativeInbound{ID: 2, Port: 30002, Protocol: "vless", Enable: true, BoundSlot: 2, Remark: "自定义 🇰🇷", NameMode: "", Clients: []nativeClient{{ID: rollbackFixtureClientID, Enable: true}}}, &nativeInbound{ID: 3, Port: 30003, Protocol: "vless", Enable: true, BoundSlot: 3, Clients: []nativeClient{{ID: rollbackFixtureClientID, Enable: true}}})
 	usePanel(t, n)
 	m := NewManager(32, t.TempDir())
@@ -251,6 +252,14 @@ func TestConsoleSubscriptionActualCountrySelectionCustomNames(t *testing.T) {
 	u, _ := url.Parse(links[0])
 	if u.Fragment != "🇯🇵 日本 · 01" || u.User.String() != rollbackFixtureClientID {
 		t.Fatal("country/name or credentials incorrect", u.Fragment)
+	}
+	ibs, err := n.Inbounds(nil)
+	if err != nil || ibs[0].NameMode != "auto" {
+		t.Fatal("legacy default was exposed as custom in console")
+	}
+	detail, err := n.InboundDetail(1, "fixture.invalid")
+	if err != nil || detail.NameMode != "auto" {
+		t.Fatal("legacy default was exposed as custom in connection detail")
 	}
 	links, err = subLinks(m, "fixture.invalid", true)
 	if err != nil || len(links) != 2 {
