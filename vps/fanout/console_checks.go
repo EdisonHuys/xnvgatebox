@@ -18,6 +18,8 @@ type CheckResult struct {
 	Host       string    `json:"host"`
 	Slot       int       `json:"slot,omitempty"`
 	Status     string    `json:"status"`
+	Phase      string    `json:"phase,omitempty"`
+	StartedAt  time.Time `json:"started_at,omitempty"`
 	Code       string    `json:"code,omitempty"`
 	ActualIP   string    `json:"actual_ip,omitempty"`
 	Country    string    `json:"country,omitempty"`
@@ -29,28 +31,30 @@ type CheckResult struct {
 }
 
 type CheckRun struct {
-	finished chan struct{}
-	mu       sync.Mutex
-	ID       string        `json:"id"`
-	Status   string        `json:"status"`
-	Kind     string        `json:"kind"`
-	Items    []CheckResult `json:"items"`
-	Done     int           `json:"done"`
-	Total    int           `json:"total"`
-	cancel   context.CancelFunc
+	finished    chan struct{}
+	mu          sync.Mutex
+	ID          string        `json:"id"`
+	Status      string        `json:"status"`
+	Kind        string        `json:"kind"`
+	Items       []CheckResult `json:"items"`
+	Done        int           `json:"done"`
+	Total       int           `json:"total"`
+	Parallelism int           `json:"parallelism"`
+	cancel      context.CancelFunc
 }
 
 func (j *CheckRun) view() any {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	return struct {
-		ID     string        `json:"id"`
-		Status string        `json:"status"`
-		Kind   string        `json:"kind"`
-		Items  []CheckResult `json:"items"`
-		Done   int           `json:"done"`
-		Total  int           `json:"total"`
-	}{j.ID, j.Status, j.Kind, append([]CheckResult(nil), j.Items...), j.Done, j.Total}
+		ID          string        `json:"id"`
+		Status      string        `json:"status"`
+		Kind        string        `json:"kind"`
+		Items       []CheckResult `json:"items"`
+		Done        int           `json:"done"`
+		Total       int           `json:"total"`
+		Parallelism int           `json:"parallelism"`
+	}{j.ID, j.Status, j.Kind, append([]CheckResult(nil), j.Items...), j.Done, j.Total, j.Parallelism}
 }
 
 func checkFailure(err error, ctx context.Context) string {
@@ -77,13 +81,40 @@ func checkFailure(err error, ctx context.Context) string {
 	}
 }
 
-// A single diagnostic worker reserves Slot 240, outside the user capacity.
-// It shares only the instance network prefix, never a live Slot's namespace,
-// listener, configuration, state or Xray binding. It is not a published exit.
-func (c *Console) probeCandidate(parent context.Context, node Node) CheckResult {
+// Each worker reserves a distinct diagnostic Slot outside user capacity. The
+// job bounds diagnostics to two and leaves production's two dial permits free.
+func (c *Console) probeCandidate(parent context.Context, node Node, slot int, progress func(string)) CheckResult {
 	result := CheckResult{Host: node.HostName, Status: "failed", IPType: "unknown", ProfileSHA: profileDigest(node.Config)}
-	ctx, cancel := context.WithTimeout(parent, 120*time.Second)
+	if slot < diagnosticFirstSlot || slot >= diagnosticFirstSlot+diagnosticWorkers {
+		result.Code = "probe_environment_failed"
+		return result
+	}
+	leaseCtx, cancelLease := context.WithCancelCause(parent)
+	defer cancelLease(nil)
+	lease := c.m.reserveDiagnostic(node, cancelLease)
+	if lease == nil {
+		result.Status, result.Code = "deferred", "candidate_in_use"
+		return result
+	}
+	// Registered before resource defers: production cannot claim the same host
+	// until the temporary OpenVPN, namespace, SOCKS and files are all gone.
+	defer c.m.releaseDiagnostic(node.HostName, lease)
+	ctx, cancel := context.WithTimeout(leaseCtx, 120*time.Second)
 	defer cancel()
+	progress("precheck")
+	if err := preflightCandidate(ctx, node); err != nil {
+		result.Code = "tcp_unreachable"
+		if ctx.Err() != nil {
+			result.Code = checkFailure(err, ctx)
+			if result.Code == "cancelled" {
+				result.Status = "cancelled"
+			}
+		}
+		if context.Cause(leaseCtx) == errDiagnosticPreempted {
+			result.Status, result.Code = "deferred", "exit_recovery_priority"
+		}
+		return result
+	}
 	dir, err := os.MkdirTemp(c.m.workDir, ".connectivity-")
 	if err != nil {
 		result.Code = "probe_environment_failed"
@@ -101,15 +132,17 @@ func (c *Console) probeCandidate(parent context.Context, node Node) CheckResult 
 		return result
 	}
 	policy := SlotPolicy{AllowedIPTypes: []string{"strict_residential", "likely_residential", "mobile", "datacenter", "business_isp", "unknown"}}
-	t := &Tunnel{Slot: 240, Port: port, Node: node, Status: "starting", Cred: cred, Policy: &policy, workCtx: ctx, cancelWork: cancel}
+	t := &Tunnel{Slot: slot, Port: port, Node: node, Status: "starting", Cred: cred, Policy: &policy, workCtx: ctx, cancelWork: cancel, onProbePhase: progress}
 	helper := NewManager(1, dir)
-	helper.connectSem = c.m.connectSem
 	helper.tunnels[t.Slot] = t
-	defer func() { t.stop(); _ = os.RemoveAll(filepath.Join("/etc/netns", t.nsName())) }()
+	defer func() { progress("cleanup"); t.stop(); _ = os.RemoveAll(filepath.Join("/etc/netns", t.nsName())) }()
 	if err := helper.tryNode(t); err != nil {
 		result.Code = checkFailure(err, ctx)
 		if result.Code == "cancelled" {
 			result.Status = "cancelled"
+		}
+		if context.Cause(leaseCtx) == errDiagnosticPreempted {
+			result.Status, result.Code = "deferred", "exit_recovery_priority"
 		}
 		return result
 	}
@@ -129,7 +162,7 @@ func (c *Console) probeCandidate(parent context.Context, node Node) CheckResult 
 	return result
 }
 
-func (c *Console) checkExit(ctx context.Context, slot int) CheckResult {
+func (c *Console) checkExit(ctx context.Context, slot int, expectedHost string, progress func(string)) CheckResult {
 	c.m.mu.RLock()
 	t := c.m.tunnels[slot]
 	c.m.mu.RUnlock()
@@ -137,6 +170,7 @@ func (c *Console) checkExit(ctx context.Context, slot int) CheckResult {
 	if t == nil {
 		return result
 	}
+	progress("waiting_exit")
 	for !t.opMu.TryLock() {
 		select {
 		case <-ctx.Done():
@@ -150,11 +184,16 @@ func (c *Console) checkExit(ctx context.Context, slot int) CheckResult {
 	v := t.snapshot()
 	result.Host = v.Node.HostName
 	result.ProfileSHA = profileDigest(v.Node.Config)
+	if expectedHost != "" && v.Node.HostName != expectedHost {
+		result.Host, result.Status, result.Code = expectedHost, "deferred", "candidate_changed"
+		return result
+	}
 	if v.Status != "up" {
 		return result
 	}
 	probeCtx, cancel := context.WithTimeout(ctx, 35*time.Second)
 	defer cancel()
+	progress("verify_exit")
 	ip, latency, err := t.probeSocksWithContext(probeCtx)
 	if err != nil {
 		result.Code = checkFailure(err, probeCtx)
@@ -183,14 +222,21 @@ func (c *Console) checkExit(ctx context.Context, slot int) CheckResult {
 }
 
 type CheckRequest struct {
-	Kind  string   `json:"kind"`
-	Hosts []string `json:"hosts"`
-	Slots []int    `json:"slots"`
+	Kind        string   `json:"kind"`
+	Hosts       []string `json:"hosts"`
+	Slots       []int    `json:"slots"`
+	Parallelism int      `json:"parallelism,omitempty"`
 }
 
 func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 	if in.Kind != "candidates" && in.Kind != "exits" {
 		return nil, fmt.Errorf("检测类型无效")
+	}
+	if in.Parallelism == 0 {
+		in.Parallelism = diagnosticWorkers
+	}
+	if in.Parallelism < 1 || in.Parallelism > diagnosticWorkers {
+		return nil, fmt.Errorf("同时检测数量须为 1-%d", diagnosticWorkers)
 	}
 	nodes, _ := c.m.Nodes()
 	byHost := map[string]Node{}
@@ -249,7 +295,7 @@ func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(c.ctx)
-	job := &CheckRun{ID: hex.EncodeToString(buf), Status: "running", Kind: in.Kind, Items: items, Total: len(items), cancel: cancel, finished: make(chan struct{})}
+	job := &CheckRun{ID: hex.EncodeToString(buf), Status: "running", Kind: in.Kind, Items: items, Total: len(items), Parallelism: in.Parallelism, cancel: cancel, finished: make(chan struct{})}
 	c.check = job
 	go c.runChecks(ctx, job, byHost)
 	return job, nil
@@ -258,57 +304,81 @@ func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 func (c *Console) runChecks(ctx context.Context, j *CheckRun, nodes map[string]Node) {
 	defer close(j.finished)
 	defer j.cancel()
-	for i := range j.Items {
-		j.mu.Lock()
-		item := j.Items[i]
-		if ctx.Err() != nil {
-			j.Items[i].Status = "cancelled"
-			j.Done++
-			j.mu.Unlock()
-			continue
-		}
-		j.Items[i].Status = "running"
-		j.mu.Unlock()
-		var result CheckResult
-		if j.Kind == "candidates" {
-			// Reuse a running candidate's real SOCKS check. A second OpenVPN
-			// login to the same upstream can displace the user's active session.
-			reused := false
-			for _, t := range c.m.Tunnels() {
-				v := t.snapshot()
-				if v.Node.HostName == item.Host && v.Status == "up" {
-					result = c.checkExit(ctx, v.Slot)
-					reused = true
-					break
+	next := 0
+	var workers sync.WaitGroup
+	for worker := 0; worker < min(j.Parallelism, len(j.Items)); worker++ {
+		workers.Add(1)
+		go func(worker int) {
+			defer workers.Done()
+			for {
+				j.mu.Lock()
+				i := next
+				next++
+				j.mu.Unlock()
+				if i >= len(j.Items) {
+					return
+				}
+				j.mu.Lock()
+				item := j.Items[i]
+				if ctx.Err() != nil {
+					j.Items[i].Status = "cancelled"
+					j.Done++
+					j.mu.Unlock()
+					continue
+				}
+				j.Items[i].Status = "running"
+				j.Items[i].StartedAt = time.Now().UTC()
+				j.mu.Unlock()
+				progress := func(phase string) {
+					j.mu.Lock()
+					j.Items[i].Phase = phase
+					j.mu.Unlock()
+				}
+				var result CheckResult
+				if j.Kind == "candidates" {
+					// Reuse a running candidate's real SOCKS check. A second OpenVPN
+					// login to the same upstream can displace the user's active session.
+					reused := false
+					for _, t := range c.m.Tunnels() {
+						v := t.snapshot()
+						if v.Node.HostName == item.Host && v.Status == "up" {
+							result = c.checkExit(ctx, v.Slot, item.Host, progress)
+							reused = true
+							break
+						}
+					}
+					if !reused {
+						result = c.probe(ctx, nodes[item.Host], diagnosticFirstSlot+worker, progress)
+					}
+				} else {
+					result = c.checkExit(ctx, item.Slot, "", progress)
+				}
+				result.CheckedAt = time.Now().UTC()
+				if ctx.Err() != nil {
+					result.Status, result.Code = "cancelled", "cancelled"
+				}
+				j.mu.Lock()
+				result.StartedAt = j.Items[i].StartedAt
+				j.Items[i] = result
+				j.Done++
+				j.mu.Unlock()
+				// Never let a cancelled/incomplete probe replace a completed observation.
+				if (result.Status == "passed" || result.Status == "failed") && result.Host != "" {
+					c.checksMu.Lock()
+					if len(c.results) >= 1000 {
+						c.results = map[string]CheckResult{}
+					}
+					c.results[result.Host] = result
+					if blob, err := json.Marshal(c.results); err == nil {
+						_ = atomicConfigWrite(filepath.Join(c.m.workDir, "checks.json"), blob)
+					}
+					c.checksMu.Unlock()
 				}
 			}
-			if !reused {
-				result = c.probe(ctx, nodes[item.Host])
-			}
-		} else {
-			result = c.checkExit(ctx, item.Slot)
-		}
-		result.CheckedAt = time.Now().UTC()
-		if ctx.Err() != nil {
-			result.Status, result.Code = "cancelled", "cancelled"
-		}
-		j.mu.Lock()
-		j.Items[i] = result
-		j.Done++
-		j.mu.Unlock()
-		// Never let a cancelled/incomplete probe replace a completed observation.
-		if result.Status != "cancelled" && result.Host != "" {
-			c.checksMu.Lock()
-			if len(c.results) >= 1000 {
-				c.results = map[string]CheckResult{}
-			}
-			c.results[result.Host] = result
-			if blob, err := json.Marshal(c.results); err == nil {
-				_ = atomicConfigWrite(filepath.Join(c.m.workDir, "checks.json"), blob)
-			}
-			c.checksMu.Unlock()
-		}
+		}(worker)
 	}
+	workers.Wait()
+
 	j.mu.Lock()
 	j.Status = "done"
 	if ctx.Err() != nil {

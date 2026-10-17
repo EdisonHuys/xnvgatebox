@@ -802,15 +802,40 @@
         <span class="mark">×</span><span class="brandtext">xnvgatebox</span>
       </div>
       <nav aria-label="主导航">
-        <button class="nav active" data-page="overview" aria-label="出口总览" title="出口总览">
+        <button
+          class="nav active"
+          data-page="overview"
+          aria-label="出口总览"
+          title="出口总览"
+        >
           <span>◫</span><span class="navtext">出口总览</span></button
-        ><button class="nav" data-page="exits" aria-label="出口管理" title="出口管理">
+        ><button
+          class="nav"
+          data-page="exits"
+          aria-label="出口管理"
+          title="出口管理"
+        >
           <span>⇄</span><span class="navtext">出口管理</span></button
-        ><button class="nav" data-page="subscription" aria-label="我的订阅" title="我的订阅">
+        ><button
+          class="nav"
+          data-page="subscription"
+          aria-label="我的订阅"
+          title="我的订阅"
+        >
           <span>⌁</span><span class="navtext">我的订阅</span></button
-        ><button class="nav" data-page="candidates" aria-label="候选节点" title="候选节点">
+        ><button
+          class="nav"
+          data-page="candidates"
+          aria-label="候选节点"
+          title="候选节点"
+        >
           <span>◎</span><span class="navtext">候选节点</span></button
-        ><button class="nav" data-page="settings" aria-label="设置" title="设置">
+        ><button
+          class="nav"
+          data-page="settings"
+          aria-label="设置"
+          title="设置"
+        >
           <span>⚙</span><span class="navtext">设置</span>
         </button>
       </nav>
@@ -850,7 +875,9 @@
           </div>
           <div class="sectionhead">
             <h2>我的出口</h2>
-            <button data-page="exits" aria-label="出口管理" title="出口管理">查看全部 →</button>
+            <button data-page="exits" aria-label="出口管理" title="出口管理">
+              查看全部 →
+            </button>
           </div>
           <div class="grid" id="overviewExits"></div>
           <div class="bottomgrid">
@@ -860,7 +887,13 @@
                 <p>
                   就绪出口会自动加入原订阅。国家与名称同步更新，无需反复导入。
                 </p>
-                <button data-page="subscription" aria-label="我的订阅" title="我的订阅">管理我的订阅 →</button>
+                <button
+                  data-page="subscription"
+                  aria-label="我的订阅"
+                  title="我的订阅"
+                >
+                  管理我的订阅 →
+                </button>
               </div>
               <div class="ring">⌁</div>
             </div>
@@ -951,12 +984,16 @@
             </div>
             <div class="actions">
               <button data-action="refresh">↻ 刷新来源</button
+              ><select id="checkParallelism" aria-label="同时检测数量">
+                <option value="2">同时检测 2 个</option>
+                <option value="1">逐个检测</option></select
               ><button class="primary" id="testSelected">检测所选节点</button>
             </div>
           </div>
           <div class="notice">
             清单数量是官方本次返回的候选数量，可能随时间变化。未测试不等于不可用；来源地区与实际出口地区分开展示。检测会建立临时连接并核验
-            HTTPS 出口。
+            HTTPS
+            出口。快速端口预检不代表出口可用；无需测完全部候选才能使用订阅。
           </div>
           <div class="progressMount"></div>
           <div class="tools">
@@ -1057,7 +1094,9 @@
               </p>
               <details style="margin-bottom: 16px">
                 <summary>高级设置</summary>
-                <p class="muted">为已有出口配置额外的接入协议、端口和客户端。</p>
+                <p class="muted">
+                  为已有出口配置额外的接入协议、端口和客户端。
+                </p>
                 <a href="advanced">接入管理 →</a>
               </details>
               <details>
@@ -1232,6 +1271,7 @@
         running: "检测中",
         done: "已完成",
         cancelled: "已取消",
+        deferred: "稍后再测",
       };
       const errors = {
         check_timeout: "检测超时",
@@ -1247,6 +1287,10 @@
         pool_refresh_failed_previous_pool_retained: "来源刷新失败，保留旧清单",
         allocation_failed: "出口分配等待重试",
         auto_binding_failed: "入站绑定等待重试",
+        tcp_unreachable: "TCP 端口暂不可达",
+        candidate_in_use: "节点正在用于出口连接，避免重复拨号",
+        exit_recovery_priority: "已让位给出口恢复，稍后再测",
+        candidate_changed: "节点绑定已变化，请重新检测",
         remove_failed: "出口移除等待重试",
       };
       let countryNames;
@@ -1499,6 +1543,16 @@
       }
       function renderProgress() {
         const j = summary.check;
+        const phases = {
+          precheck: "快速端口预检",
+          setup: "准备临时连接",
+          connecting: "连接上游节点",
+          baseline: "确认隧道出口",
+          profile: "查询出口信息",
+          verify_exit: "核验实际出口",
+          waiting_exit: "等待出口操作完成",
+          cleanup: "清理临时连接",
+        };
         document.querySelectorAll(".progressMount").forEach((m) => {
           if (!j) {
             m.innerHTML = "";
@@ -1511,7 +1565,9 @@
             j.done +
             " / " +
             j.total +
-            "</h3>" +
+            " <small>最多同时 " +
+            (j.parallelism || 1) +
+            " 个</small></h3>" +
             (j.status === "running"
               ? '<button data-action="cancelCheck">取消检测</button>'
               : badge(j.status)) +
@@ -1519,12 +1575,22 @@
             (j.total ? (j.done / j.total) * 100 : 0) +
             '%"></span></div><div class="jobitems">' +
             (j.items || [])
+              .slice()
+              .sort(
+                (a, b) =>
+                  (({ running: 0, queued: 1 })[a.status] ?? 2) -
+                  ({ running: 0, queued: 1 }[b.status] ?? 2),
+              )
               .map(
                 (i) =>
                   '<div class="jobitem"><span>' +
                   esc(i.slot ? "出口 " + i.slot : i.host) +
                   "</span><span>" +
                   badge(i.status) +
+                  " " +
+                  esc(
+                    i.status === "running" ? phases[i.phase] || "开始检测" : "",
+                  ) +
                   " " +
                   esc(errors[i.code] || "") +
                   "</span></div>",
@@ -1534,6 +1600,13 @@
         });
       }
       function nodeResult(n) {
+        const pending =
+          summary.check?.status === "running" &&
+          summary.check.items?.find(
+            (i) =>
+              i.host === n.hostname && ["running", "queued"].includes(i.status),
+          );
+        if (pending) return pending;
         const r = summary.results?.[n.hostname];
         return r
           ? { ...r, status: r.stale ? "stale" : r.status }
@@ -1780,6 +1853,8 @@
         $("exitDialog").showModal();
       }
       async function check(req) {
+        if (req.kind === "candidates")
+          req.parallelism = Number($("checkParallelism").value);
         await api("api/console/check", req);
         toast("检测任务已加入队列");
         await poll();

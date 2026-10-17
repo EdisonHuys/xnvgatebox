@@ -48,7 +48,7 @@ type Console struct {
 	start  func(Node, SlotPolicy) (*Tunnel, error)
 	remove func(int) error
 	ensure func([]*Tunnel, string) error
-	probe  func(context.Context, Node) CheckResult
+	probe  func(context.Context, Node, int, func(string)) CheckResult
 }
 
 func newConsole(m *Manager) (*Console, error) {

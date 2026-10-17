@@ -54,7 +54,32 @@ func (t *Tunnel) blockForPolicy(reason string) {
 }
 
 func (m *Manager) claimNode(t *Tunnel, node Node, ctx context.Context) bool {
-	m.mu.Lock()
+	for {
+		m.mu.Lock()
+		if m.tunnels[t.Slot] != t || ctx.Err() != nil {
+			m.mu.Unlock()
+			return false
+		}
+		lease := m.diagnostics[node.HostName]
+		if lease == nil && node.IP != "" {
+			for _, other := range m.diagnostics {
+				if other.ip == node.IP {
+					lease = other
+					break
+				}
+			}
+		}
+		if lease == nil {
+			break // Keep the lock through the final claim below.
+		}
+		lease.cancel(errDiagnosticPreempted)
+		m.mu.Unlock()
+		select {
+		case <-lease.done:
+		case <-ctx.Done():
+			return false
+		}
+	}
 	defer m.mu.Unlock()
 	if m.tunnels[t.Slot] != t || ctx.Err() != nil {
 		return false

@@ -32,6 +32,9 @@ jobs:
           go test -c -o /tmp/xnvgatebox-tests
           sudo /tmp/xnvgatebox-tests -test.v
         working-directory: vps/fanout
+      - name: Check diagnostic concurrency for races
+        run: go test -race -run 'Test(ConsoleTwoWorkers|ConsoleCancellation|ConsoleParallelism|ConsoleCandidateQueue|ConsoleRunningCandidate|ConsoleShutdown|DiagnosticLease|CancelledProduction|DiagnosticBusy|CandidateReuse|Preflight|TCPPreflight)' ./...
+        working-directory: vps/fanout
       - run: bash -n vps/install.sh vps/deploy/xnvgatebox
       - name: Build the package from this tested commit
         env:

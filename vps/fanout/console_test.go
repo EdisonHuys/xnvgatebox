@@ -312,10 +312,10 @@ func waitConsoleCheck(t *testing.T, j *CheckRun) {
 func TestConsoleCandidateQueueCancelKeepsCompletedEvidence(t *testing.T) {
 	c := consoleFixture(t)
 	c.m.nodes = []Node{{HostName: "a", Config: "a"}, {HostName: "b", Config: "b"}}
-	started := make(chan struct{})
+	started := make(chan struct{}, 2)
 	c.results["a"] = CheckResult{Host: "a", Status: "passed"}
-	c.probe = func(ctx context.Context, n Node) CheckResult {
-		close(started)
+	c.probe = func(ctx context.Context, n Node, slot int, progress func(string)) CheckResult {
+		started <- struct{}{}
 		<-ctx.Done()
 		return CheckResult{Host: n.HostName, Status: "cancelled"}
 	}
@@ -345,7 +345,7 @@ func TestConsoleRunningCandidateUsesExistingSocksWithoutSecondDial(t *testing.T)
 	node := Node{HostName: "running", Config: "fixture-profile"}
 	c.m.nodes = []Node{node}
 	c.m.tunnels[1] = &Tunnel{Slot: 1, Port: 17928, Node: node, Status: "up", ExitIP: "192.0.2.202"}
-	c.probe = func(context.Context, Node) CheckResult {
+	c.probe = func(context.Context, Node, int, func(string)) CheckResult {
 		t.Error("running candidate dialed a second OpenVPN session")
 		return CheckResult{Status: "failed"}
 	}
@@ -362,9 +362,9 @@ func TestConsoleRunningCandidateUsesExistingSocksWithoutSecondDial(t *testing.T)
 func TestConsoleShutdownCancelsJobsAndStopsReconciliation(t *testing.T) {
 	c := consoleFixture(t)
 	c.m.nodes = []Node{{HostName: "cancel-at-stop"}}
-	started := make(chan struct{})
-	c.probe = func(ctx context.Context, n Node) CheckResult {
-		close(started)
+	started := make(chan struct{}, 2)
+	c.probe = func(ctx context.Context, n Node, slot int, progress func(string)) CheckResult {
+		started <- struct{}{}
 		<-ctx.Done()
 		return CheckResult{Host: n.HostName, Status: "cancelled"}
 	}

@@ -42,7 +42,25 @@ func diagnosticConfigOwned(workDir, ns, executable, config string) bool {
 // lock. SIGKILL cannot run defers, so recover only our reserved diagnostic
 // namespace and private temporary directories before accepting new jobs.
 func (c *Console) cleanupDiagnostics() error {
-	t := &Tunnel{Slot: 240}
+	for slot := diagnosticFirstSlot; slot < diagnosticFirstSlot+diagnosticWorkers; slot++ {
+		if err := c.cleanupDiagnosticSlot(slot); err != nil {
+			return err
+		}
+	}
+	dirs, err := filepath.Glob(filepath.Join(c.m.workDir, ".connectivity-*"))
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		if err := os.RemoveAll(dir); err != nil {
+			return fmt.Errorf("无法清理检测临时目录")
+		}
+	}
+	return nil
+}
+
+func (c *Console) cleanupDiagnosticSlot(slot int) error {
+	t := &Tunnel{Slot: slot}
 	nsPath := filepath.Join("/run/netns", t.nsName())
 	nsInfo, err := os.Stat(nsPath)
 	if err == nil {
@@ -93,14 +111,5 @@ func (c *Console) cleanupDiagnostics() error {
 	}
 	t.teardownNetns()
 	_ = os.RemoveAll(filepath.Join("/etc/netns", t.nsName()))
-	dirs, err := filepath.Glob(filepath.Join(c.m.workDir, ".connectivity-*"))
-	if err != nil {
-		return err
-	}
-	for _, dir := range dirs {
-		if err := os.RemoveAll(dir); err != nil {
-			return fmt.Errorf("无法清理检测临时目录")
-		}
-	}
 	return nil
 }

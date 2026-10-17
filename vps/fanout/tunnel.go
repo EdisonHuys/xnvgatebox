@@ -47,6 +47,7 @@ type Tunnel struct {
 	cooldown            map[string]time.Time
 	validating          bool // permits only the manager's own expected/actual probe
 	validationCred      *SocksCred
+	onProbePhase        func(string)
 	egress              *EgressProfile
 	egressExpectedIP    string
 	egressActualIP      string
@@ -278,7 +279,8 @@ func (t *Tunnel) startOpenVPN(dir string) error {
 		return fmt.Errorf("启动 openvpn 失败: %w", err)
 	}
 	t.ovpn = cmd
-	go cmd.Wait() // 回收子进程，避免僵尸
+	exited := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(exited) }()
 
 	// openvpn 建好 tun0 前 SOCKS5 无法正常出网，这里等它就绪
 	deadline := time.Now().Add(40 * time.Second)
@@ -291,8 +293,10 @@ func (t *Tunnel) startOpenVPN(dir string) error {
 				return nil
 			}
 		}
-		if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+		select {
+		case <-exited:
 			return fmt.Errorf("openvpn 提前退出，详见 %s", logPath)
+		default:
 		}
 		if !waitForWork(ctx, time.Second) {
 			return ctx.Err()
