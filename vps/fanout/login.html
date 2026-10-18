@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>xnvgatebox · 登录</title>
+    <style>
+      :root {
+        --bg: #f4f7f7;
+        --card: #fff;
+        --text: #182c34;
+        --muted: #70828a;
+        --line: #e0e9e9;
+        --accent: #117b68;
+        --soft: #e7f4ef;
+        --error: #b34d4d;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100svh;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "PingFang SC",
+          "Microsoft YaHei",
+          sans-serif;
+      }
+      body.dark {
+        --bg: #101b22;
+        --card: #192830;
+        --text: #e6edf0;
+        --muted: #98aab5;
+        --line: #2c3d45;
+        --accent: #75d5b9;
+        --soft: #203f39;
+        --error: #ef9898;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button,
+      a,
+      input {
+        outline-offset: 4px;
+      }
+      button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
+      .top {
+        max-width: 1440px;
+        margin: auto;
+        padding: 30px 48px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        font-size: 19px;
+        font-weight: 750;
+        letter-spacing: -0.6px;
+      }
+      .mark {
+        display: grid;
+        place-items: center;
+        background: var(--accent);
+        color: var(--card);
+        width: 35px;
+        height: 35px;
+        border-radius: 11px;
+        font-size: 28px;
+        line-height: 1;
+        font-weight: 400;
+      }
+      .theme {
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 7px 11px;
+        font-size: 13px;
+      }
+      main {
+        max-width: 1200px;
+        margin: 5vh auto 6vh;
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        align-items: center;
+        gap: 90px;
+        padding: 25px 48px;
+      }
+      .intro {
+        position: relative;
+      }
+      .eyebrow {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: var(--accent);
+      }
+      h1 {
+        font-size: clamp(32px, 3.6vw, 49px);
+        line-height: 1.3;
+        letter-spacing: -1.5px;
+        margin: 18px 0;
+      }
+      h1 span {
+        color: var(--accent);
+      }
+      .lead {
+        color: var(--muted);
+        max-width: 370px;
+        line-height: 1.9;
+      }
+      .network {
+        height: 220px;
+        position: relative;
+        margin-top: 24px;
+        max-width: 420px;
+        isolation: isolate;
+      }
+      .halo {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        left: 70px;
+        top: 10px;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+      }
+      .halo:before,
+      .halo:after {
+        content: "";
+        position: absolute;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        inset: 25px;
+      }
+      .halo:after {
+        inset: -28px;
+        opacity: 0.55;
+      }
+      .hub {
+        position: absolute;
+        left: 136px;
+        top: 76px;
+        width: 68px;
+        height: 68px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        background: var(--accent);
+        color: var(--card);
+        font-size: 37px;
+        box-shadow: 0 14px 40px #117b681e;
+      }
+      .node {
+        position: absolute;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        padding: 9px 15px;
+        box-shadow: 0 5px 25px #19354a05;
+        font-size: 13px;
+      }
+      .node:before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: var(--accent);
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+      .n1 {
+        top: 26px;
+        left: 6px;
+      }
+      .n2 {
+        right: 0;
+        top: 88px;
+      }
+      .n3 {
+        left: 24px;
+        bottom: 18px;
+      }
+      .caption {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 12px;
+      }
+      .login {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        padding: 40px;
+        box-shadow: 0 18px 70px #1b354509;
+      }
+      .lock {
+        display: grid;
+        place-items: center;
+        background: var(--soft);
+        color: var(--accent);
+        border-radius: 13px;
+        width: 47px;
+        height: 47px;
+        margin-bottom: 25px;
+      }
+      .lock svg {
+        width: 24px;
+        height: 24px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      h2 {
+        font-size: 26px;
+        letter-spacing: -0.6px;
+        line-height: 1.3;
+        margin: 0 0 8px;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 0 0 29px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 9px;
+      }
+      .password {
+        display: flex;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .password:focus-within {
+        outline: 3px solid var(--soft);
+        border-color: var(--accent);
+      }
+      input {
+        min-width: 0;
+        width: 100%;
+        color: var(--text);
+        border: 0;
+        background: transparent;
+        padding: 13px 14px;
+        outline: none;
+      }
+      .reveal {
+        background: transparent;
+        border: 0;
+        padding: 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .submit {
+        width: 100%;
+        padding: 13px 18px;
+        background: var(--accent);
+        color: var(--card);
+        border: 0;
+        border-radius: 11px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 650;
+      }
+      .submit:hover {
+        filter: brightness(0.95);
+      }
+      .err {
+        min-height: 42px;
+        padding: 8px 0;
+        color: var(--error);
+        font-size: 13px;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+        margin: 22px 0 0;
+        padding-top: 21px;
+        border-top: 1px solid var(--line);
+      }
+      footer {
+        max-width: 1200px;
+        margin: auto;
+        padding: 0 48px 28px;
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .links {
+        display: flex;
+        gap: 20px;
+      }
+      .links a:hover {
+        color: var(--accent);
+      }
+      @media (min-width: 1500px) {
+        main {
+          margin-top: 10vh;
+        }
+      }
+      @media (max-width: 850px) {
+        main {
+          gap: 40px;
+          padding: 25px 30px;
+        }
+        .top {
+          padding: 25px 30px;
+        }
+        .network {
+          transform: scale(0.9);
+          transform-origin: left center;
+        }
+        .login {
+          padding: 30px;
+        }
+        h1 {
+          font-size: 34px;
+        }
+        footer {
+          padding: 0 30px 25px;
+        }
+      }
+      @media (max-width: 650px) {
+        .top {
+          padding: 24px;
+        }
+        .brand {
+          font-size: 17px;
+        }
+        main {
+          display: block;
+          padding: 18px 24px 30px;
+          margin: 0 auto;
+          max-width: 470px;
+        }
+        .intro {
+          margin-bottom: 28px;
+        }
+        .intro h1 {
+          font-size: 30px;
+          letter-spacing: -0.8px;
+          margin: 12px 0 8px;
+        }
+        .lead {
+          font-size: 13px;
+          margin: 0;
+        }
+        .network,
+        .caption {
+          display: none;
+        }
+        .login {
+          padding: 27px;
+          border-radius: 20px;
+        }
+        .lock {
+          margin-bottom: 20px;
+        }
+        h2 {
+          font-size: 23px;
+        }
+        .muted {
+          margin-bottom: 23px;
+        }
+        footer {
+          max-width: 470px;
+          padding: 0 24px 24px;
+          flex-wrap: wrap;
+        }
+        .eyebrow {
+          font-size: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="./"
+        ><span class="mark" aria-hidden="true">×</span>xnvgatebox</a
+      ><button class="theme" id="theme" type="button" aria-label="切换明暗主题">
+        ◐ 外观
+      </button>
+    </header>
+    <main>
+      <section class="intro">
+        <div class="eyebrow">YOUR CONNECTIONS, IN ONE PLACE</div>
+        <h1>连接世界，<br /><span>从这里开始。</span></h1>
+        <p class="lead">
+          发现可用节点，管理独立出口。<br />把每一条连接，交给一个清晰的控制台。
+        </p>
+        <div class="network" aria-hidden="true">
+          <div class="halo"></div>
+          <div class="hub">×</div>
+          <div class="node n1">发现节点</div>
+          <div class="node n2">独立出口</div>
+          <div class="node n3">统一订阅</div>
+        </div>
+        <p class="caption">简单管理 · 清晰状态 · 随时掌握</p>
+      </section>
+      <form class="login" id="f">
+        <div class="lock" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <rect x="5" y="10" width="14" height="11" rx="3" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+          </svg>
+        </div>
+        <h2>欢迎回来</h2>
+        <p class="muted">登录，继续管理你的连接。</p>
+        <label for="pw">管理密码</label>
+        <div class="password">
+          <input
+            type="password"
+            id="pw"
+            name="password"
+            required
+            autofocus
+            autocomplete="current-password"
+            aria-describedby="err"
+            placeholder="输入管理密码"
+          /><button
+            class="reveal"
+            type="button"
+            id="reveal"
+            aria-controls="pw"
+            aria-pressed="false"
+          >
+            显示
+          </button>
+        </div>
+        <div class="err" id="err" role="alert" aria-live="polite"></div>
+        <button class="submit" type="submit" id="submit">
+          <span id="submitText">进入控制台</span
+          ><span aria-hidden="true">→</span>
+        </button>
+        <p class="note">此入口仅供管理员使用</p>
+      </form>
+    </main>
+    <footer>
+      <span>xnvgatebox · 独立出口控制台</span>
+      <nav class="links" aria-label="帮助">
+        <a
+          href="https://github.com/hanhaoops/xnvgatebox"
+          target="_blank"
+          rel="noopener"
+          >项目 ↗</a
+        ><a
+          href="https://github.com/hanhaoops/xnvgatebox/blob/main/vps/README.md"
+          target="_blank"
+          rel="noopener"
+          >使用说明 ↗</a
+        >
+      </nav>
+    </footer>
+    <script>
+      "use strict";
+      const $ = (id) => document.getElementById(id);
+      try {
+        document.body.classList.toggle(
+          "dark",
+          localStorage.getItem("xnvgatebox-theme") === "dark",
+        );
+      } catch {}
+      $("theme").onclick = () => {
+        document.body.classList.toggle("dark");
+        try {
+          localStorage.setItem(
+            "xnvgatebox-theme",
+            document.body.classList.contains("dark") ? "dark" : "light",
+          );
+        } catch {}
+      };
+      $("reveal").onclick = () => {
+        const show = $("pw").type === "password";
+        $("pw").type = show ? "text" : "password";
+        $("reveal").textContent = show ? "隐藏" : "显示";
+        $("reveal").setAttribute("aria-pressed", String(show));
+      };
+      $("pw").oninput = () => {
+        $("err").textContent = "";
+        $("pw").removeAttribute("aria-invalid");
+      };
+      $("f").onsubmit = async (e) => {
+        e.preventDefault();
+        if ($("submit").disabled) return;
+        $("submit").disabled = true;
+        $("f").setAttribute("aria-busy", "true");
+        $("submitText").textContent = "正在登录…";
+        $("err").textContent = "";
+        try {
+          const r = await fetch("login", {
+            method: "POST",
+            body: new URLSearchParams({ password: $("pw").value }),
+          });
+          if (r.ok) {
+            location.reload();
+            return;
+          }
+          const d = await r.json().catch(() => ({}));
+          $("err").textContent = d.error || "登录失败，请重试";
+          $("pw").setAttribute("aria-invalid", "true");
+          $("pw").focus();
+        } catch {
+          $("err").textContent = "暂时无法连接，请稍后重试";
+        }
+        $("submit").disabled = false;
+        $("f").removeAttribute("aria-busy");
+        $("submitText").textContent = "进入控制台";
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,259 @@
+{
+  "scope": "private_proxy_resources_with_vps_local_sstp_validation_and_reusable_socks",
+  "verified_at": "2026-10-18T03:59:15.156738Z",
+  "build": {
+    "git_head": "5daca2685940e8661622dd4bcc2029f296c1e436",
+    "manager_origin": "built_from_source",
+    "source_dirty": false,
+    "source_snapshot_sha256": "94d2b3e8f01927e0f1b67475dfeba7f2f4e5ce562928a2e2e253e0b6d61357af",
+    "version": "dev-sstp-resources-20261018",
+    "xray_version": "v26.3.27",
+    "package_sha256": "5de8866818b0330fd8efad7f6ec71ab057829c53dcefa09cfdbc250d3ef833eb"
+  },
+  "tests": {
+    "go_live_linux": {
+      "passed": true,
+      "top_level_pass": 239,
+      "all_pass_events": 295,
+      "skips": 2
+    },
+    "python_linux": {
+      "passed": true,
+      "tests": 64
+    },
+    "native_sstp_lifecycle_test": "sstp_live_test.go:121: native SSTP attempt status=failed code=sstp_https_failed; isolated cleanup and crash recovery passed",
+    "github_checks": [
+      {
+        "id": 39095399122,
+        "workflow": "VPS tests and package",
+        "conclusion": "success"
+      },
+      {
+        "id": 39095399103,
+        "workflow": "Test",
+        "conclusion": "success"
+      },
+      {
+        "id": 39095396314,
+        "workflow": "Test",
+        "conclusion": "success"
+      },
+      {
+        "id": 39095396262,
+        "workflow": "VPS tests and package",
+        "conclusion": "success"
+      }
+    ],
+    "github_sstp_and_scheduler_race": "passed",
+    "final_embedded_js_and_go_vet": "passed",
+    "optional_scheduler_enabled_disabled_no_overlap": "deterministic regression and race checks passed",
+    "browser_demo": [
+      "separate_socks_and_sstp_tabs",
+      "source_and_measured_country_separate",
+      "single_check_immediate_running_spinner",
+      "saved_numeric_settings",
+      "private_socks_credentials_and_deep_link",
+      "390px_form_layout"
+    ]
+  },
+  "upgrade": {
+    "verified_at": "2026-10-18T03:49:43.300438Z",
+    "status": "passed",
+    "checks": {
+      "all_existing_inbound_settings_ports_and_credentials_preserved": true,
+      "all_slot_ports_credentials_policies_and_intent_preserved": true,
+      "management_subscription_plan_parallelism_preserved": true,
+      "xui_config_preserved": true,
+      "xui_process_preserved": true,
+      "clean_installed_build": true,
+      "proxy_resource_menu_served": true,
+      "sstp_dependency_ready": true,
+      "sstp_no_auto_scan_on_install": true,
+      "sstp_own_parallelism_defaults_to_existing_user_setting": true,
+      "all_current_pool_candidates_retained": true,
+      "no_unmeasured_sstp_is_reported_passed": true,
+      "cf_remains_not_tested": true,
+      "login_required_api/resources/sstp": true,
+      "login_required_api/resources/sstp/export": true,
+      "empty_export_rejected": true
+    },
+    "target": 32,
+    "openvpn_parallelism": 16,
+    "sstp_parallelism": 16,
+    "sstp_candidates": 98,
+    "ready_at_verification": 1,
+    "backup_sha256": "e3e53a1abc5f3ed68742ed2466d9df16e12ef5ac65157df24b935a194553bc5f"
+  },
+  "sstp_full_batch": {
+    "verified_at": "2026-10-18T03:52:23.123958Z",
+    "status": "passed",
+    "checks": {
+      "manual_priority_deduplicates_active_host": "covered_by_deterministic_test_job_already_finished",
+      "cancel_drains_all_workers": true,
+      "cancel_preserves_completed_results": true,
+      "export_no_store": true,
+      "valid_export_has_vps_only_evidence": true,
+      "selected_export_does_not_expand": true,
+      "private_text_endpoint_matches_selected": true,
+      "empty_selected_does_not_export_all": true,
+      "all_temporary_sstp_directories_cleaned": true,
+      "private_results_persisted": true
+    },
+    "valid_export_count": 57,
+    "job_done": 98,
+    "job_total": 98,
+    "job_status": "done",
+    "parallelism": 16,
+    "cf_status": "not_tested"
+  },
+  "sstp_real_priority_and_cancel": {
+    "verified_at": "2026-10-18T03:53:28.930984Z",
+    "status": "passed",
+    "checks": {
+      "manual_priority_deduplicates": true,
+      "second_batch_rejected": true,
+      "real_running_task_cancelled": true,
+      "cancelled_nodes_keep_previous_evidence": true,
+      "all_workers_drained": true,
+      "temporary_directories_removed": true
+    },
+    "active_before_cancel": 16,
+    "cancelled_items": 95
+  },
+  "final_restart_and_preservation": {
+    "verified_at": "2026-10-18T03:59:15.156738Z",
+    "status": "passed",
+    "checks": {
+      "xui_original_config_and_process_preserved": true,
+      "original_connections_and_credentials_preserved": true,
+      "original_slots_and_intent_preserved": true,
+      "original_management_subscription_quantity_parallelism_preserved": true,
+      "sstp_settings_and_results_survive_restart": true,
+      "final_clean_source_installed": true,
+      "fresh_export_includes_measured_server_ip": true,
+      "cf_still_not_tested": true,
+      "no_sstp_background_scan_after_restart": true,
+      "diagnostics_cleaned": true,
+      "original_main_parallelism_and_target_preserved": true,
+      "host_direct_still_enabled": true,
+      "original_public_socks_still_enabled": true
+    },
+    "valid_sstp_after_restart": 54,
+    "sstp_candidates": 98,
+    "ready_exits_at_snapshot": 1,
+    "original_slot_status": {
+      "1": "starting",
+      "2": "up",
+      "3": "starting"
+    },
+    "target": 32,
+    "main_check_parallelism": 16,
+    "sstp_settings": {
+      "parallelism": 16,
+      "interval_minutes": 0,
+      "valid_minutes": 60,
+      "timeout_seconds": 90
+    },
+    "build": {
+      "git_head": "5daca2685940e8661622dd4bcc2029f296c1e436",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "94d2b3e8f01927e0f1b67475dfeba7f2f4e5ce562928a2e2e253e0b6d61357af",
+      "version": "dev-sstp-resources-20261018",
+      "xray_version": "v26.3.27"
+    },
+    "before_upgrade_backup_sha256": "e3e53a1abc5f3ed68742ed2466d9df16e12ef5ac65157df24b935a194553bc5f",
+    "followup_backup_sha256": "c3d0e234a560a9332b8fb055d19e179147fedf4051eafd698eb0540c817c7e88"
+  },
+  "real_original_clients": {
+    "server": {
+      "verified_at": "2026-10-18T04:00:03.182440Z",
+      "vantage": "server-local-public-client",
+      "blocked": false,
+      "checks": [
+        {
+          "kind": "direct",
+          "slot": null,
+          "status": "passed"
+        },
+        {
+          "kind": "vpn",
+          "slot": 2,
+          "status": "passed"
+        },
+        {
+          "kind": "socks",
+          "slot": 2,
+          "status": "passed",
+          "incorrect_password_rejected": true
+        }
+      ],
+      "public_subscription_fetch": "passed",
+      "status": "passed"
+    },
+    "mac": {
+      "verified_at": "2026-10-18T04:03:43.500569Z",
+      "vantage": "external-client",
+      "blocked": false,
+      "checks": [
+        {
+          "kind": "direct",
+          "slot": null,
+          "status": "passed"
+        },
+        {
+          "kind": "vpn",
+          "slot": 2,
+          "status": "passed",
+          "transport_errors_before_retry": [
+            {
+              "endpoint": 0,
+              "code": "curl_failed_35"
+            },
+            {
+              "endpoint": 2,
+              "code": "curl_failed_35"
+            }
+          ]
+        },
+        {
+          "kind": "socks",
+          "slot": 2,
+          "status": "passed",
+          "incorrect_password_rejected": true
+        }
+      ],
+      "public_subscription_fetch": "passed",
+      "status": "passed"
+    },
+    "coverage": "original default subscription, explicit VPS host-direct, original Slot 2 VLESS and external authenticated SOCKS; two exact HTTPS IP echoes plus HTTPS content; wrong SOCKS password rejected",
+    "slot_1_and_3_positive": "upstream conditions insufficient; original policies, ports and credentials preserved; no forced country or direct fallback",
+    "all_target_slots_tested": false
+  },
+  "backup": {
+    "full_private_archives_on_vps_and_mac": true,
+    "before_upgrade_sha256": "e3e53a1abc5f3ed68742ed2466d9df16e12ef5ac65157df24b935a194553bc5f",
+    "before_final_sha256": "c3d0e234a560a9332b8fb055d19e179147fedf4051eafd698eb0540c817c7e88"
+  },
+  "retained_failures": {
+    "pre_fix_mtu": "VPS uplink MTU 1400 versus veth default 1500; isolated HTTPS timed out at 1500 and passed at 1400. Native SSTP now adapts temporary links to uplink MTU. Pre-fix timeout logs retained.",
+    "separate_native_candidates": "one post-MTU candidate reached both IP echoes but failed HTTPS content; another failed HTTPS echoes. Neither was exported as passed. Full online batch later validated 57 candidates.",
+    "live_second_batch": "16 real active workers cancelled; 95 items cancelled; completed evidence preserved. Three items completed before cancellation; 54 valid observations remained at the final restart snapshot.",
+    "ci_initial_timeout": {
+      "run_id": 39095226780,
+      "test": "TestConsoleFullSourceAndTargetBeyond32",
+      "reason": "321 durable writes exceeded 3-second small-job test deadline on shared race runner",
+      "fix": "wait for task completion with bounded 30-second deadline; retained full 321 count assertions; final four workflows passed"
+    },
+    "client_invocation": "first Mac call used an absent client path; corrected to pinned tools/bin/xray, all actual routes passed. Later transport retries retain exact IP and certificate requirements."
+  },
+  "boundaries": {
+    "cf": "paused; no deployment, write, or end-to-end verification",
+    "xui": "original process and runtime configuration unchanged",
+    "unknown": "never claimed residential",
+    "raw_sstp_export": "authenticated vpngate_vps_sstp_observations schema; source endpoint IP, expiry and VPS evidence; not old CF full-chain manifest",
+    "sstp_connectivity": "results are time-limited observations; availability and geography depend on upstream volunteers",
+    "automatic_scan": "disabled by default and left disabled",
+    "permanent_sstp_proxy": "not created; temporary connections cleaned"
+  }
+}

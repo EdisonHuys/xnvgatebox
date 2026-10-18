@@ -1,0 +1,2330 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>xnvgatebox · 接入管理</title>
+    <style>
+      :root {
+        --bg: #f4f6f8;
+        --panel: #fff;
+        --line: #e4ebee;
+        --text: #182c34;
+        --dim: #72828c;
+        --accent: #117b68;
+        --soft: #e7f4ef;
+        --ok: #117b68;
+        --warn: #a77317;
+        --bad: #b34d4d;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.65 -apple-system,
+          BlinkMacSystemFont,
+          "PingFang SC",
+          "Microsoft YaHei",
+          sans-serif;
+      }
+      body.dark {
+        --bg: #101b22;
+        --panel: #192830;
+        --line: #2c3d45;
+        --text: #e6edf0;
+        --dim: #98aab5;
+        --accent: #75d5b9;
+        --soft: #203f39;
+        --ok: #75d5b9;
+        --warn: #eac17b;
+        --bad: #ef9898;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button,
+      a,
+      input,
+      select,
+      textarea {
+        outline-offset: 4px;
+      }
+      button {
+        color: var(--text);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 9px 14px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        white-space: nowrap;
+      }
+      button:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--panel);
+        font-weight: 650;
+      }
+      button.icon {
+        padding: 7px;
+        background: transparent;
+        color: var(--dim);
+      }
+      button.danger {
+        color: var(--bad);
+      }
+      svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .spacer {
+        flex: 1;
+        min-width: 0;
+      }
+      header {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+      .header-inner {
+        max-width: 1280px;
+        margin: auto;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 20px 36px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        font-size: 18px;
+        font-weight: 750;
+        letter-spacing: -0.5px;
+      }
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 33px;
+        height: 33px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--panel);
+        font-size: 27px;
+        font-weight: 400;
+      }
+      .crumb {
+        border-left: 1px solid var(--line);
+        padding-left: 18px;
+        color: var(--dim);
+        font-size: 13px;
+      }
+      .back {
+        color: var(--dim);
+        font-size: 13px;
+      }
+      main {
+        max-width: 1280px;
+        padding: 36px 36px 60px;
+        margin: auto;
+      }
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 2px;
+      }
+      .hero h1 {
+        font-size: 32px;
+        letter-spacing: -0.8px;
+        margin: 9px 0;
+      }
+      .hero p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 14px;
+      }
+      .hero-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .helpbar {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        padding: 17px 20px;
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        margin-bottom: 24px;
+        color: var(--dim);
+        font-size: 13px;
+      }
+      .helpbar b {
+        color: var(--text);
+        display: block;
+        font-weight: 650;
+      }
+      .helpbar a {
+        white-space: nowrap;
+      }
+      .tools {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .tools h2 {
+        font-size: 16px;
+        margin: 0;
+      }
+      .count {
+        font-size: 12px;
+        color: var(--dim);
+      }
+      #list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+      .exit {
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: var(--panel);
+        padding: 22px;
+        min-width: 0;
+      }
+      .exit-head {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .exit-head h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 650;
+        letter-spacing: -0.3px;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--dim);
+        flex: none;
+      }
+      .dot.up {
+        background: var(--ok);
+      }
+      .dot.starting,
+      .dot.waiting_for_nodes {
+        background: var(--warn);
+      }
+      .dot.failed,
+      .dot.blocked {
+        background: var(--bad);
+      }
+      .badge {
+        display: inline-block;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 2px 8px;
+        font-size: 11px;
+        color: var(--dim);
+      }
+      .badge.ok {
+        color: var(--ok);
+        background: var(--soft);
+        border-color: transparent;
+      }
+      .badge.bad {
+        color: var(--bad);
+      }
+      .connection {
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        margin-top: 9px;
+        padding: 13px 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .connection-main {
+        min-width: 0;
+        flex: 1;
+      }
+      .connection strong {
+        display: block;
+        overflow-wrap: anywhere;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .connection small {
+        font-size: 12px;
+        color: var(--dim);
+        display: block;
+      }
+      .connection button {
+        font-size: 12px;
+        padding: 6px 11px;
+      }
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: 13px;
+        text-align: center;
+        padding: 30px 18px;
+        color: var(--dim);
+        grid-column: 1/-1;
+      }
+      .empty button {
+        margin-top: 12px;
+      }
+      .muted,
+      .dim {
+        color: var(--dim);
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 8px;
+        overflow-wrap: anywhere;
+      }
+      .hint.bad {
+        color: var(--bad);
+      }
+      .slotmeta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--dim);
+        font-size: 12px;
+        flex-wrap: wrap;
+      }
+      .slotmeta button {
+        padding: 3px 8px;
+        font-size: 12px;
+      }
+      .orphan {
+        margin-top: 28px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        padding: 22px;
+      }
+      .orphan summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .orphan .top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 18px 0;
+      }
+      .orphan .top h3 {
+        font-size: 14px;
+        margin: 0;
+      }
+      .orow {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 9px 0;
+        border-top: 1px solid var(--line);
+        flex-wrap: wrap;
+      }
+      .orow select {
+        width: 220px;
+        max-width: 100%;
+      }
+      .chip {
+        font-size: 12px;
+      }
+      .nodetable {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .notice {
+        color: var(--bad);
+        margin-bottom: 18px;
+      }
+      .footnote {
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 26px;
+      }
+      .modal {
+        margin: 0;
+        width: 100vw;
+        height: 100svh;
+        max-width: none;
+        max-height: none;
+        border: 0;
+        color: var(--text);
+        position: fixed;
+        inset: 0;
+        background: #0b192a70;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        padding: 24px;
+      }
+      .modal.open {
+        display: flex;
+      }
+      .sheet {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        width: min(700px, 100%);
+        max-height: 88svh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 22px 80px #0b192a20;
+      }
+      .sheet .head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--line);
+      }
+      .sheet .head h2 {
+        font-size: 18px;
+        margin: 0;
+        font-weight: 650;
+      }
+      .sheet .body {
+        overflow: auto;
+        padding: 24px;
+        overscroll-behavior: contain;
+      }
+      .sheet .foot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 18px 24px;
+        border-top: 1px solid var(--line);
+      }
+      label.f {
+        display: block;
+        margin-bottom: 18px;
+      }
+      label.f > span,
+      .ef > span {
+        display: block;
+        color: var(--dim);
+        font-size: 12px;
+        margin-bottom: 7px;
+      }
+      select,
+      input,
+      textarea {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 10px 12px;
+        color: var(--text);
+        max-width: 100%;
+      }
+      input[type="text"],
+      input[type="password"],
+      select {
+        width: 100%;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--soft);
+        border-color: var(--accent);
+      }
+      label.chk {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        margin: 0;
+      }
+      input[type="checkbox"] {
+        accent-color: var(--accent);
+        width: 16px;
+        height: 16px;
+      }
+      .setrow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 18px;
+      }
+      .updsec {
+        margin-top: 25px;
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+      }
+      .updrow {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .updver span {
+        color: var(--dim);
+        margin-left: 8px;
+      }
+      .updnotes {
+        padding: 15px;
+        border-radius: 9px;
+        background: var(--bg);
+        white-space: pre-wrap;
+        max-height: 180px;
+        overflow: auto;
+        margin-top: 15px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 70px 1fr;
+        gap: 10px 14px;
+        margin: 0 0 20px;
+      }
+      .kv dt {
+        color: var(--dim);
+        padding-top: 6px;
+      }
+      .kv dd {
+        margin: 0;
+        word-break: break-all;
+      }
+      .editbar {
+        display: flex;
+        gap: 14px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+      }
+      .ef {
+        display: block;
+        flex: 1;
+        min-width: 110px;
+      }
+      .ef input {
+        width: 100%;
+      }
+      .credrow {
+        display: flex;
+        gap: 14px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+      .chead {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        border-top: 1px solid var(--line);
+        margin: 24px 0 14px;
+        padding-top: 20px;
+      }
+      .chead h3 {
+        font-size: 15px;
+        margin: 0;
+      }
+      .client {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        margin: 10px 0;
+      }
+      .crow {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .cemail {
+        font-weight: 600;
+      }
+      .cid {
+        font-size: 11px;
+        color: var(--dim);
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .share {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 13px;
+        font:
+          12px/1.8 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        word-break: break-all;
+        margin: 12px 0 0;
+      }
+      .share button {
+        margin-top: 9px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 260px;
+        font:
+          12px/1.8 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        resize: vertical;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        background: var(--text);
+        color: var(--panel);
+        border-radius: 10px;
+        padding: 12px 20px;
+        font-size: 13px;
+        max-width: 90vw;
+        z-index: 80;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+      .toast.bad {
+        background: var(--bad);
+        color: var(--panel);
+      }
+      @media (max-width: 850px) {
+        #list {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          align-items: flex-start;
+        }
+        .header-inner {
+          padding: 18px 24px;
+        }
+        main {
+          padding: 28px 24px;
+        }
+        .hero h1 {
+          font-size: 29px;
+        }
+        .hero-actions {
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+      }
+      @media (max-width: 580px) {
+        .header-inner {
+          gap: 12px;
+          padding: 16px 20px;
+        }
+        .brand {
+          font-size: 16px;
+        }
+        .crumb {
+          display: none;
+        }
+        main {
+          padding: 24px 18px;
+        }
+        .hero {
+          display: block;
+        }
+        .hero h1 {
+          font-size: 27px;
+        }
+        .hero-actions {
+          margin-top: 20px;
+          justify-content: flex-start;
+        }
+        .helpbar {
+          align-items: flex-start;
+          padding: 15px;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .exit {
+          padding: 18px;
+        }
+        .tools {
+          gap: 8px;
+        }
+        .tools button {
+          font-size: 12px;
+          padding: 8px 10px;
+        }
+        .modal {
+          padding: 12px;
+        }
+        .sheet {
+          max-height: 94svh;
+          border-radius: 16px;
+        }
+        .sheet .head,
+        .sheet .body,
+        .sheet .foot {
+          padding: 18px;
+        }
+        .sheet .head h2 {
+          font-size: 16px;
+        }
+        .setrow {
+          grid-template-columns: 1fr;
+        }
+        .back {
+          font-size: 12px;
+        }
+        .orphan {
+          padding: 18px;
+        }
+        .orphan .top {
+          flex-wrap: wrap;
+        }
+        .connection {
+          padding: 12px;
+          gap: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <a class="brand" href="./"
+          ><span class="mark" aria-hidden="true">×</span>xnvgatebox</a
+        ><span class="crumb">接入管理</span><span class="spacer"></span
+        ><button
+          class="icon"
+          id="theme"
+          aria-label="切换明暗主题"
+          title="切换明暗主题"
+        >
+          ◐</button
+        ><a class="back" href="./">← 返回控制台</a>
+      </div>
+    </header>
+    <main>
+      <div class="hero">
+        <div>
+          <div class="eyebrow">CONNECTION STUDIO</div>
+          <h1>每条连接，尽在掌握。</h1>
+          <p>设置客户端接入协议、端口，并选择已有出口。</p>
+        </div>
+        <div class="hero-actions">
+          <button id="settingsBtn">维护设置</button
+          ><button class="primary" id="newnode">＋ 新增接入入口</button>
+        </div>
+      </div>
+      <div class="helpbar">
+        <div>
+          <b>日常管理，从控制台开始</b
+          >这里管理客户端如何接入。出口数量、国家策略和连通性检测可在出口管理中完成。
+        </div>
+        <span class="spacer"></span><a href="./#exits">管理出口 →</a>
+      </div>
+      <div id="loadError" class="notice" role="alert" hidden></div>
+      <div class="tools">
+        <h2>出口与接入入口</h2>
+        <span class="count" id="ecount"></span><span class="spacer"></span
+        ><button id="subBtn">订阅口令</button
+        ><button id="exportAll">导出链接</button
+        ><button id="exportXray">导出配置</button
+        ><button id="rollbackNative">恢复上次配置</button>
+      </div>
+      <div id="list"><div class="empty">正在读取连接…</div></div>
+      <div id="orphans"></div>
+      <p class="footnote">
+        修改接入配置可能短暂中断客户端连接。缺少可信国家证据时显示“待验证”；出口类型
+        unknown 不代表家宽。
+      </p>
+    </main>
+    <dialog class="modal" id="newnodebox">
+      <div class="sheet">
+        <div class="head">
+          <h2>新增接入入口</h2>
+          <span class="spacer"></span>
+          <button class="icon" data-close="newnodebox" title="关闭">
+            <svg viewBox="0 0 24 24">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="body">
+          <p class="hint" style="margin: 0 0 20px">
+            创建后，在该入口的“配置 →
+            出口”中选择已有的就绪出口。此操作不会增加出口数量；未绑定时流量保持阻断。
+          </p>
+          <label class="f">
+            <span>协议</span>
+            <select id="nproto">
+              <option value="vless">VLESS</option>
+              <option value="vmess">VMess</option>
+              <option value="trojan">Trojan</option>
+            </select>
+          </label>
+          <label class="f">
+            <span>传输</span>
+            <select id="nnet">
+              <option value="tcp">TCP</option>
+              <option value="ws">WebSocket</option>
+              <option value="grpc">gRPC</option>
+              <option value="httpupgrade">HTTPUpgrade</option>
+              <option value="xhttp">XHTTP</option>
+            </select>
+          </label>
+          <label class="f">
+            <span>安全</span>
+            <select id="nsec">
+              <option value="none">无</option>
+              <option value="tls">TLS</option>
+              <option value="reality">REALITY</option>
+            </select>
+            <div class="hint" id="nsechint"></div>
+          </label>
+          <label class="f" id="nvisionwrap" hidden>
+            <span>流控</span>
+            <label class="chk"
+              ><input type="checkbox" id="nvision" /> xtls-rprx-vision</label
+            >
+          </label>
+          <label class="f" id="nsniwrap" hidden>
+            <span>域名 SNI</span>
+            <input
+              id="nsni"
+              type="text"
+              placeholder="留空用 localhost，将生成自签证书"
+            />
+          </label>
+          <label class="f" id="ncertwrap" hidden>
+            <span>证书路径</span>
+            <input
+              id="ncert"
+              type="text"
+              placeholder="留空生成自签证书，如 /etc/ssl/x.crt"
+            />
+          </label>
+          <label class="f" id="nkeywrap" hidden>
+            <span>私钥路径</span>
+            <input
+              id="nkey"
+              type="text"
+              placeholder="与证书成对填写，如 /etc/ssl/x.key"
+            />
+          </label>
+          <label class="f" id="ndestwrap" hidden>
+            <span>借用站点</span>
+            <input
+              id="ndest"
+              type="text"
+              placeholder="留空用 www.tesla.com:443"
+            />
+          </label>
+          <label class="f" id="npathwrap" hidden>
+            <span id="npathlabel">路径</span>
+            <input id="npath" type="text" placeholder="留空自动生成" />
+          </label>
+          <label class="f">
+            <span>端口</span>
+            <input
+              id="nport"
+              type="text"
+              inputmode="numeric"
+              placeholder="留空随机分配"
+            />
+          </label>
+          <label class="f">
+            <span>备注</span>
+            <input id="nremark" type="text" placeholder="留空自动命名" />
+          </label>
+        </div>
+        <div class="foot">
+          <span class="count" id="nnhint"></span>
+          <span class="spacer"></span>
+          <button data-close="newnodebox">取消</button>
+          <button class="primary" id="ncreate">创建</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="modal" id="detail">
+      <div class="sheet">
+        <div class="head">
+          <h2 id="dtitle">节点</h2>
+          <span class="spacer"></span>
+          <button class="icon danger" id="ddel" title="删除这个入站">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 6h18" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+          <button class="icon" data-close="detail" title="关闭">
+            <svg viewBox="0 0 24 24">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="body" id="dbody"></div>
+      </div>
+    </dialog>
+
+    <dialog class="modal" id="credbox">
+      <div class="sheet">
+        <div class="head">
+          <h2>SOCKS5 访问凭据</h2>
+          <span class="count" id="crtitle"></span>
+          <span class="spacer"></span>
+          <button class="icon" data-close="credbox" title="关闭">
+            <svg viewBox="0 0 24 24">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="body">
+          <label class="chk"
+            ><input id="crpublic" type="checkbox" />允许其他电脑或 Worker 通过
+            SOCKS5 接入</label
+          >
+          <div class="hint" id="crscope"></div>
+          <div class="share" id="crurl"></div>
+          <div class="credrow">
+            <label class="ef"
+              ><span>用户名</span>
+              <input id="cruser" type="text" spellcheck="false"
+            /></label>
+            <label class="ef"
+              ><span>口令</span>
+              <input id="crpass" type="text" spellcheck="false"
+            /></label>
+            <button id="crrand" title="随机生成一套">
+              <svg viewBox="0 0 24 24">
+                <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+              随机
+            </button>
+          </div>
+          <div class="hint">
+            SOCKS5
+            无需域名证书，连接本身不加密。外部接入使用独立端口和本出口的账号口令；出口故障时阻断，不回落服务器直出。修改凭据或接入设置可能短暂中断连接。
+          </div>
+        </div>
+        <div class="foot">
+          <button id="crcopy">
+            <svg viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
+            </svg>
+            复制地址
+          </button>
+          <span class="spacer"></span>
+          <button data-close="credbox">取消</button>
+          <button class="primary" id="crsave">保存</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="modal" id="export">
+      <div class="sheet">
+        <div class="head">
+          <h2>节点链接</h2>
+          <span class="count" id="excount"></span>
+          <span class="spacer"></span>
+          <button id="copyall">
+            <svg viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
+            </svg>
+            全部复制
+          </button>
+          <button class="icon" data-close="export" title="关闭">
+            <svg viewBox="0 0 24 24">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="body">
+          <textarea id="exbox" spellcheck="false" readonly></textarea>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="modal" id="subbox">
+      <div class="sheet">
+        <div class="head">
+          <h2>订阅管理</h2>
+          <span class="count" id="subcount"></span>
+          <span class="spacer"></span>
+          <button class="icon" data-close="subbox" title="关闭">
+            <svg viewBox="0 0 24 24">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="body">
+          <label class="f"
+            ><span>订阅地址</span>
+            <input id="suburl" type="text" spellcheck="false" readonly
+          /></label>
+          <div class="hint">
+            客户端里新建订阅填这条。以后加出口、删出口都会自己跟上，不用重新配。
+          </div>
+          <div class="hint" id="sublistenhint">
+            订阅地址必须能从客户端访问；如果管理界面只监听 127.0.0.1，请先通过
+            HTTPS 反向代理公开订阅接口，或使用 SSH 隧道。
+          </div>
+          <div class="hint bad">地址最后那串口令等于密码，别发群里。</div>
+          <div class="hint">
+            想看明文而不是 base64，地址后面加 <code>&amp;target=links</code>。
+          </div>
+        </div>
+        <div class="foot">
+          <span class="spacer"></span>
+          <button id="subreset">换一串口令</button>
+          <button class="primary" id="subcopy">复制地址</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="modal" id="settings">
+      <div class="sheet">
+        <div class="head">
+          <h2>维护设置</h2>
+          <span class="spacer"></span>
+          <button class="icon" data-close="settings" title="关闭">
+            <svg viewBox="0 0 24 24">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="body">
+          <label class="f"
+            ><span>访问口令</span>
+            <input
+              id="setPw"
+              type="password"
+              spellcheck="false"
+              autocomplete="new-password"
+              placeholder="留空则不改"
+          /></label>
+          <div class="hint">改完只影响新登录，当前这个浏览器不会被踢下线。</div>
+
+          <label class="f" style="margin-top: 16px"
+            ><span>访问路径</span>
+            <input
+              id="setPath"
+              type="text"
+              spellcheck="false"
+              placeholder="留空则去掉路径前缀"
+          /></label>
+          <div class="hint" id="setPathHint">
+            界面挂在这个路径下，扫端口的探不到。只能用字母数字和 - _。
+          </div>
+
+          <label class="f" style="margin-top: 16px"
+            ><span>节点后端</span>
+            <select id="setBackend"></select
+          ></label>
+          <div class="hint" id="setBackendHint">
+            节点从哪来。装了 3x-ui 或 xray-cf-lite
+            就能直接接管，都没有就用自建。
+          </div>
+
+          <label class="chk" style="margin-top: 16px"
+            ><input type="checkbox" id="setResi" /> 只用家宽节点</label
+          >
+          <div class="hint" id="setResiHint">
+            为新建 Slot 默认只允许 strict/likely 住宅类型；候选必须经实际
+            OpenVPN 画像验活。已有 Slot 的策略请在对应出口单独修改。
+          </div>
+
+          <div class="setrow">
+            <label class="f" style="margin: 0"
+              ><span>监听端口</span>
+              <input
+                id="setPort"
+                type="text"
+                inputmode="numeric"
+                spellcheck="false"
+            /></label>
+            <label class="f" style="margin: 0"
+              ><span>本地监听地址</span>
+              <select id="setListen">
+                <option value="0.0.0.0">所有网卡（0.0.0.0）</option>
+                <option value="127.0.0.1">仅本机（127.0.0.1）</option>
+              </select></label
+            >
+          </div>
+          <div class="hint bad" id="setPortHint">
+            改端口或监听地址会切换监听，保存后要用新地址重新打开界面。
+          </div>
+
+          <div class="updsec">
+            <div class="updrow">
+              <div class="updver">
+                版本 <b id="updCur">-</b><span id="updLatest"></span>
+              </div>
+              <span class="spacer"></span>
+              <button id="updCheck">检查更新</button>
+              <button class="primary" id="updApply" hidden>
+                更新到 <span id="updApplyVer"></span>
+              </button>
+            </div>
+            <div class="updnotes" id="updNotes" hidden></div>
+          </div>
+        </div>
+        <div class="foot">
+          <span class="spacer"></span>
+          <button data-close="settings">取消</button>
+          <button class="primary" id="setSave">保存</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const $ = (s) => document.querySelector(s);
+      const ICON = {
+        copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>',
+        redo: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+        ok: '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
+        bad: '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+        run: '<svg viewBox="0 0 24 24" class="spin"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg>',
+        wait: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>',
+        plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+        trash:
+          '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+        x: '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+        lock: '<svg viewBox="0 0 24 24" class="lock"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+      };
+
+      // 界面挂在随机前缀下，请求一律走相对路径
+      async function api(path, opts) {
+        const r = await fetch(path.replace(/^\//, ""), opts);
+        if (r.status === 401) {
+          location.reload();
+          throw Error("需要重新登录");
+        }
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || "HTTP " + r.status);
+        return d;
+      }
+      function esc(s) {
+        return String(s == null ? "" : s).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      }
+
+      $("#rollbackNative").onclick = async (e) => {
+        if (
+          !confirm(
+            "恢复上一次成功提交的内置入站、客户端凭据和绑定？可能重新启用旧客户端链接，所有 Xray 连接会短暂中断；Slot 策略不会改变。",
+          )
+        )
+          return;
+        e.target.disabled = true;
+        try {
+          await api("/api/config/rollback", { method: "POST" });
+          toast("已回滚内置配置");
+          poll();
+        } catch (err) {
+          toast(err.message, true);
+        }
+        e.target.disabled = false;
+      };
+      let toastTimer;
+      function toast(msg, bad) {
+        const el = $("#toast");
+        (document.querySelector("dialog[open]") || document.body).append(el);
+        el.textContent = msg;
+        el.className = "toast show" + (bad ? " bad" : "");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.className = "toast";
+        }, 2400);
+      }
+      async function copy(text) {
+        // navigator.clipboard 只在 HTTPS/localhost 下存在，而面板通常是 http://IP 访问，
+        // 所以必须留一条 execCommand 兜底路径，否则复制在正常使用场景里必然失败。
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            toast("已复制");
+            return;
+          } catch (e) {}
+        }
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        // 放在视口内但不可见：置于视口外会让 iOS 在聚焦时滚动页面
+        ta.style.cssText =
+          "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;padding:0;border:0";
+        document.body.appendChild(ta);
+        const prev = document.activeElement;
+        ta.focus();
+        ta.setSelectionRange(0, ta.value.length);
+        let ok = false;
+        try {
+          ok = document.execCommand("copy");
+        } catch (e) {}
+        ta.remove();
+        if (prev && prev.focus) prev.focus();
+        toast(ok ? "已复制" : "复制失败，请手动选中", !ok);
+      }
+
+      let view = { exits: [], direct: [], backend: "", public_ip: "" };
+      function isNative() {
+        return view.backend === "native";
+      }
+      function isXCL() {
+        return view.backend === "xray-cf-lite";
+      }
+      const STATUS = {
+        up: "已就绪",
+        starting: "连接中",
+        failed: "连接异常",
+        stopped: "已停止",
+        waiting: "等待候选",
+        waiting_for_nodes: "等待候选",
+        blocked: "已阻断",
+      };
+      let countryNames;
+      try {
+        countryNames = new Intl.DisplayNames(["zh-CN"], { type: "region" });
+      } catch {}
+      function exitName(e) {
+        const c =
+          e.status === "up" && e.egress?.intelligence_status === "passed"
+            ? e.egress.country
+            : "";
+        return (
+          (/^[A-Z]{2}$/.test(c || "")
+            ? String.fromCodePoint(
+                ...[...c].map((x) => 127397 + x.charCodeAt(0)),
+              ) +
+              " " +
+              (countryNames ? countryNames.of(c) : c)
+            : "待验证") +
+          " · " +
+          String(e.slot).padStart(2, "0")
+        );
+      }
+      function connectionName(i, e) {
+        return i.name_mode === "auto" ? exitName(e) : i.remark || "未命名连接";
+      }
+      function renderExits() {
+        $("#ecount").textContent = view.exits.length + " 个出口";
+        $("#exportAll").disabled = !view.exits.some(
+          (e) => (e.inbounds || []).length,
+        );
+        $("#list").innerHTML = view.exits.length
+          ? view.exits
+              .map(
+                (e) =>
+                  '<article class="exit"><div class="exit-head"><span class="dot ' +
+                  esc(e.status) +
+                  '"></span><h3>' +
+                  esc(exitName(e)) +
+                  '</h3><span class="spacer"></span><span class="badge ' +
+                  (e.status === "up" ? "ok" : "") +
+                  '">' +
+                  esc(STATUS[e.status] || e.status) +
+                  '</span></div><div class="slotmeta"><span>实际出口 ' +
+                  esc(e.status === "up" ? e.exit_ip || "—" : "—") +
+                  "</span><span>类型 " +
+                  esc(e.egress?.ip_type || "unknown") +
+                  '</span><span class="spacer"></span><button data-cred="' +
+                  e.slot +
+                  '">SOCKS 凭据</button></div>' +
+                  (e.inbounds || [])
+                    .map(
+                      (i) =>
+                        '<div class="connection"><div class="connection-main"><strong>' +
+                        esc(connectionName(i, e)) +
+                        "</strong><small>" +
+                        esc(i.protocol.toUpperCase()) +
+                        " · 端口 " +
+                        i.port +
+                        (i.enable ? "" : " · 已停用") +
+                        '</small></div><button data-detail="' +
+                        i.id +
+                        '">配置 →</button></div>',
+                    )
+                    .join("") +
+                  (!(e.inbounds || []).length
+                    ? '<p class="hint">尚未建立连接，自动配置会继续重试。</p>'
+                    : "") +
+                  "</article>",
+              )
+              .join("")
+          : '<div class="empty">还没有出口，先在控制台设置数量。<br><a href="./#exits">前往出口管理 →</a></div>';
+      }
+      function renderHostDirect() {
+        let box = $("#hostConnections");
+        if (!box) {
+          box = document.createElement("div");
+          box.id = "hostConnections";
+          $("#orphans").before(box);
+        }
+        box.innerHTML = (view.host_direct || [])
+          .map(
+            (i) =>
+              '<article class="slot"><h3>VPS 本机直出</h3><p class="hint">独立使用服务器网络，' +
+              (i.enable ? "已启用" : "已停用") +
+              '。VPN Gate 故障时不会自动切换。</p><div class="connection"><div class="connection-main"><strong>' +
+              esc(i.remark) +
+              "</strong><small>" +
+              esc(i.protocol.toUpperCase()) +
+              " · 端口 " +
+              i.port +
+              '</small></div><button data-detail="' +
+              i.id +
+              '">配置 →</button></div></article>',
+          )
+          .join("");
+      }
+      function renderOrphans() {
+        const box = $("#orphans");
+        const list = view.direct || [];
+        const expanded = box.querySelector("details")?.open;
+        if (!list.length) {
+          box.innerHTML = "";
+          return;
+        }
+        const hasUp = view.exits.some((e) => e.status === "up");
+        box.innerHTML =
+          '<details class="orphan"' +
+          (expanded ? " open" : "") +
+          "><summary>保留的连接 · " +
+          list.length +
+          ' 个</summary><p class="hint">暂无有效出口绑定，保留凭据并阻断流量。再次增加对应出口时可复用。</p><div class="top">' +
+          '<h3>未绑定出口的入站</h3><span class="count">' +
+          list.length +
+          " 个，" +
+          (isNative() ? "未绑定将阻断" : "由外部面板路由") +
+          "</span>" +
+          '<span class="spacer"></span>' +
+          (isXCL()
+            ? ""
+            : '<button data-delorphans="1" title="删除这些入站">' +
+              ICON.trash +
+              "清理</button>") +
+          "</div>" +
+          list
+            .map(
+              (i) =>
+                '<div class="orow">' +
+                '<button class="chip" data-detail="' +
+                i.id +
+                '" title="' +
+                esc(
+                  (i.remark || i.protocol) + " · " + i.protocol + " :" + i.port,
+                ) +
+                '">' +
+                esc(i.remark || i.protocol) +
+                " :" +
+                i.port +
+                "</button>" +
+                '<span class="spacer"></span>' +
+                (hasUp
+                  ? '<select class="obind" data-tag="' +
+                    esc(i.tag) +
+                    '">' +
+                    exitOptions("") +
+                    "</select>"
+                  : '<span class="dim">先开一个出口</span>') +
+                (isXCL()
+                  ? ""
+                  : '<button class="icon danger" data-delone="' +
+                    i.id +
+                    '" data-name="' +
+                    esc((i.remark || i.protocol) + " :" + i.port) +
+                    '" title="删除这个入站">' +
+                    ICON.trash +
+                    "</button>") +
+                "</div>",
+            )
+            .join("") +
+          "</details>";
+      }
+
+      async function poll() {
+        try {
+          view = await api("/api/exits");
+          $("#loadError").hidden = true;
+          $("#newnode").hidden = isXCL();
+          $("#exportAll").hidden = isXCL();
+          $("#rollbackNative").hidden = !isNative();
+          renderExits();
+          renderHostDirect();
+          renderOrphans();
+          if (!window.resourceSlotOpened) {
+            const requested = Number(
+              new URLSearchParams(location.search).get("slot"),
+            );
+            if (requested && view.exits.some((e) => e.slot === requested)) {
+              window.resourceSlotOpened = true;
+              openCred(requested);
+            }
+          }
+        } catch (e) {
+          $("#loadError").textContent = "读取失败：" + e.message;
+          $("#loadError").hidden = false;
+        }
+      }
+      const modalFocus = new Map();
+      function openModal(id) {
+        const m = $("#" + id);
+        modalFocus.set(id, document.activeElement);
+        m.setAttribute(
+          "aria-label",
+          m.querySelector("h2")?.textContent || "接入管理",
+        );
+        m.showModal();
+        m.classList.add("open");
+        m.querySelector("button[data-close]")?.focus();
+      }
+      function closeModal(id) {
+        const m = $("#" + id);
+        m.close();
+        m.classList.remove("open");
+        modalFocus.get(id)?.focus();
+      }
+
+      document.addEventListener("click", (e) => {
+        const c = e.target.closest("[data-close]");
+        if (c) closeModal(c.dataset.close);
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape")
+          document
+            .querySelectorAll(".modal.open")
+            .forEach((m) => closeModal(m.id));
+      });
+      document.querySelectorAll(".modal").forEach((m) => {
+        m.onclick = (e) => {
+          if (e.target === m) closeModal(m.id);
+        };
+        m.addEventListener("close", () => {
+          m.classList.remove("open");
+          modalFocus.get(m.id)?.focus();
+        });
+      });
+
+      // ---- 新建节点 ----
+      document.addEventListener("click", (e) => {
+        if (e.target.closest("#newnode") || e.target.closest("#newnode2")) {
+          $("#nnhint").textContent = "";
+          syncNodeForm();
+          openModal("newnodebox");
+        }
+      });
+
+      // 表单随协议/传输/安全层联动：只露出当前组合真正用得到的字段
+      function syncNodeForm() {
+        const proto = $("#nproto").value;
+        const net = $("#nnet").value;
+        const sec = $("#nsec").value;
+
+        // REALITY 靠模仿 TLS 握手工作，套在自带头部的传输上没有意义
+        const realityOK = net === "tcp" || net === "xhttp" || net === "grpc";
+        const secSel = $("#nsec");
+        for (const o of secSel.options) {
+          if (o.value === "reality") o.disabled = !realityOK;
+        }
+        if (secSel.value === "reality" && !realityOK) secSel.value = "none";
+
+        const cur = secSel.value;
+        $("#nsniwrap").hidden = cur !== "tls";
+        $("#ncertwrap").hidden = cur !== "tls";
+        $("#nkeywrap").hidden = cur !== "tls";
+        $("#ndestwrap").hidden = cur !== "reality";
+
+        // Vision 只在 VLESS + 裸 TCP + TLS/REALITY 下有效
+        const visionOK = proto === "vless" && net === "tcp" && cur !== "none";
+        $("#nvisionwrap").hidden = !visionOK;
+        if (!visionOK) $("#nvision").checked = false;
+
+        const needPath =
+          net === "ws" ||
+          net === "httpupgrade" ||
+          net === "xhttp" ||
+          net === "grpc";
+        $("#npathwrap").hidden = !needPath;
+        $("#npathlabel").textContent = net === "grpc" ? "服务名" : "路径";
+
+        $("#nsechint").textContent =
+          cur === "reality"
+            ? "密钥与 shortId 自动生成"
+            : cur === "tls"
+              ? "不填证书就用自签，链接会带证书指纹"
+              : "";
+      }
+      $("#nproto").onchange = syncNodeForm;
+      $("#nnet").onchange = syncNodeForm;
+      $("#nsec").onchange = syncNodeForm;
+
+      $("#ncreate").onclick = async (e) => {
+        const q = new URLSearchParams({
+          protocol: $("#nproto").value,
+          network: $("#nnet").value,
+          security: $("#nsec").value,
+          port: ($("#nport").value || "").trim(),
+          remark: ($("#nremark").value || "").trim(),
+          path: ($("#npath").value || "").trim(),
+          sni: ($("#nsni").value || "").trim(),
+          cert: ($("#ncert").value || "").trim(),
+          key: ($("#nkey").value || "").trim(),
+          dest: ($("#ndest").value || "").trim(),
+        });
+        if ($("#nvision").checked) q.set("vision", "1");
+        e.target.disabled = true;
+        try {
+          const r = await api("/api/panel/inbound/new?" + q.toString(), {
+            method: "POST",
+          });
+          toast("已创建 " + r.protocol + " 节点，端口 " + r.port);
+          closeModal("newnodebox");
+          $("#nport").value = "";
+          $("#nremark").value = "";
+          poll();
+        } catch (err) {
+          toast(err.message, true);
+        }
+        e.target.disabled = false;
+      };
+
+      document.addEventListener("click", async (e) => {
+        const cred = e.target.closest("[data-cred]");
+        if (cred) {
+          openCred(Number(cred.dataset.cred));
+          return;
+        }
+        const del = e.target.closest("[data-delorphans],[data-delone]");
+        if (!del) return;
+        const ids = del.hasAttribute("data-delorphans")
+          ? (view.direct || []).map((i) => i.id).join(",")
+          : del.dataset.delone;
+        if (!confirm("删除所选连接？相应客户端链接将失效，且不可撤销。"))
+          return;
+        del.disabled = true;
+        try {
+          await api("/api/xui/delete?ids=" + encodeURIComponent(ids), {
+            method: "POST",
+          });
+          toast("已删除连接");
+          poll();
+        } catch (err) {
+          toast(err.message, true);
+          del.disabled = false;
+        }
+      });
+      // ---- 节点详情 ----
+      let curDetail = null;
+
+      // 详情弹窗的重绘要跟轮询解耦：正在编辑时被 poll 刷掉输入会很烦
+      async function openDetail(id) {
+        $("#dbody").innerHTML = '<div class="empty">读取中…</div>';
+        curDetail = null;
+        $("#ddel").disabled = true;
+        openModal("detail");
+        try {
+          const d = await api("/api/xui/detail?id=" + id);
+          curDetail = d;
+          renderDetail(d);
+          $("#ddel").hidden = isXCL();
+          $("#ddel").disabled = isXCL();
+        } catch (err) {
+          $("#dbody").innerHTML =
+            '<div class="empty">读取失败: ' + esc(err.message) + "</div>";
+        }
+      }
+
+      // 出口下拉：列出所有已连通的隧道，外加"直连"。绑定按 Xray 的 inboundTag 走。
+      function exitOptions(currentHost) {
+        const up = view.exits.filter((e) => e.status === "up");
+        return (
+          '<option value=""' +
+          (currentHost ? "" : " selected") +
+          ">" +
+          (isNative() ? "未绑定（阻断流量）" : "未绑定（外部面板路由）") +
+          "</option>" +
+          up
+            .map(
+              (e) =>
+                '<option value="' +
+                esc(e.host) +
+                '"' +
+                (e.host === currentHost ? " selected" : "") +
+                ">" +
+                esc((e.exit_ip || e.host) + " · " + exitName(e)) +
+                "</option>",
+            )
+            .join("")
+        );
+      }
+
+      function renderDetail(d) {
+        const owner = view.exits.find((x) =>
+          (x.inbounds || []).some((i) => i.id === d.id),
+        );
+
+        const clients = (d.clients || [])
+          .map((c, i) => {
+            const link = (d.links || [])[i] || "";
+            return (
+              '<div class="client">' +
+              '<div class="crow">' +
+              '<span class="cemail">' +
+              esc(c.email) +
+              "</span>" +
+              '<span class="cid">' +
+              esc(c.id) +
+              "</span>" +
+              '<span class="spacer"></span>' +
+              (link
+                ? '<button class="icon" data-copy="' +
+                  esc(link) +
+                  '" title="复制链接">' +
+                  ICON.copy +
+                  "</button>"
+                : "") +
+              '<button class="icon" data-creset="' +
+              esc(c.email) +
+              '" title="换一套凭据，旧链接立即失效">' +
+              ICON.redo +
+              "</button>" +
+              '<button class="icon" data-cdel="' +
+              esc(c.email) +
+              '" title="删除这个客户端">' +
+              ICON.trash +
+              "</button>" +
+              "</div>" +
+              (link ? '<div class="share">' + esc(link) + "</div>" : "") +
+              "</div>"
+            );
+          })
+          .join("");
+
+        $("#dtitle").textContent =
+          (owner ? connectionName(d, owner) : d.remark || "连接") +
+          "　:" +
+          d.port;
+        // xray-cf-lite 的节点归它自己管，这里只留出口选择，改端口/备注/客户端都不给
+        const editable = !isXCL();
+        $("#dbody").innerHTML =
+          '<dl class="kv">' +
+          (d.host_direct
+            ? "<dt>出口</dt><dd>VPS 本机直出（独立入口）</dd>"
+            : '<dt>出口</dt><dd><select id="dbind" data-tag="' +
+              esc(d.tag) +
+              '">' +
+              exitOptions(owner ? owner.host : "") +
+              "</select></dd>") +
+          "<dt>协议</dt><dd>" +
+          esc(d.protocol) +
+          "　" +
+          esc(d.network || "") +
+          (d.tls && d.tls !== "none" ? "　" + esc(d.tls) : "") +
+          "</dd>" +
+          "<dt>监听</dt><dd>" +
+          esc(d.listen || "0.0.0.0") +
+          "</dd>" +
+          "</dl>" +
+          (editable
+            ? '<div class="editbar">' +
+              '<label class="ef"><span>名称方式</span><select id="dmode"><option value="auto"' +
+              (d.name_mode === "auto" ? " selected" : "") +
+              '>跟随实际国家</option><option value="custom"' +
+              (d.name_mode !== "auto" ? " selected" : "") +
+              ">自定义名称</option></select></label>" +
+              '<label class="ef"><span>自定义名称</span>' +
+              '<input id="dremark" type="text" value="' +
+              esc(d.remark || "") +
+              '"></label>' +
+              '<label class="ef"><span>端口</span>' +
+              '<input id="dport" type="text" inputmode="numeric" value="' +
+              d.port +
+              '"></label>' +
+              '<label class="chk"><input type="checkbox" id="denable"' +
+              (d.enable === false ? "" : " checked") +
+              "> 启用</label>" +
+              '<span class="spacer"></span>' +
+              '<button class="primary" id="dsave">保存</button>' +
+              "</div>" +
+              '<div class="chead"><h3>客户端</h3><span class="count">' +
+              (d.clients || []).length +
+              ' 个</span><span class="spacer"></span>' +
+              '<button id="dcadd">' +
+              ICON.plus +
+              "添加</button></div>" +
+              (clients || '<div class="empty">没有客户端</div>')
+            : '<div class="hint">这个节点由 xray-cf-lite 管，端口、UUID 和分享链接都去它那边改。这里只决定它走哪条出口。</div>');
+        if (editable) {
+          const sync = () => {
+            $("#dremark").disabled = isNative() && $("#dmode").value === "auto";
+          };
+          $("#dmode").onchange = sync;
+          sync();
+        }
+      }
+
+      // 未绑定区的出口下拉，选中即绑
+      document.addEventListener("change", async (e) => {
+        const sel = e.target.closest(".obind");
+        if (!sel || !sel.value) return;
+        sel.disabled = true;
+        try {
+          await api(
+            "/api/xui/bind?tag=" +
+              encodeURIComponent(sel.dataset.tag) +
+              "&host=" +
+              encodeURIComponent(sel.value),
+            { method: "POST" },
+          );
+          toast("已绑定");
+          poll();
+        } catch (err) {
+          toast(err.message, true);
+          sel.disabled = false;
+        }
+      });
+
+      // 出口下拉改动即生效；内置模式 host 传空只解绑并阻断。
+      document.addEventListener("change", async (e) => {
+        const sel = e.target.closest("#dbind");
+        if (!sel) return;
+        sel.disabled = true;
+        try {
+          await api(
+            "/api/xui/bind?tag=" +
+              encodeURIComponent(sel.dataset.tag) +
+              "&host=" +
+              encodeURIComponent(sel.value),
+            { method: "POST" },
+          );
+          toast(sel.value ? "已绑定" : "已解绑");
+          poll();
+        } catch (err) {
+          toast(err.message, true);
+        }
+        sel.disabled = false;
+      });
+
+      document.addEventListener("click", async (e) => {
+        const link = e.target.closest("[data-detail]");
+        if (link) return openDetail(link.dataset.detail);
+
+        if (e.target.closest("#dsave")) {
+          const btn = e.target.closest("#dsave");
+          btn.disabled = true;
+          const q = new URLSearchParams({
+            id: curDetail.id,
+            port: ($("#dport").value || "").trim(),
+            remark: ($("#dremark").value || "").trim(),
+            ...(isNative() ? { name_mode: $("#dmode").value } : {}),
+            enable: $("#denable").checked ? "1" : "0",
+          });
+          try {
+            await api("/api/panel/inbound/update?" + q, { method: "POST" });
+            toast("已保存");
+            await openDetail(curDetail.id);
+            poll();
+          } catch (err) {
+            toast(err.message, true);
+            btn.disabled = false;
+          }
+          return;
+        }
+
+        const add = e.target.closest("#dcadd");
+        if (add) {
+          add.disabled = true;
+          try {
+            await api("/api/panel/client/add?id=" + curDetail.id, {
+              method: "POST",
+            });
+            toast("已添加客户端");
+            await openDetail(curDetail.id);
+          } catch (err) {
+            toast(err.message, true);
+            add.disabled = false;
+          }
+          return;
+        }
+
+        const del = e.target.closest("[data-cdel]");
+        if (del) {
+          if (
+            !confirm(
+              "删除客户端 " + del.dataset.cdel + "？它的链接会立即失效。",
+            )
+          )
+            return;
+          del.disabled = true;
+          try {
+            await api(
+              "/api/panel/client/del?id=" +
+                curDetail.id +
+                "&email=" +
+                encodeURIComponent(del.dataset.cdel),
+              { method: "POST" },
+            );
+            toast("已删除");
+            await openDetail(curDetail.id);
+          } catch (err) {
+            toast(err.message, true);
+            del.disabled = false;
+          }
+          return;
+        }
+
+        const reset = e.target.closest("[data-creset]");
+        if (reset) {
+          if (
+            !confirm(
+              "重置 " +
+                reset.dataset.creset +
+                " 的凭据？已分发的旧链接会立即失效。",
+            )
+          )
+            return;
+          reset.disabled = true;
+          try {
+            await api(
+              "/api/panel/client/reset?id=" +
+                curDetail.id +
+                "&email=" +
+                encodeURIComponent(reset.dataset.creset),
+              { method: "POST" },
+            );
+            toast("已重置");
+            await openDetail(curDetail.id);
+          } catch (err) {
+            toast(err.message, true);
+            reset.disabled = false;
+          }
+          return;
+        }
+
+        // 详情弹窗里删掉当前这个入站
+        const dd = e.target.closest("#ddel");
+        if (dd && curDetail) {
+          const name =
+            (curDetail.remark || curDetail.protocol || "节点") +
+            " :" +
+            curDetail.port;
+          if (
+            !confirm(
+              "删除入站 " + name + "？它的所有客户端链接都会失效，且不可撤销。",
+            )
+          )
+            return;
+          dd.disabled = true;
+          try {
+            await api("/api/xui/delete?ids=" + curDetail.id, {
+              method: "POST",
+            });
+            toast("已删除 " + name);
+            curDetail = null;
+            closeModal("detail");
+            poll();
+          } catch (err) {
+            toast(err.message, true);
+            dd.disabled = false;
+          }
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        const c = e.target.closest("[data-copy]");
+        if (c) copy(c.dataset.copy);
+      });
+
+      // ---- SOCKS5 凭据 ----
+      let curCred = null;
+
+      function socksURL(host, port, user, pass) {
+        if (!user) return "socks5://" + host + ":" + port;
+        return (
+          "socks5://" +
+          encodeURIComponent(user) +
+          ":" +
+          encodeURIComponent(pass) +
+          "@" +
+          host +
+          ":" +
+          port
+        );
+      }
+
+      // Only the explicitly enabled external listener uses this public address.
+      // The internal Slot port always stays on loopback.
+      function credHost(e) {
+        return view.public_ip || location.hostname || e.host;
+      }
+
+      function openCred(slot) {
+        const e = view.exits.find((x) => x.slot === slot);
+        if (!e) {
+          toast("这个出口不在了", true);
+          return;
+        }
+        curCred = {
+          slot: slot,
+          port: e.port,
+          host: credHost(e),
+          public: e.public_socks,
+          label: exitName(e),
+        };
+        $("#crpublic").checked = !!e.public_socks?.enable;
+        $("#crtitle").textContent = exitName(e) + " · :" + e.port;
+        $("#cruser").value = e.socks_user || "";
+        $("#crpass").value = e.socks_pass || "";
+        refreshCredURL();
+        openModal("credbox");
+      }
+
+      function refreshCredURL() {
+        if (!curCred) return;
+        const pub = $("#crpublic").checked && curCred.public?.enable;
+        $("#crtitle").textContent =
+          curCred.label +
+          " · :" +
+          (pub ? curCred.public.port : curCred.port) +
+          (pub ? " · 外部接入" : " · 仅本机");
+        $("#crscope").textContent = pub
+          ? "外部接入已启用。复制此地址到其他电脑或私有 Worker 配置；服务器防火墙须允许该端口。"
+          : $("#crpublic").checked
+            ? "保存后分配外部端口；当前地址仅供服务器本机使用。"
+            : "仅服务器本机可用。开启外部接入并保存后可复制公网地址。";
+        $("#crurl").textContent = socksURL(
+          pub ? curCred.host : "127.0.0.1",
+          pub ? curCred.public.port : curCred.port,
+          $("#cruser").value.trim(),
+          $("#crpass").value.trim(),
+        );
+      }
+      $("#crpublic").onchange = refreshCredURL;
+      $("#cruser").oninput = refreshCredURL;
+      $("#crpass").oninput = refreshCredURL;
+
+      $("#crrand").onclick = () => {
+        // 客户端和服务端都要能识别，只用无歧义、无需转义的字符
+        const abc = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const gen = (n) =>
+          Array.from(crypto.getRandomValues(new Uint8Array(n)))
+            .map((v) => abc[v % abc.length])
+            .join("");
+        $("#cruser").value = "fo" + gen(6);
+        $("#crpass").value = gen(14);
+        refreshCredURL();
+      };
+
+      $("#crcopy").onclick = () => {
+        copy($("#crurl").textContent);
+      };
+
+      $("#crsave").onclick = async (e) => {
+        if (!curCred) return;
+        const btn = e.target;
+        btn.disabled = true;
+        const q = new URLSearchParams({
+          slot: curCred.slot,
+          user: $("#cruser").value.trim(),
+          pass: $("#crpass").value.trim(),
+        });
+        try {
+          const r = await api("/api/cred?" + q, { method: "POST" });
+          $("#cruser").value = r.user;
+          $("#crpass").value = r.pass;
+          await api("/api/console/socks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              slot: curCred.slot,
+              enabled: $("#crpublic").checked,
+            }),
+          });
+          view = await api("/api/exits");
+          curCred.public = view.exits.find(
+            (x) => x.slot === curCred.slot,
+          )?.public_socks;
+          refreshCredURL();
+          toast("已保存，立即生效");
+          poll();
+        } catch (err) {
+          toast(err.message, true);
+        }
+        btn.disabled = false;
+      };
+
+      // ---- 导出 ----
+      $("#exportXray").onclick = () => {
+        window.location.href = "api/export/xray";
+      };
+      $("#exportAll").onclick = async () => {
+        const ids = [
+          ...view.exits.flatMap((x) => (x.inbounds || []).map((i) => i.id)),
+          ...(view.host_direct || []).filter((i) => i.enable).map((i) => i.id),
+        ];
+        if (!ids.length) {
+          toast("还没有节点可导出", true);
+          return;
+        }
+        $("#exbox").value = "读取中…";
+        $("#excount").textContent = "";
+        openModal("export");
+        try {
+          const d = await api("/api/xui/links?ids=" + ids.join(","));
+          $("#exbox").value = (d.links || []).join("\n");
+          $("#excount").textContent = (d.links || []).length + " 条";
+        } catch (err) {
+          $("#exbox").value = "导出失败: " + err.message;
+        }
+      };
+      $("#copyall").onclick = () => {
+        const v = $("#exbox").value;
+        if (v) copy(v);
+      };
+
+      // ---- 订阅 ----
+      // 地址用 location.origin 拼：后端给的是访问路径下的相对部分，
+      // 这样反代、改端口、换路径之后拿到的都是用户此刻真正能访问的地址。
+      async function showSub(d) {
+        $("#suburl").value = location.origin + d.path;
+        const n = view ? view.exits.flatMap((x) => x.inbounds || []).length : 0;
+        $("#subcount").textContent = n
+          ? n + " 个节点"
+          : "还没有节点，先开出口再建节点链接";
+      }
+      $("#subBtn").onclick = async () => {
+        $("#suburl").value = "读取中…";
+        $("#subcount").textContent = "";
+        openModal("subbox");
+        try {
+          showSub(await api("/api/sub"));
+        } catch (err) {
+          $("#suburl").value = "读取失败: " + err.message;
+        }
+      };
+      $("#subcopy").onclick = () => {
+        const v = $("#suburl").value;
+        if (v) copy(v);
+      };
+      $("#subreset").onclick = async (e) => {
+        if (
+          !confirm("换一串口令？旧地址立刻失效，已经配过的客户端要重新填一次。")
+        )
+          return;
+        e.target.disabled = true;
+        try {
+          showSub(await api("/api/sub/reset", { method: "POST" }));
+          toast("已换新地址");
+        } catch (err) {
+          toast(err.message, true);
+        }
+        e.target.disabled = false;
+      };
+
+      // ---- 设置：改密码 / 改路径 / 改端口 / 改本地监听 ----
+      let curSettings = null;
+      let curBackend = null;
+
+      // 后端切换：把本机能用的模式列出来，装了的可选，没装的置灰并说明原因
+      async function loadBackendModes() {
+        const sel = $("#setBackend");
+        const hint = $("#setBackendHint");
+        try {
+          const m = await api("/api/panel/mode");
+          curBackend = m.mode || "";
+          sel.innerHTML =
+            '<option value="">自动（按本机装了什么挑）</option>' +
+            (m.modes || [])
+              .map(
+                (x) =>
+                  '<option value="' +
+                  esc(x.mode) +
+                  '"' +
+                  (x.available ? "" : " disabled") +
+                  ">" +
+                  esc(x.label) +
+                  (x.available ? "" : "（没装）") +
+                  "</option>",
+              )
+              .join("");
+          sel.value = curBackend;
+          const bad = (m.modes || []).filter((x) => !x.available);
+          hint.textContent = m.describe
+            ? "当前：" +
+              ((m.modes || []).find((x) => x.mode === m.mode)?.label ||
+                "自动") +
+              (bad.length ? "；不可用模式已置灰。" : "")
+            : "节点从哪来。装了 3x-ui 或 xray-cf-lite 就能直接接管，都没有就用自建。";
+        } catch (err) {
+          sel.innerHTML = '<option value="">读取失败</option>';
+          hint.textContent = err.message;
+        }
+      }
+
+      $("#settingsBtn").onclick = async () => {
+        $("#setPw").value = "";
+        $("#setPath").value = "";
+        $("#setPathHint").textContent = "读取中…";
+        openModal("settings");
+        loadBackendModes();
+        try {
+          const s = await api("/api/settings");
+          curSettings = s;
+          $("#setPath").value = (s.base_path || "").replace(/^\//, "");
+          $("#setPort").value = s.port || "";
+          $("#setListen").value = s.listen_addr || "0.0.0.0";
+          $("#setResi").checked = s.residential_only !== false;
+          $("#setPathHint").textContent =
+            "界面挂在这个路径下，扫端口的探不到。只能用字母数字和 - _。";
+          $("#updCur").textContent = s.version || "-";
+          $("#updLatest").textContent = "";
+          $("#updNotes").hidden = true;
+          $("#updApply").hidden = true;
+          $("#updCheck").disabled = false;
+          $("#updCheck").textContent = "检查更新";
+        } catch (err) {
+          $("#setPathHint").textContent = "读取失败: " + err.message;
+        }
+      };
+
+      // 检查更新：问后端 GitHub 最新版，有新版就亮出更新按钮和更新内容
+      $("#updCheck").onclick = async (e) => {
+        e.target.disabled = true;
+        e.target.textContent = "检查中…";
+        try {
+          const u = await api("/api/update/check");
+          $("#updCur").textContent = u.current || "-";
+          if (u.has_update) {
+            $("#updLatest").textContent = "有新版本 " + u.latest;
+            $("#updApplyVer").textContent = u.latest;
+            $("#updApply").hidden = false;
+            $("#updNotes").textContent = u.notes || "（这个版本没写更新说明）";
+            $("#updNotes").hidden = false;
+          } else {
+            $("#updLatest").textContent = "已是最新";
+            $("#updApply").hidden = true;
+            $("#updNotes").hidden = true;
+          }
+        } catch (err) {
+          toast(err.message, true);
+        }
+        e.target.disabled = false;
+        e.target.textContent = "检查更新";
+      };
+
+      // 一键更新：后端下载替换二进制并重启服务，进程重启期间界面会短暂断连
+      $("#updApply").onclick = async (e) => {
+        if (
+          !confirm(
+            "更新到 " +
+              $("#updApplyVer").textContent +
+              "？服务会重启，界面会短暂断开。",
+          )
+        )
+          return;
+        e.target.disabled = true;
+        e.target.textContent = "更新中…";
+        try {
+          const r = await api("/api/update/apply", { method: "POST" });
+          if (r.restarting) {
+            $("#updNotes").textContent =
+              "已下载新版本，服务正在重启，几秒后刷新页面即可。";
+            $("#updNotes").hidden = false;
+            toast("更新中，服务重启后刷新页面");
+            // 给服务重启留点时间再自动刷新
+            setTimeout(() => location.reload(), 6000);
+          } else {
+            toast(r.message || "已是最新版");
+            e.target.disabled = false;
+            e.target.textContent = "更新到 " + $("#updApplyVer").textContent;
+          }
+        } catch (err) {
+          toast(err.message, true);
+          e.target.disabled = false;
+          e.target.textContent = "更新到 " + $("#updApplyVer").textContent;
+        }
+      };
+
+      // 端口/监听地址变了要提示用户之后从新地址进；密码/路径可原地生效
+      function nextURL(port, listen, path) {
+        const host =
+          listen && listen !== "0.0.0.0" ? listen : location.hostname;
+        return (
+          location.protocol +
+          "//" +
+          host +
+          ":" +
+          port +
+          (path ? "/" + path : "") +
+          "/"
+        );
+      }
+
+      $("#setSave").onclick = async (e) => {
+        e.target.disabled = true;
+        const body = {};
+        const pw = $("#setPw").value.trim();
+        if (pw) body.password = pw;
+        body.base_path = $("#setPath").value.trim();
+        const port = parseInt($("#setPort").value.trim(), 10);
+        if (port) body.port = port;
+        body.listen_addr = $("#setListen").value;
+        body.residential_only = $("#setResi").checked;
+
+        const portChanged =
+          curSettings &&
+          (port !== curSettings.port ||
+            body.listen_addr !== (curSettings.listen_addr || "0.0.0.0"));
+
+        try {
+          // 后端和其它设置分属两个接口，先切后端：切失败就别继续，免得用户以为整单都生效了
+          const backend = $("#setBackend").value;
+          if (curBackend !== null && backend !== curBackend) {
+            const r = await api("/api/panel/mode", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mode: backend }),
+            });
+            curBackend = r.mode || "";
+            $("#setBackendHint").textContent =
+              "当前：" + (r.describe || r.kind || "已切换");
+          }
+          await api("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (portChanged) {
+            const url = nextURL(port, body.listen_addr, body.base_path);
+            $("#setPortHint").innerHTML =
+              '监听已切换，请从新地址打开：<a href="' +
+              esc(url) +
+              '">' +
+              esc(url) +
+              "</a>";
+            toast("监听已切换，用新地址重新打开");
+            // 端口变了当前连接会断，不自动跳转，让用户看清新地址
+          } else {
+            toast("已保存");
+            // 路径可能变了，重新加载到新路径下
+            const np = body.base_path;
+            const cur = ((curSettings && curSettings.base_path) || "").replace(
+              /^\//,
+              "",
+            );
+            if (np !== cur) {
+              location.href =
+                location.protocol +
+                "//" +
+                location.host +
+                (np ? "/" + np : "") +
+                "/";
+              return;
+            }
+            closeModal("settings");
+            poll();
+          }
+        } catch (err) {
+          toast(err.message, true);
+        }
+        e.target.disabled = false;
+      };
+
+      poll();
+      setInterval(poll, 3000);
+
+      try {
+        document.body.classList.toggle(
+          "dark",
+          localStorage.getItem("xnvgatebox-theme") === "dark",
+        );
+      } catch {}
+      $("#theme").onclick = () => {
+        document.body.classList.toggle("dark");
+        try {
+          localStorage.setItem(
+            "xnvgatebox-theme",
+            document.body.classList.contains("dark") ? "dark" : "light",
+          );
+        } catch {}
+      };
+    </script>
+  </body>
+</html>

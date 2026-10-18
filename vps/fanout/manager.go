@@ -21,10 +21,14 @@ type Manager struct {
 	maxSlots        int
 	jobs            JobStore
 	saveMu          sync.Mutex
+	shuttingDown    bool // protected by saveMu; transient teardown is not user intent
 	deletedSlots    map[int]bool
 	localEvidence   map[string]Node
 	stateWriteHook  func(string) error
 	credentialApply func(*Tunnel) error
+	connectSem      chan struct{}
+	diagnostics     map[string]*diagnosticLease
+	console         *Console
 }
 
 func NewManager(maxSlots int, workDir string) *Manager {
@@ -34,6 +38,8 @@ func NewManager(maxSlots int, workDir string) *Manager {
 		maxSlots:      maxSlots,
 		deletedSlots:  map[int]bool{},
 		localEvidence: map[string]Node{},
+		connectSem:    make(chan struct{}, 2),
+		diagnostics:   map[string]*diagnosticLease{},
 	}
 }
 
@@ -326,10 +332,18 @@ func (m *Manager) tunnelActive(t *Tunnel) bool {
 
 // tryNode 尝试用当前节点把隧道拉起来。
 func (m *Manager) tryNode(t *Tunnel) error {
+	select {
+	case m.connectSem <- struct{}{}:
+		defer func() { <-m.connectSem }()
+	case <-t.workContext().Done():
+		return t.workContext().Err()
+	}
 	t.clearEgress()
+	t.probePhase("setup")
 	if err := t.setupNetns(); err != nil {
 		return err
 	}
+	t.probePhase("connecting")
 	if err := t.startOpenVPN(m.workDir); err != nil {
 		return err
 	}
@@ -338,6 +352,7 @@ func (m *Manager) tryNode(t *Tunnel) error {
 			return err
 		}
 	}
+	t.probePhase("baseline")
 	ip, err := t.probeExitIP()
 	if err != nil {
 		return err
@@ -348,6 +363,7 @@ func (m *Manager) tryNode(t *Tunnel) error {
 	t.mu.Lock()
 	t.ExitIP = ip
 	t.mu.Unlock()
+	t.probePhase("profile")
 	image := lookupOpenVPNEgressContext(t.workContext(), m.workDir, ip)
 	if !m.tunnelActive(t) {
 		return fmt.Errorf("画像查询期间 Slot 已停止")
@@ -357,6 +373,7 @@ func (m *Manager) tryNode(t *Tunnel) error {
 		return err
 	}
 	t.setValidating(true)
+	t.probePhase("verify_exit")
 	actual, latency, err := t.probeSocksExitIPWithLatency()
 	t.setValidating(false)
 	if err != nil {
@@ -469,6 +486,13 @@ func (m *Manager) Stop(slot int) error {
 // Delete is explicit: stopping reserves the Slot; deletion frees its identity.
 // Export retains a block tombstone until that Slot is deliberately recreated.
 func (m *Manager) Delete(slot int) error {
+	if m.console != nil {
+		return m.console.deleteSlot(slot)
+	}
+	return m.deleteSlot(slot)
+}
+
+func (m *Manager) deleteSlot(slot int) error {
 	m.mu.RLock()
 	t := m.tunnels[slot]
 	m.mu.RUnlock()
@@ -728,8 +752,18 @@ func (m *Manager) syncCred(t *Tunnel) {
 
 // Shutdown 停掉运行态但保留状态文件，让下次启动能恢复同样的隧道。
 func (m *Manager) Shutdown() {
+	m.shutdownWithStop(func(t *Tunnel) { t.stop() })
+}
+
+func (m *Manager) shutdownWithStop(stop func(*Tunnel)) {
+	// Fence all writers before the first temporary stopped status. A worker
+	// completing another Slot during teardown must not persist half a shutdown
+	// as explicit operator stop intent. Wait for an existing commit first.
+	m.saveMu.Lock()
+	m.shuttingDown = true
+	m.saveMu.Unlock()
 	for _, t := range m.Tunnels() {
-		t.stop()
+		stop(t)
 	}
 }
 

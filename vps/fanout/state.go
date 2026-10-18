@@ -42,6 +42,9 @@ const stateJournal = ".state-transaction.json"
 func (m *Manager) saveState() error {
 	m.saveMu.Lock()
 	defer m.saveMu.Unlock()
+	if m.shuttingDown {
+		return fmt.Errorf("服务正在停止，保留最后提交的运行意图")
+	}
 	var st persistedState
 	m.mu.RLock()
 	for slot := range m.deletedSlots {

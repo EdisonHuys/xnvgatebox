@@ -21,7 +21,7 @@ var version = "dev"
 func main() {
 	var (
 		webPort  = flag.Int("web", 8899, "Web 管理端口")
-		maxSlots = flag.Int("max", 3, "最多同时运行的隧道数")
+		maxSlots = flag.Int("max", maximumSlots, "管理员设置的出口容量（默认使用实例地址容量）")
 		workDir  = flag.String("dir", "/var/lib/xnvgatebox/fanout", "工作目录")
 	)
 	panelMode := flag.String("panel", "", "节点链接后端: 留空按界面设置/自动探测, 3x-ui, native, xray-cf-lite")
@@ -29,6 +29,9 @@ func main() {
 	showVersion := flag.Bool("version", false, "显示版本后退出")
 	checkState := flag.Bool("check-state", false, "只读检查内置模式状态副本的迁移配置，不启动服务")
 	flag.Parse()
+	if *maxSlots < 1 || *maxSlots > maximumSlots {
+		log.Fatalf("出口容量范围为 1-%d", maximumSlots)
+	}
 
 	if *publicIP == "" {
 		*publicIP = os.Getenv("FANOUT_PUBLIC_IP")
@@ -107,6 +110,13 @@ func main() {
 		log.Printf("已获取 %d 个节点", n)
 	}
 
+	console, err := newConsole(mgr)
+	if err != nil {
+		log.Fatalf("加载出口计划失败: %v", err)
+	}
+	if err := console.cleanupDiagnostics(); err != nil {
+		log.Fatalf("临时检测清理失败: %v", err)
+	}
 	if n, err := mgr.restoreState(); err != nil {
 		log.Fatalf("恢复上次状态失败，拒绝忽略已保存策略: %v", err)
 	} else if n > 0 {
@@ -117,6 +127,9 @@ func main() {
 	}
 	startConfiguredSlot(mgr)
 
+	go console.watch()
+	go console.sstp.watch()
+
 	go mgr.WatchHealth()
 	go mgr.WatchNodePool()
 
@@ -125,6 +138,7 @@ func main() {
 	go func() {
 		<-stop
 		log.Println("正在清理所有隧道...")
+		console.shutdown()
 		mgr.Shutdown()
 		closePanel()
 		unlock() // os.Exit 会绕过 defer，这里手动放锁
@@ -133,6 +147,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
+	console.routes(mux)
 	mux.HandleFunc("/api/nodes", apiNodes(mgr))
 	mux.HandleFunc("/api/tunnels", apiTunnels(mgr))
 	mux.HandleFunc("/api/start", apiStart(mgr))
@@ -189,8 +204,10 @@ func main() {
 	srv := newWebServer(StripBasePath(auth.Wrap(mux)))
 	// 设置面板：改密码 / 改路径 / 改端口 / 改本地监听。
 	mux.HandleFunc("/api/settings", apiSettings(auth, srv))
-	mux.HandleFunc("/api/update/check", apiUpdateCheck)
-	mux.HandleFunc("/api/update/apply", apiUpdateApply)
+	updater := newUpdateManager(*workDir)
+	mux.HandleFunc("/api/update/check", updater.check)
+	mux.HandleFunc("/api/update/apply", updater.apply)
+	mux.HandleFunc("/api/update/status", updater.status)
 
 	log.Printf("管理界面: http://<本机IP>%s%s/", webCfg.listenAddrString(), currentBasePath())
 	if base, fixed, err := fixedSlotPort(1); fixed && err == nil {
@@ -225,9 +242,6 @@ func apiNodes(m *Manager) http.HandlerFunc {
 			nodes = kept
 		}
 		shown := len(nodes)
-		if len(nodes) > 200 {
-			nodes = nodes[:200]
-		}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"nodes":            nodes,
 			"fetched":          fetched,
@@ -402,39 +416,6 @@ func apiSettings(auth *Auth, srv *webServer) http.HandlerFunc {
 	}
 }
 
-// apiUpdateCheck 问 GitHub 最新 release，回报当前/最新版本与更新内容。
-func apiUpdateCheck(w http.ResponseWriter, r *http.Request) {
-	st, err := checkUpdate()
-	if err != nil {
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "检查更新失败: " + err.Error()})
-		return
-	}
-	writeJSON(w, http.StatusOK, st)
-}
-
-// apiUpdateApply 下载最新版替换二进制并重启服务。成功后进程会被拉起成新版本。
-func apiUpdateApply(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "用 POST"})
-		return
-	}
-	st, err := checkUpdate()
-	if err != nil {
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "检查更新失败: " + err.Error()})
-		return
-	}
-	if !st.HasUpdate {
-		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "restarting": false, "message": "已经是最新版"})
-		return
-	}
-	if err := applyUpdate(); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-	// 先把响应发回去，restartSelf 已排在延迟后触发
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "restarting": true, "latest": st.Latest})
-}
-
 // apiExits 返回主界面需要的一切：出口以及挂在它上面的入站。
 func apiExits(m *Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -574,8 +555,10 @@ func apiXUIInbounds(m *Manager) http.HandlerFunc {
 func liveHosts(m *Manager) map[string]bool {
 	live := map[string]bool{}
 	for _, t := range m.Tunnels() {
-		if t.Status == "up" {
-			live[sanitizeTag(t.Node.HostName)] = true
+		v := t.snapshot()
+		if v.Status == "up" {
+			live[sanitizeTag(v.Node.HostName)] = true
+			live[slotOutboundTag(v.Slot)] = true
 		}
 	}
 	return live
@@ -778,6 +761,9 @@ func apiInboundUpdate(m *Manager) http.HandlerFunc {
 
 		// 只有真正传了的参数才改，没传的保持原样
 		var patch InboundPatch
+		if mode := q.Get("name_mode"); mode != "" {
+			patch.NameMode = &mode
+		}
 		if v := q.Get("port"); v != "" {
 			port, err := strconv.Atoi(v)
 			if err != nil {

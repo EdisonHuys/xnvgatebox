@@ -12,7 +12,7 @@ from .common import ToolError, atomic_write, utc_now, write_json
 from .config import load_env, load_settings, mode_a_environment
 from .pipeline import clear_publication, publish, run_mode_a
 from .pool import build_pool
-from .intelligence import profile_openvpn_exit
+from .intelligence import profile_measured_exit
 
 
 @contextmanager
@@ -46,15 +46,18 @@ def main(argv=None):
     profile = sub.add_parser("profile-openvpn", help="Profile a measured OpenVPN exit IP; does not verify a tunnel")
     profile.add_argument("--ip", required=True)
     profile.add_argument("--cache", type=Path, default=Path("runtime/intelligence/cache.json"))
+    sstp_profile = sub.add_parser("profile-sstp", help="Profile a measured SSTP exit; not a tunnel check")
+    sstp_profile.add_argument("--ip", required=True)
+    sstp_profile.add_argument("--cache", type=Path, default=Path("runtime/intelligence/sstp-cache.json"))
     args = parser.parse_args(argv)
     try:
-        if args.command == "profile-openvpn":
+        if args.command in ("profile-openvpn", "profile-sstp"):
             settings = load_settings(args.config)
             load_env(args.env_file)
             # Multiple Slots can finish their baselines concurrently. Serialize
             # cache read/query/write without locking or rewriting the node pool.
             with output_lock(args.cache.parent, wait=True):
-                image = profile_openvpn_exit(args.ip, settings, args.cache)
+                image = profile_measured_exit(args.ip, settings, args.cache, "sstp" if args.command == "profile-sstp" else "openvpn")
             print(json.dumps(image, ensure_ascii=False))
             return 0
         with output_lock(args.output):

@@ -2,37 +2,43 @@
 
 当前支持 Debian / Ubuntu、Linux amd64、systemd。管理进程、内置 Xray、共享候选池都在 VPS 本地运行。已有 3x-ui 不会被卸载或修改数据库。
 
-## 安装与升级
+## 安装与升级（v0.5.0）
+
+Debian 12 amd64、systemd，以 root 执行：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/main/vps/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.5.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.5.0
 ```
 
-默认从本项目 GitHub Release 下载完整包和 SHA256 清单，不下载上游项目的安装脚本或管理程序。包内 Xray 固定为 `config/xray-release.json` 的版本，并在构建时验证官方归档 SHA256。下载失败或初次构建候选池失败时不会停止现有管理进程。
+只下载本项目 GitHub Release 的完整包和 SHA256，固定 Xray 在构建时验证官方归档摘要。安装器检查归档路径、类型、重复项、完整文件清单、成员摘要和正式版本构建信息。下载、包校验及候选清单准备在停止旧服务之前完成；来源暂时失败且已有可用候选快照时保留旧池。
 
-本地包安装：`bash vps/install.sh --mode vps --package /path/xnvgatebox-linux-amd64.tar.gz`，相邻目录必须有 `checksums.txt`。更新前在 `/var/backups/xnvgatebox/` 备份旧二进制、服务环境和项目状态。独立管理采用 native 后端；保留旧管理路径、密码和订阅 token。原 3x-ui 入站不会自动转成内置 Xray 入站，需在管理页新建并绑定。
+`xnvgatebox access` 查看管理地址和密码，`xnvgatebox version` 查看版本。管理页默认监听 8899，使用随机路径和密码；服务器防火墙需允许管理端口及实际公开接入端口。内部 SOCKS 仅监听本机，外部 SOCKS 需在界面显式启用。
 
-## 管理和订阅
+更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.5.0` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
 
-`xnvgatebox access` 打印管理地址格式和密码。管理 UI 默认直接监听 VPS `8899`，使用随机访问路径和登录密码；SOCKS 仅在 `127.0.0.1` 监听。
+离线包：`bash vps/install.sh --mode vps --package /path/xnvgatebox-linux-amd64.tar.gz`，相邻目录须有 `checksums.txt`。完整包包含管理器、Xray、Python 源码、脚本和服务，不只替换一个二进制。
 
-1. 进入“新建出口”，选择国家和数量，总上限三个。能否建立出口取决于上游当时的节点供给与可达性；没有合适节点时提示该地区暂不可用，可稍后重试或自行选择其他国家。
-2. 在“新建节点”选择 VLESS、TCP、REALITY 和未被占用的公开端口；目标站点须支持 TLS 1.3。
-3. 绑定节点到对应出口。每个公开入站端口对应一个本地 SOCKS Slot。
-4. 点击“订阅”，复制一个链接到客户端；添加节点和出口绑定后刷新订阅即可。
-5. “导出 Xray 配置”下载出站和 routing 片段，模板 inbound 标签为 `inbound-slot-01` 等，接入外部 Xray 时替换为实际标签。导出含本地 SOCKS 认证，仅供管理员使用。
+更新停止本项目服务后备份 `/var/lib/xnvgatebox`、`/usr/local/lib/xnvgatebox`、`/etc/xnvgatebox`、本项目两个命令、环境文件和三个 systemd 单元至 `/var/backups/xnvgatebox/install-<任务编号>/project.tar.gz`，均为私有文件。配置预检后替换完整程序，通过本地登录检查实际运行版本和内置后端。失败恢复原文件及服务启停/开机状态；恢复未完成保留 `/var/lib/xnvgatebox-deploy/transaction.json`，下次安装先恢复。状态与恢复工具独立保存于该目录，不随程序替换丢失。系统依赖包不在回滚范围内，3x-ui 不在受管路径内。
 
-节点替换保持 `slot-01`、`127.0.0.1:17928` 和该入站端口不变。第二、第三 Slot 分别为 `17929`、`17930`。默认出站为 blackhole，未绑定、失效或无匹配规则的请求不能直连母机公网。
+## 首次管理和订阅
+
+1. 执行 `xnvgatebox access`，使用打印的私有地址与密码登录。
+2. 在总览启用“VPS 本机直出”，复制默认订阅到 v2rayN 并更新。此项直接使用 VPS IP，能在尚无 VPN Gate 出口时先验收接入链路。
+3. 设置目标出口数。系统自动创建并绑定接入入口；也可在“接入管理 → 新增接入入口”手动配置协议和出口。
+4. 在候选页刷新来源和检测；用户自行设置检测并发，含 64/128，程序报告真实资源限制，不因测试机配置而静默调低。手动任务优先，同一候选去重；显示等待或实际检测阶段。
+5. 代理资源分“VPS SOCKS5”和“原始 SSTP”。前者显式开启外部认证端口并私有导出；后者在隔离环境实测正常证书、PPP、准确 HTTPS 出口后才作为有效结果导出，可自定并发、有效期和定时检测。
+
+默认订阅可选择所有入口或指定范围，国家国旗与名称使用实际证据；未知保持待验证。上游暂时无合适国家或数量时保留策略与端口并等待。VPN Gate 出口故障会阻断，不自动切换到本机直出。原始 SSTP 导出不依赖本 VPS 持续转发，但使用端需自行支持 SSTP，且节点可能失效。
+
+完整操作见 [控制台](../docs/CONSOLE.md)、[代理资源](../docs/PROXY_RESOURCES.md) 和 [安装更新及全新验收](../docs/INSTALL_UPDATE.md)。
 
 ## 本地刷新
 
-`xnvgatebox-pool.timer` 每十分钟运行同一个 Python Pool Builder，输出 `/var/lib/xnvgatebox/pool/node_pool.json`；管理进程每三十秒检查新快照。`xnvgatebox refresh` 手动立即执行，界面的“刷新节点池”只重新读取本地快照。采集失败保留上一份完整快照。国家等来源配置在 `/etc/xnvgatebox/pool.json`。
-
-没有 GitHub Actions、Cloudflare、远程 node_pool 也可独立运行。抓取阶段全量发现，昂贵协议探测另行限额；配置存在不表示节点可用。
+`xnvgatebox-pool.timer` 每十分钟生成本地候选池，管理进程每三十秒读取新快照。`xnvgatebox refresh` 或候选页刷新会触发真实采集，失败保留上一份完整快照。来源配置在 `/etc/xnvgatebox/pool.json`。抓取阶段完整解析官方当次公开响应；数量取决于当次供给，不等于全球所有 VPN Gate，也不等于实测可用数量。
 
 ## OpenVPN 出口画像
 
-开发版本在每次建连时，将 namespace 内两个 HTTPS Echo 得到的基线 IP 交给同一 Python intelligence adapter 和 classifier，再独立检查固定 SOCKS 端口的 actual IP。只有 expected、画像 IP、actual 三者一致才发布该 Slot 的运行证据；画像查询本身不证明隧道或公开订阅可用。
+每次建连时，将 namespace 内两个 HTTPS Echo 得到的基线 IP 交给同一 Python intelligence adapter 和 classifier，再独立检查固定 SOCKS 端口的 actual IP。只有 expected、画像 IP、actual 三者一致才发布该 Slot 的运行证据；画像查询本身不证明隧道或公开订阅可用。
 
 画像服务可选，默认没有配置。查询失败、字段不足或证据过期时，类型显示 `unknown`，不继承 SSTP 画像或来源主机的住宅标签。API 返回部分字段时，缺失布尔值仍为 null；国家、ASN、ISP 和类型以实际 OpenVPN 出口为对象。管理页在 Slot 下展示实际画像，候选表中的国家和延迟明确标为来源信息。
 
@@ -118,6 +124,6 @@ python3 scripts/toolbox.py --config config/settings.json --env-file /path/intell
 
 ## 升级前离线检查
 
-开发版本可执行 `xnvgatebox-manager -check-state -dir /path/to/private-state-copy -max 3`，检查停止服务后取得的内置模式状态副本。该入口不要求 root，不创建目录、修改文件、恢复事务或启动网络服务，输出脱敏 JSON；退出码 0 仅表示持久化结构检查通过。未完成事务、半套凭据及损坏配置会报错，不能靠删除记录或重新生成凭据来掩盖。完整范围、三 Slot 合成样例及真实环境验收记录见 [开发版本迁移验证](../docs/VPS_UPGRADE_VALIDATION.md)。
+可执行 `xnvgatebox-fanout -check-state -dir /path/to/private-state-copy`，检查停止服务后取得的内置模式状态副本。该入口不要求 root，不创建目录、修改文件、恢复事务或启动网络服务，输出脱敏 JSON；退出码 0 仅表示持久化结构检查通过。未完成事务、半套凭据及损坏配置会报错，不能靠删除记录或重新生成凭据来掩盖。完整范围、三 Slot 合成样例及真实环境验收记录见 [开发版本迁移验证](../docs/VPS_UPGRADE_VALIDATION.md)。
 
 开发测试包另含 `scripts/vps_acceptance.py`：采集私有计划、从实际订阅验证三个入站、检查本地固定 SOCKS、对唯一确认归属的 Slot OpenVPN 注入故障并观察自动恢复，以及比较升级前后凭据/身份是否保留。外部客户端和 VPS 本机测试分别标记；执行方法及真实验收范围见上述迁移文档。`BUILD.json` 如实记录提交和 dirty 状态；正式发布要求从干净提交构建并与版本标签一致。

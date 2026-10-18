@@ -52,7 +52,7 @@ func openNative(workDir string) (*Native, error) {
 func (n *Native) Kind() string { return "native" }
 
 func (n *Native) Describe() string {
-	return fmt.Sprintf("xnvgatebox 内置 Xray（%s）", n.proc.bin)
+	return "xnvgatebox"
 }
 
 // OnTunnelsChanged 在隧道集合变化后重建配置。自建模式下出站直接由隧道列表
@@ -80,10 +80,17 @@ func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 	list := n.store.sorted()
 	out := make([]Inbound, 0, len(list))
 	for _, ib := range list {
+		if ib.SocksSlot > 0 {
+			continue
+		}
+		boundUp := live[ib.BoundTo]
+		if ib.BoundSlot > 0 {
+			boundUp = live[slotOutboundTag(ib.BoundSlot)]
+		}
 		out = append(out, Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			BoundTo: ib.BoundTo, BoundUp: live[ib.BoundTo],
+			HostDirect: ib.HostDirect, BoundTo: ib.BoundTo, BoundUp: boundUp, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		})
 	}
 	return out, nil
@@ -104,7 +111,7 @@ func (n *Native) InboundDetail(id int, publicHost string) (*InboundDetail, error
 		Inbound: Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			BoundTo: ib.BoundTo,
+			HostDirect: ib.HostDirect, BoundTo: ib.BoundTo, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		},
 		Listen:  "0.0.0.0",
 		Network: ib.netOrTCP(),
@@ -131,10 +138,13 @@ func (n *Native) InboundLinks(ids []int, publicHost string) ([]string, error) {
 	var out []string
 	for _, id := range ids {
 		ib := n.store.byID(id)
-		if ib == nil {
+		if ib == nil || ib.SocksSlot > 0 {
 			continue
 		}
 		for _, c := range ib.Clients {
+			if !c.Enable {
+				continue
+			}
 			out = append(out, shareLink(ib, c, publicHost))
 		}
 	}
@@ -174,10 +184,15 @@ func (n *Native) Bind(inboundTag string, hostname string, tunnels []*Tunnel) err
 		return fmt.Errorf("入站 %s 不存在", inboundTag)
 	}
 
+	if found.HostDirect || found.SocksSlot > 0 {
+		return fmt.Errorf("此入口由本机直出或 SOCKS 访问设置管理")
+	}
 	if target == nil {
 		found.BoundTo = ""
+		found.BoundSlot = 0
 	} else {
 		found.BoundTo = sanitizeTag(target.Node.HostName)
+		found.BoundSlot = target.Slot
 	}
 	return n.apply(tunnels)
 }
@@ -192,12 +207,19 @@ func (n *Native) Rebind(oldHost string, target *Tunnel, tunnels []*Tunnel) error
 	newTag := sanitizeTag(target.Node.HostName)
 	newLabel := exitLabel(target)
 	for _, ib := range n.store.Inbounds {
-		if ib.BoundTo != oldTag {
+		if ib.BoundSlot > 0 {
+			if ib.BoundSlot != target.Slot {
+				continue
+			}
+		} else if oldTag == "" || ib.BoundTo != oldTag {
 			continue
 		}
 		ib.BoundTo = newTag
+		ib.BoundSlot = target.Slot
 		// 备注里带着旧出口的地区和 IP 尾段，换了节点要跟着改
-		ib.Remark = renameExitLabel(ib.Remark, newLabel)
+		if ib.NameMode != "custom" {
+			ib.Remark = renameExitLabel(ib.Remark, newLabel)
+		}
 	}
 	return n.apply(tunnels)
 }
@@ -257,13 +279,14 @@ func (n *Native) CloneToTunnels(templateID int, hosts []string, tunnels []*Tunne
 			Host:     tpl.Host,
 			// 安全层必须跟着复制：漏掉的话从 REALITY/TLS 模板复制出来的
 			// 入站会变成明文，而分享链接照样标着模板的协议，很难发现
-			Security: tpl.Security,
-			TLS:      tpl.TLS,
-			Reality:  tpl.Reality,
-			Remark:   remark,
-			Enable:   true,
-			Clients:  append([]nativeClient(nil), tpl.Clients...),
-			BoundTo:  sanitizeTag(t.Node.HostName),
+			Security:  tpl.Security,
+			TLS:       tpl.TLS,
+			Reality:   tpl.Reality,
+			Remark:    remark,
+			Enable:    true,
+			Clients:   append([]nativeClient(nil), tpl.Clients...),
+			BoundTo:   sanitizeTag(t.Node.HostName),
+			BoundSlot: t.Slot, NameMode: "auto",
 		}
 		n.store.NextID++
 		n.store.Inbounds = append(n.store.Inbounds, clone)
@@ -326,9 +349,18 @@ func (n *Native) UpdateInbound(id int, patch InboundPatch, tunnels []*Tunnel) er
 		}
 		ib.Port = port
 	}
+	if patch.NameMode != nil {
+		if *patch.NameMode != "auto" && *patch.NameMode != "custom" {
+			return fmt.Errorf("命名模式无效")
+		}
+		ib.NameMode = *patch.NameMode
+	}
 	if patch.Remark != nil {
 		if r := strings.TrimSpace(*patch.Remark); r != "" {
 			ib.Remark = r
+			if patch.NameMode == nil {
+				ib.NameMode = "custom"
+			}
 		}
 	}
 	if patch.Enable != nil {
@@ -434,13 +466,16 @@ func visionFlow(ib *nativeInbound) string {
 // 留空的字段都有合理默认：端口随机、备注按协议加端口自动生成、
 // 路径随机、REALITY 的密钥与 shortId 自动生成。
 type NewInboundSpec struct {
-	Protocol string
-	Network  string
-	Port     int
-	Remark   string
-	Path     string
-	Host     string
-	Security string
+	// Internal batch provisioning may reuse one successful check of the exact
+	// same destination. This field cannot be set by HTTP/JSON input.
+	realityChecked bool
+	Protocol       string
+	Network        string
+	Port           int
+	Remark         string
+	Path           string
+	Host           string
+	Security       string
 	// Vision 请求给 VLESS 客户端启用 xtls-rprx-vision
 	Vision bool
 
@@ -466,46 +501,10 @@ func (n *Native) CreateInbound(spec NewInboundSpec, tunnels []*Tunnel) (*Created
 	finish := n.beginChange()
 	defer finish()
 
-	ns, err := normalizeInboundSpec(spec, n.store.usedPorts())
+	ib, err := n.prepareInbound(spec, n.store.usedPorts())
 	if err != nil {
 		return nil, err
 	}
-	proto, network, security, port := ns.Protocol, ns.Network, ns.Security, ns.Port
-
-	ib := &nativeInbound{
-		ID:       n.store.NextID,
-		Port:     port,
-		Protocol: proto,
-		Network:  network,
-		Path:     ns.Path,
-		Host:     ns.Host,
-		Security: security,
-		Remark:   ns.Remark,
-		Enable:   true,
-	}
-
-	switch security {
-	case "tls":
-		conf, err := buildTLS(n.dir, spec)
-		if err != nil {
-			return nil, err
-		}
-		ib.TLS = conf
-	case "reality":
-		conf, err := buildReality(n.proc.bin, spec)
-		if err != nil {
-			return nil, err
-		}
-		ib.Reality = conf
-	}
-
-	ib.Clients = []nativeClient{{
-		Email:    fmt.Sprintf("%s-%d", proto, port),
-		ID:       newUUID(),
-		Password: randomHex(8),
-		Flow:     ns.Flow,
-		Enable:   true,
-	}}
 
 	n.store.NextID++
 	n.store.Inbounds = append(n.store.Inbounds, ib)
@@ -660,8 +659,10 @@ func buildReality(xrayBin string, spec NewInboundSpec) (*realityConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := checkRealityDest(dest, names[0]); err != nil {
-		return nil, fmt.Errorf("REALITY 目标站点不可用，换一个 dest: %w", err)
+	if !spec.realityChecked {
+		if err := checkRealityDest(dest, names[0]); err != nil {
+			return nil, fmt.Errorf("REALITY 目标站点不可用，换一个 dest: %w", err)
+		}
 	}
 
 	short := strings.TrimSpace(spec.ShortID)
@@ -681,4 +682,50 @@ func buildReality(xrayBin string, spec NewInboundSpec) (*realityConfig, error) {
 		ShortIDs:    []string{short},
 		Fingerprint: fp,
 	}, nil
+}
+
+func (n *Native) prepareInbound(spec NewInboundSpec, used map[int]bool) (*nativeInbound, error) {
+	ns, err := normalizeInboundSpec(spec, used)
+	if err != nil {
+		return nil, err
+	}
+	proto, network, security, port := ns.Protocol, ns.Network, ns.Security, ns.Port
+
+	ib := &nativeInbound{
+		NameMode: "custom",
+		ID:       n.store.NextID,
+		Port:     port,
+		Protocol: proto,
+		Network:  network,
+		Path:     ns.Path,
+		Host:     ns.Host,
+		Security: security,
+		Remark:   ns.Remark,
+		Enable:   true,
+	}
+
+	switch security {
+	case "tls":
+		conf, err := buildTLS(n.dir, spec)
+		if err != nil {
+			return nil, err
+		}
+		ib.TLS = conf
+	case "reality":
+		conf, err := buildReality(n.proc.bin, spec)
+		if err != nil {
+			return nil, err
+		}
+		ib.Reality = conf
+	}
+
+	ib.Clients = []nativeClient{{
+		Email:    fmt.Sprintf("%s-%d", proto, port),
+		ID:       newUUID(),
+		Password: randomHex(8),
+		Flow:     ns.Flow,
+		Enable:   true,
+	}}
+
+	return ib, nil
 }

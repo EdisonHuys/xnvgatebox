@@ -1,19 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 case "${1:-status}" in
-  install) shift; exec bash /usr/local/lib/xnvgatebox/install.sh "$@" ;;
+  install|update) shift; exec bash /usr/local/lib/xnvgatebox/install.sh --mode vps "$@" ;;
+  version) exec /usr/local/bin/xnvgatebox-fanout -version ;;
+  check-update)
+    python3 - <<'PY'
+import pathlib,json,urllib.request
+current=pathlib.Path('/usr/local/lib/xnvgatebox/VERSION').read_text().strip()
+try:
+ req=urllib.request.Request('https://api.github.com/repos/hanhaoops/xnvgatebox/releases/latest',headers={'Accept':'application/vnd.github+json','User-Agent':'xnvgatebox-updater'})
+ with urllib.request.urlopen(req,timeout=15) as r:latest=json.load(r)
+ print('当前版本：'+current);print('最新正式版：'+latest['tag_name']);print('在线更新：管理页「设置 → 版本与更新」，或 xnvgatebox update')
+except (OSError,ValueError,KeyError):raise SystemExit('检查更新失败，请稍后重试')
+PY
+    ;;
+  update-status) exec python3 /usr/local/lib/xnvgatebox/deploy/installer.py status ;;
   status) systemctl --no-pager status xnvgatebox-fanout.service xnvgatebox-pool.timer ;;
   refresh) systemctl start xnvgatebox-pool.service ;;
   restart) systemctl restart xnvgatebox-fanout.service ;;
   access)
     python3 - <<'PY'
-import pathlib,json,socket
-p=pathlib.Path('/var/lib/xnvgatebox/fanout')
-s=json.loads((p/'settings.json').read_text())
-host=socket.getfqdn()
-print('管理地址：http://<VPS公网IP>:'+str(s['port'])+'/'+(p/'basepath').read_text().strip()+'/')
-print('管理密码：'+(p/'password').read_text().strip())
+import pathlib,json,http.client,urllib.parse
+p=pathlib.Path('/var/lib/xnvgatebox/fanout');s=json.loads((p/'settings.json').read_text());base='/'+(p/'basepath').read_text().strip().strip('/');password=(p/'password').read_text().strip()
+listen=s.get('listen_addr') or '0.0.0.0';host='127.0.0.1' if listen in ('0.0.0.0','all','::') else listen
+public='<VPS公网IP>'
+try:
+ c=http.client.HTTPConnection(host,int(s['port']),timeout=3);c.request('POST',base+'/login',urllib.parse.urlencode({'password':password}),{'Content-Type':'application/x-www-form-urlencoded'});r=c.getresponse();r.read();cookie=r.getheader('Set-Cookie','').split(';')[0]
+ c.request('GET',base+'/api/exits',headers={'Cookie':cookie});r=c.getresponse();view=json.loads(r.read());public=view.get('public_ip') or public;c.close()
+except (OSError,ValueError,http.client.HTTPException):pass
+if listen in ('127.0.0.1','::1','localhost'):public='127.0.0.1'
+print('管理地址：http://'+public+':'+str(s['port'])+base+'/');print('管理密码：'+password)
+if public=='127.0.0.1':print('当前只允许本机访问，请使用 SSH 端口转发。')
 PY
     ;;
-  *) echo '用法：xnvgatebox {install --mode vps|status|refresh|restart|access}'; exit 1 ;;
+  *) echo '用法：xnvgatebox {version|check-update|update [--version vX.Y.Z]|update-status|status|refresh|restart|access}'; exit 1 ;;
 esac

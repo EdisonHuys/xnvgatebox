@@ -6,12 +6,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
 // 订阅：把 fanout 管着的节点链接聚成一条地址，客户端订阅一次就全有了。
 //
-// 为什么需要它：一次批量开 5 个家宽出口就是 5 个入站、5 条链接，
+// 为什么需要它：一次批量开 5 个出口就是 5 个入站、5 条链接，
 // 手动一条条复制粘贴到客户端太笨。而且换节点时端口和客户端配置不变，
 // 订阅地址一次配好就不用再动，出口增删会自己跟上。
 //
@@ -103,16 +105,85 @@ func apiSubReset(w http.ResponseWriter, r *http.Request) {
 // subLinks 收集要放进订阅的节点链接。
 //
 // boundOnly=true 只要绑在出口上的入站。这是默认行为：订阅的意义是
-// "一条地址拿到我所有家宽出口"，把走直连的入站混进去会让人以为那些也是家宽。
+// 显式的本机直出另行选择并明确命名；未绑定入站仍然阻断。
 func subLinks(m *Manager, host string, boundOnly bool) ([]string, error) {
+	return subLinksSelected(m, host, boundOnly, nil)
+}
+
+func subLinksSelected(m *Manager, host string, boundOnly bool, selected map[int]bool) ([]string, error) {
+	return subLinksScoped(m, host, boundOnly, selected, selected == nil)
+}
+
+func subLinksScoped(m *Manager, host string, boundOnly bool, selected map[int]bool, includeDirect bool) ([]string, error) {
 	p, err := openPanel()
 	if err != nil {
 		return nil, err
 	}
 
 	var ids []int
+	if _, native := p.(*Native); native && boundOnly {
+		var links []string
+		names := map[string]bool{}
+		for _, e := range m.ExitsOf().Exits {
+			if e.Status != "up" || (selected != nil && !selected[e.Slot]) {
+				continue
+			}
+			for _, ib := range e.Inbounds {
+				if !ib.Enable {
+					continue
+				}
+				rows, err := p.InboundLinks([]int{ib.ID}, host)
+				if err != nil {
+					return nil, err
+				}
+				label := ib.Remark
+				if automaticName(ib) {
+					label = subscriptionExitName(e)
+					if len(e.Inbounds) > 1 {
+						label += fmt.Sprintf(" · %d", ib.Port)
+					}
+				}
+				for _, link := range rows {
+					name := uniqueRemark(label, names)
+					names[name] = true
+					u, err := url.Parse(link)
+					if err != nil {
+						return nil, fmt.Errorf("节点链接无效")
+					}
+					u.Fragment = name
+					u.RawFragment = ""
+					links = append(links, u.String())
+				}
+			}
+		}
+		if includeDirect {
+			for _, ib := range m.ExitsOf().HostDirect {
+				if !ib.Enable {
+					continue
+				}
+				rows, err := p.InboundLinks([]int{ib.ID}, host)
+				if err != nil {
+					return nil, err
+				}
+				for _, link := range rows {
+					u, err := url.Parse(link)
+					if err != nil {
+						return nil, err
+					}
+					u.Fragment = uniqueRemark("VPS 本机直出", names)
+					u.RawFragment = ""
+					names[u.Fragment] = true
+					links = append(links, u.String())
+				}
+			}
+		}
+		return links, nil
+	}
 	if boundOnly {
 		for _, e := range m.ExitsOf().Exits {
+			if selected != nil && !selected[e.Slot] {
+				continue
+			}
 			for _, ib := range e.Inbounds {
 				if ib.Enable {
 					ids = append(ids, ib.ID)
@@ -175,7 +246,26 @@ func handleSub(m *Manager) http.HandlerFunc {
 		if host == "" {
 			host = publicHost(r)
 		}
-		links, err := subLinks(m, host, q.Get("bound") != "0")
+		selected, selectErr := subscriptionSlots(q.Get("slots"))
+		if selectErr != nil || (selected != nil && q.Get("bound") == "0") {
+			http.Error(w, "出口选择无效", 400)
+			return
+		}
+		includeDirect := selected == nil
+		if v := q.Get("direct"); v != "" {
+			if v != "0" && v != "1" {
+				http.Error(w, "直出选择无效", 400)
+				return
+			}
+			includeDirect = v == "1"
+		}
+		if q.Get("vpn") == "0" {
+			selected = map[int]bool{}
+		} else if v := q.Get("vpn"); v != "" && v != "1" {
+			http.Error(w, "出口选择无效", 400)
+			return
+		}
+		links, err := subLinksScoped(m, host, q.Get("bound") != "0", selected, includeDirect)
 		if err != nil {
 			// 节点后端不给链接（xray-cf-lite 模式下链接由它自己的订阅负责）
 			http.Error(w, "生成订阅失败: "+firstLine(err.Error()), http.StatusBadGateway)
@@ -206,4 +296,19 @@ func encodeSub(links []string, target string) string {
 		return base64.StdEncoding.EncodeToString([]byte(body))
 	}
 	return body
+}
+
+func subscriptionSlots(text string) (map[int]bool, error) {
+	if text == "" {
+		return nil, nil
+	}
+	out := map[int]bool{}
+	for _, v := range strings.Split(text, ",") {
+		slot, err := strconv.Atoi(v)
+		if err != nil || slot < 1 || slot > maximumSlots || out[slot] {
+			return nil, fmt.Errorf("出口选择无效")
+		}
+		out[slot] = true
+	}
+	return out, nil
 }

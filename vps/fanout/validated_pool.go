@@ -36,8 +36,9 @@ type validatedPoolNode struct {
 			Egress         EgressProfile `json:"egress"`
 		} `json:"openvpn"`
 		SSTP struct {
-			Status         string `json:"status"`
-			ExpectedExitIP string `json:"expected_exit_ip"`
+			Candidates     []SstpEndpoint `json:"candidates"`
+			Status         string         `json:"status"`
+			ExpectedExitIP string         `json:"expected_exit_ip"`
 			Egress         struct {
 				IPType string `json:"ip_type"`
 				ISP    string `json:"isp"`
@@ -123,6 +124,7 @@ func fetchNodesFromValidatedPool(poolPath string) ([]Node, error) {
 			ExpectedExitIP:    expected,
 			OpenVPNEgress:     publicImage,
 			SSTPStatus:        item.Protocols.SSTP.Status,
+			SSTPCandidates:    append([]SstpEndpoint(nil), item.Protocols.SSTP.Candidates...),
 			OpenVPNStatus:     item.Protocols.OpenVPN.Status,
 			FullChainVerified: item.ModeA.Status == "passed",
 			LastVerified:      item.ModeA.VerifiedAt,

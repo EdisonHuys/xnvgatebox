@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net"
@@ -47,11 +48,15 @@ func (t *Tunnel) probeSocksExitIP() (string, error) {
 }
 
 func (t *Tunnel) probeSocksExitIPWithLatency() (string, float64, error) {
+	return t.probeSocksWithContext(t.workContext())
+}
+
+func (t *Tunnel) probeSocksWithContext(ctx context.Context) (string, float64, error) {
 	cred := t.probeCredential()
 	proxy := fmt.Sprintf("127.0.0.1:%d", t.Port)
 	userpass := cred.User + ":" + cred.Pass
 	return probeSocksPair(func(url string) ([]byte, error) {
-		return cmdOutput(exec.CommandContext(t.workContext(), "curl", "--disable", "-4fsS", "--noproxy", "", "--max-time", "15", "--socks5-hostname", proxy, "--proxy-user", userpass, "--write-out", "\n%{time_total}", url))
+		return cmdOutput(exec.CommandContext(ctx, "curl", "--disable", "-4fsS", "--noproxy", "", "--max-time", "15", "--socks5-hostname", proxy, "--proxy-user", userpass, "--write-out", "\n%{time_total}", url))
 	})
 }
 

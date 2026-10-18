@@ -32,7 +32,7 @@ func TestDefaultWorkDirKeepsLegacyNames(t *testing.T) {
 	if got := tn.nsName(); got != "fo3" {
 		t.Fatalf("netns 名应与老版本一致，实际 %q", got)
 	}
-	if got := tn.subnet(); got != "10.99.3" {
+	if got := tn.linkCIDR(); got != "10.99.3.0/30" {
 		t.Fatalf("网段应与老版本一致，实际 %q", got)
 	}
 	veth, peer := tn.vethNames()
@@ -71,7 +71,7 @@ func TestOtherWorkDirGetsOwnNames(t *testing.T) {
 	if tn.nsName() == "fo3" {
 		t.Fatal("netns 名和默认实例撞了")
 	}
-	if tn.subnet() == "10.99.3" {
+	if tn.linkCIDR() == "10.99.3.0/30" {
 		t.Fatal("网段和默认实例撞了")
 	}
 
