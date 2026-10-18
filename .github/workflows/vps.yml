@@ -33,7 +33,7 @@ jobs:
           sudo /tmp/xnvgatebox-tests -test.v
         working-directory: vps/fanout
       - name: Check diagnostic concurrency for races
-        run: go test -race -run 'Test(Sstp|ExplicitHostDirect|PublicSocks|HostDirectSubscription|AccessStore|ShutdownPersistence|ShutdownWaits|NetworkLinks|Diagnostic128|ProductionNetwork|DynamicDiagnostic|Console128|ConsoleManual|ConsoleFullSource|ConsoleCheckSettings|ConsoleTwoWorkers|ConsoleCancellation|ConsoleParallelism|ConsoleCandidateQueue|ConsoleRunningCandidate|ConsoleShutdown|DiagnosticLease|CancelledProduction|DiagnosticBusy|CandidateReuse|Preflight|TCPPreflight)' ./...
+        run: go test -race -run 'Test(Update|Sstp|ExplicitHostDirect|PublicSocks|HostDirectSubscription|AccessStore|ShutdownPersistence|ShutdownWaits|NetworkLinks|Diagnostic128|ProductionNetwork|DynamicDiagnostic|Console128|ConsoleManual|ConsoleFullSource|ConsoleCheckSettings|ConsoleTwoWorkers|ConsoleCancellation|ConsoleParallelism|ConsoleCandidateQueue|ConsoleRunningCandidate|ConsoleShutdown|DiagnosticLease|CancelledProduction|DiagnosticBusy|CandidateReuse|Preflight|TCPPreflight)' ./...
         working-directory: vps/fanout
       - run: bash -n vps/install.sh vps/deploy/xnvgatebox
       - name: Build the package from this tested commit

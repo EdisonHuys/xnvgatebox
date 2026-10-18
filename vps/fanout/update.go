@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -23,11 +22,13 @@ const updateRepo = "hanhaoops/xnvgatebox"
 
 // releaseInfo 是 GitHub Releases API 里我们关心的字段。
 type releaseInfo struct {
-	TagName string `json:"tag_name"`
-	Name    string `json:"name"`
-	Body    string `json:"body"`
-	HTMLURL string `json:"html_url"`
-	Assets  []struct {
+	TagName    string `json:"tag_name"`
+	Name       string `json:"name"`
+	Body       string `json:"body"`
+	HTMLURL    string `json:"html_url"`
+	Draft      bool   `json:"draft"`
+	Prerelease bool   `json:"prerelease"`
+	Assets     []struct {
 		Name string `json:"name"`
 		URL  string `json:"browser_download_url"`
 	} `json:"assets"`
@@ -40,6 +41,7 @@ type UpdateStatus struct {
 	HasUpdate bool   `json:"has_update"`
 	Notes     string `json:"notes"`
 	URL       string `json:"url"`
+	Supported bool   `json:"supported"`
 }
 
 // goarch 把 runtime.GOARCH 映射成 release 资产用的名字。
@@ -74,8 +76,11 @@ func fetchLatestRelease() (*releaseInfo, error) {
 		return nil, fmt.Errorf("GitHub 返回 HTTP %d", resp.StatusCode)
 	}
 	var rel releaseInfo
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&rel); err != nil {
 		return nil, err
+	}
+	if !validReleaseTag(rel.TagName) || rel.Draft || rel.Prerelease {
+		return nil, fmt.Errorf("正式发布信息无效")
 	}
 	return &rel, nil
 }
@@ -94,6 +99,7 @@ func checkUpdate() (*UpdateStatus, error) {
 		Notes:     strings.TrimSpace(rel.Body),
 		URL:       rel.HTMLURL,
 		HasUpdate: versionLess(cur, latest),
+		Supported: releaseHasPackage(rel),
 	}
 	return st, nil
 }
@@ -133,62 +139,12 @@ func parseSemver(v string) ([3]int, bool) {
 	}
 	for i := 0; i < len(parts); i++ {
 		n, err := strconv.Atoi(parts[i])
-		if err != nil {
+		if err != nil || n < 0 {
 			return out, false
 		}
 		out[i] = n
 	}
 	return out, true
-}
-
-// applyUpdate 下载最新版对应架构的包、校验、替换当前二进制，然后重启服务。
-// 成功后本进程会被 init 系统拉起成新版本，所以正常情况下这里返回后进程即被替换。
-func applyUpdate() error {
-	return fmt.Errorf("请使用 xnvgatebox install --mode vps 更新完整部署包；网页不执行单文件替换")
-}
-
-func downloadFile(url, dst string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("User-Agent", "xnvgatebox-updater")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %d", resp.StatusCode)
-	}
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.Body)
-	return err
-}
-
-func verifyChecksum(path, name, sumsURL string) error {
-	sums := filepath.Join(filepath.Dir(path), "checksums.txt")
-	if err := downloadFile(sumsURL, sums); err != nil {
-		return fmt.Errorf("下载校验和失败: %w", err)
-	}
-	want, err := sha256FromList(sums, name)
-	if err != nil {
-		return err
-	}
-	got, err := sha256File(path)
-	if err != nil {
-		return err
-	}
-	if !strings.EqualFold(want, got) {
-		return fmt.Errorf("校验和不匹配，包可能损坏")
-	}
-	return nil
 }
 
 func sha256FromList(listPath, name string) (string, error) {
@@ -252,47 +208,4 @@ func extractBinary(tarGz, member, dst string) error {
 		}
 		return nil
 	}
-}
-
-func copyFileMode(src, dst string, mode os.FileMode) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
-		return err
-	}
-	return out.Close()
-}
-
-// restartSelf 通过 init 系统重启 fanout 服务，拉起刚替换的新二进制。
-// systemd / openrc 各一套；都不可用时退回直接自我 exec。
-func restartSelf() {
-	if hasCmd("systemctl") && dirExists("/run/systemd/system") {
-		_ = exec.Command("systemctl", "restart", "fanout").Start()
-		return
-	}
-	if hasCmd("rc-service") {
-		_ = exec.Command("rc-service", "fanout", "restart").Start()
-		return
-	}
-	// 没有 init 系统托管：直接退出，让外部守护（若有）拉起；
-	// 没有守护就只能等下次手动启动。日志留个痕。
-	fmt.Println("fanout: 已替换二进制，但未检测到 systemd/openrc，请手动重启服务")
-}
-
-func hasCmd(name string) bool {
-	_, err := exec.LookPath(name)
-	return err == nil
-}
-
-func dirExists(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && fi.IsDir()
 }

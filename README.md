@@ -4,27 +4,45 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
-最新发布：[v0.4.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.4.0)，已完成干净源码构建及 VPS/Mac 候选升级实测，见 [发布验收记录](docs/evidence/vps-release-20261016.json)。
+最新发布：[v0.5.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.0)。本版包含独立控制台、自定出口数与检测并发、VPS 本机直出、外部 SOCKS5、原始 SSTP 资源管理及完整包在线更新。安装更新规范与验证范围见 [安装和更新说明](docs/INSTALL_UPDATE.md)。
 
-开发中的新版控制台与可配置出口数量见 [控制台说明](docs/CONSOLE.md)，发布版操作流程见下文。
+## Debian 12 安装
 
-## VPS 一条命令安装
-
-目前支持 Debian / Ubuntu、Linux amd64、systemd，以 root 执行：
+已测环境为 Debian 12 amd64、systemd。Debian / Ubuntu amd64 可使用同一入口，其他系统尚未验收。以 root 执行：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/main/vps/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.5.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.5.0
 ```
 
-安装包包含本项目管理程序、统一 Pool Builder 和校验固定版本的 Xray。安装后由 VPS 自己完整解析官方当次公开清单并构建候选池，每十分钟刷新，无需 GitHub/Cloudflare 账号或远程节点池。再次安装前自动备份已有项目状态。
+安装包含管理程序、Pool Builder、固定版本 Xray 和系统协议依赖。VPS 自行解析 VPN Gate 官方当次公开清单，每十分钟刷新，不需要 GitHub 或 Cloudflare 账号，也不需要 3x-ui。安装完成后执行：
 
-运行 `xnvgatebox access` 查看直接访问 VPS 的管理地址和密码。v0.4.0 发布版界面操作：新建出口 → 新建 VLESS/REALITY 节点 → 绑定出口 → 复制订阅。一个订阅包含所有已绑定入站，各入站使用独立公开端口和对应固定 SOCKS Slot。不要把本地 SOCKS 端口当作客户端的 VLESS 端口。
+```sh
+xnvgatebox access
+```
 
-`xnvgatebox refresh` 立即刷新候选池，`xnvgatebox status` 查看服务；`xnvgatebox install --mode vps` 更新完整部署包。v0.4.0 发布版默认最多三个 Slot，国家可在界面选择；本开发分支改为 0–32 个目标出口，自动建立并绑定入站。未绑定或失效出口的内置 Xray 流量被阻断。
+在浏览器打开它打印的私有管理地址并输入密码。默认管理端口为 8899，服务器防火墙需允许访问此端口。首次安装会生成新的路径、密码和订阅凭据；重装系统后旧地址不会自动恢复。
 
-指定国家能否建立出口，取决于 VPN Gate 上游当时提供的节点及其可达性。暂时没有合适 IP 时，如实提示暂不可用或等待，不要求每个国家随时有出口，也不因此判定本程序故障。功能验收可使用当时可用的国家；三个独立出口可以来自同一国家。
+1. 在“总览”启用 **VPS 本机直出**，复制默认订阅到 v2rayN，刷新订阅并验证。该入口明确使用 VPS 公网 IP，可独立启停。
+2. 设置目标出口数，程序自动建立接入入口并绑定出口；数量和检测并发由用户决定，实际受主机资源、地址/端口及上游节点限制。也可在“接入管理”自建入口并选择已有出口。
+3. 在“候选节点”刷新来源和检测连通性。来源数量不等于可用节点数量；实际国家未知时显示待验证，不用来源国家冒充实际出口。
+4. 在“代理资源”管理可选外部 SOCKS5，以及实测后的原始 SSTP 参数。外部 SOCKS5 经本 VPS 转发，需要 VPS 在线；原始 SSTP 由使用方自行建连，最近实测通过不保证持续可用。
 
-候选池只说明发现了节点；OpenVPN 与 SOCKS 必须在目标 VPS 实测后才显示健康。没有出口画像证据时类型显示 unknown，不能宣传为已验证家宽。详细安装、验收和限制见 [VPS 文档](vps/README.md)。许可证与来源见 [参考审计](docs/REFERENCE_AUDIT.md)。
+VPN Gate 出口故障时阻断对应连接，不自动切换到本机直出。指定国家当时没有合适 IP 时保留策略并等待；不强求国家或出口数量。没有可信画像时类型保持 unknown，不能称为已验证家宽。操作细节见 [控制台说明](docs/CONSOLE.md)、[代理资源说明](docs/PROXY_RESOURCES.md) 和 [VPS 文档](vps/README.md)。
+
+## 在线更新
+
+管理页“设置 → 版本与更新”检查正式版、查看说明并执行完整包更新。更新会短暂中断连接；管理服务恢复后重新登录可查看结果。也可使用命令行：
+
+```sh
+xnvgatebox version
+xnvgatebox check-update
+xnvgatebox update
+xnvgatebox update-status
+```
+
+安装、命令行更新和网页更新共用部署锁。更新前停止本项目服务并在 `/var/backups/xnvgatebox/` 保存一致的完整项目备份，保留端口、凭据、订阅和用户设置；校验、状态检查或运行验证失败会恢复原部署。恢复未完成会保留记录，下次安装先恢复。备份含私密信息，不应上传公开仓库；它不是整机系统备份。已有 v0.4.0 安装先执行上面新版安装命令完成一次迁移，之后即可使用网页更新。
+
+重装系统前请将备份另存到本机。重装后的第一轮全新测试先不导入旧状态，按 [Debian 12 全新验收清单](docs/INSTALL_UPDATE.md#全新系统验收清单) 验证；操作系统重装由使用者自行进行。
 
 ## 本机使用
 

@@ -1297,6 +1297,39 @@
               <p>管理访问入口、客户端接入和显示偏好。</p>
             </div>
           </div>
+          <div class="card pad" style="margin-bottom: 24px">
+            <h2>版本与更新</h2>
+            <p style="margin: 12px 0">
+              当前版本 <b id="softwareCurrent">正在读取</b>
+              <span id="softwareLatest"></span>
+            </p>
+            <div class="actions">
+              <button id="checkSoftwareUpdate">检查更新</button
+              ><button id="installSoftwareUpdate" class="primary" disabled>
+                安装更新</button
+              ><a
+                href="https://github.com/hanhaoops/xnvgatebox/releases"
+                target="_blank"
+                rel="noopener"
+                >版本记录 ↗</a
+              >
+            </div>
+            <p
+              id="softwareUpdateStatus"
+              class="muted"
+              role="status"
+              style="margin-top: 12px"
+            >
+              更新完整程序并保留配置；服务重启后可能需要重新登录。
+            </p>
+            <details id="softwareNotesDetails" hidden>
+              <summary>版本说明</summary>
+              <pre
+                id="softwareNotes"
+                style="white-space: pre-wrap; font: inherit"
+              ></pre>
+            </details>
+          </div>
           <div class="subgrid">
             <form class="card pad" id="settingsForm">
               <h2>管理入口</h2>
@@ -1539,6 +1572,11 @@
         settingsLoaded = false,
         currentPage = "overview",
         toastTimer;
+      let softwareRelease = null,
+        softwareJob = null,
+        softwarePolling = false,
+        softwareSubmitting = false,
+        softwareCheckMessage = "";
       const submittingChecks = new Set();
       const phases = {
         precheck: "快速端口预检",
@@ -1734,7 +1772,10 @@
           );
         if (location.hash.slice(1) !== page)
           history.replaceState(null, "", "#" + page);
-        if (page === "settings" && !settingsLoaded) action(loadSettings);
+        if (page === "settings") {
+          if (!settingsLoaded) action(loadSettings);
+          action(loadSoftwareStatus);
+        }
         if (page === "subscription") renderSubscription();
         if (page === "resources") {
           renderResources();
@@ -1832,6 +1873,8 @@
         $("hostDirectToggle").textContent = directOn ? "停用直出" : "启用直出";
         $("hostDirectCard").hidden = s.backend !== "native";
         $("version").textContent = s.version || "开发版";
+        $("softwareCurrent").textContent = s.version || "开发版";
+        if (currentPage === "settings") loadSoftwareStatus().catch(() => {});
         if (
           document.activeElement !== $("checkParallelism") &&
           !$("checkParallelism").dataset.dirty
@@ -2899,6 +2942,80 @@
           if (!t.trim()) throw Error("当前范围暂无就绪入站");
           await copy(t);
         });
+      function renderSoftwareUpdate() {
+        const running = softwareSubmitting || softwareJob?.status === "running";
+        $("checkSoftwareUpdate").disabled = running;
+        $("installSoftwareUpdate").disabled =
+          running ||
+          !softwareRelease?.has_update ||
+          !softwareRelease?.supported;
+        $("installSoftwareUpdate").textContent = running
+          ? "正在更新…"
+          : "安装更新";
+        $("softwareLatest").textContent = softwareRelease
+          ? " · 最新正式版 " + softwareRelease.latest
+          : "";
+        if (softwareCheckMessage && softwareJob?.status !== "running") {
+          $("softwareUpdateStatus").textContent = softwareCheckMessage;
+        } else if (softwareJob && softwareJob.status !== "idle") {
+          $("softwareUpdateStatus").textContent =
+            (softwareJob.target ? softwareJob.target + " · " : "") +
+            softwareJob.message +
+            (softwareJob.status === "failed" && softwareJob.rolled_back
+              ? "，可以检查日志后重试。"
+              : "");
+        }
+      }
+      async function loadSoftwareStatus() {
+        if (softwarePolling) return;
+        softwarePolling = true;
+        try {
+          softwareJob = await api("api/update/status");
+          renderSoftwareUpdate();
+        } finally {
+          softwarePolling = false;
+        }
+      }
+      $("checkSoftwareUpdate").onclick = () =>
+        action(async () => {
+          softwareRelease = await api("api/update/check");
+          renderSoftwareUpdate();
+          $("softwareNotes").textContent =
+            softwareRelease.notes || "此版本暂无附加说明。";
+          $("softwareNotesDetails").hidden = false;
+          if (softwareJob?.status !== "running")
+            $("softwareUpdateStatus").textContent = softwareCheckMessage =
+              !softwareRelease.supported
+                ? "当前架构暂无可用安装包。"
+                : softwareRelease.has_update
+                  ? "发现新版本，可备份并更新完整程序。"
+                  : "当前已是最新正式版本。";
+        }, $("checkSoftwareUpdate"));
+      $("installSoftwareUpdate").onclick = () =>
+        action(async () => {
+          if (!softwareRelease?.has_update || softwareSubmitting) return;
+          if (
+            !confirm(
+              "将备份并更新至 " +
+                softwareRelease.latest +
+                "，连接会短暂中断，原配置与订阅保留。继续更新？",
+            )
+          )
+            return;
+          softwareSubmitting = true;
+          softwareCheckMessage = "";
+          renderSoftwareUpdate();
+          try {
+            const r = await api("api/update/apply", {
+              expected_version: softwareRelease.latest,
+            });
+            if (r.status) softwareJob = r;
+            await loadSoftwareStatus();
+          } finally {
+            softwareSubmitting = false;
+            renderSoftwareUpdate();
+          }
+        }, $("installSoftwareUpdate"));
       async function loadSettings() {
         const s = await api("api/settings");
         $("settingPort").value = s.port;
