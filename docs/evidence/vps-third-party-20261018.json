@@ -1,0 +1,318 @@
+{
+  "recorded_at": "2026-10-18T16:37:44.347396+00:00",
+  "release": {
+    "tag": "v0.6.0",
+    "source_commit": "0bd7113dbab30195068742536f9d6f462e7f6a8a",
+    "package_sha256": "8d34e016def662e45b17839735a3146ce39684192da843bf3237bcd24219aa49",
+    "build_run": 39133501481,
+    "publish_run": 39136142633,
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.6.0",
+    "pull_request": 5,
+    "merged": true
+  },
+  "python_tests": {
+    "passed": 79
+  },
+  "linux_tests": {
+    "status": "passed",
+    "top_level_pass": 256,
+    "pass_events": 319,
+    "skips": 4,
+    "failed_tests": []
+  },
+  "javascript_regressions": {
+    "status": "passed",
+    "files": [
+      "tests/test_console_sstp.mjs",
+      "tests/test_console_third_party.mjs"
+    ]
+  },
+  "browser_demo": {
+    "data": "synthetic, not supplier credentials",
+    "real_click_add_fill_fields_save_and_scope": true,
+    "country_city_and_remark_shown": true,
+    "only_third_party_subscription_generated": true
+  },
+  "real_supplier_probe": {
+    "actual_ip_observed": true,
+    "https_latency_observed": true,
+    "wrong_password_rejected": true
+  },
+  "online_update": {
+    "status": "passed",
+    "checks": {
+      "api_accepted_202": true,
+      "worker_has_independent_systemd_cgroup": true,
+      "manager_process_replaced": true,
+      "installed_version_is_formal": true,
+      "status_completed": true,
+      "complete_backup_reported": true,
+      "same_version_has_no_update": true,
+      "same_version_apply_does_not_restart": true,
+      "no_pending_recovery": true,
+      "login_required_api/update/status": true,
+      "login_required_api/update/apply": true,
+      "clean_source_release_build": true
+    },
+    "phases_observed": [
+      "preparing",
+      "downloading",
+      "verifying",
+      "pool",
+      "stopping",
+      "health",
+      "complete"
+    ],
+    "build": {
+      "git_head": "0bd7113dbab30195068742536f9d6f462e7f6a8a",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "b0ca8d1e7065606a31daa74b873e368ac35fcd63756ed8f7661a6f318bb76960",
+      "version": "v0.6.0",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "preservation_after_final_restart": {
+    "version": "v0.6.0",
+    "status": "passed",
+    "checks": {
+      "management_subscription_target_parallelism_preserved": true,
+      "all_inbound_ports_credentials_and_bindings_preserved": true,
+      "all_slots_ports_credentials_policies_intent_preserved": true,
+      "sstp_settings_and_observations_preserved": true,
+      "xui_original_process_and_config_preserved": true,
+      "native_backend_without_error": true,
+      "saved_target_and_parallelism": true,
+      "update_card_served": true,
+      "clean_source": true
+    },
+    "ready_snapshot": 8
+  },
+  "vps_public_client_and_faults": {
+    "status": "passed",
+    "checks": {
+      "supplier_resource_probe_passed": true,
+      "supplier_exit_differs_from_vps": true,
+      "server_public_vless_reality_exact_exit": true,
+      "vps_direct_independent": true,
+      "provider_credentials_not_in_subscription": true,
+      "supplier_wrong_password_vless_blocked": true,
+      "direct_available_during_supplier_failure": true,
+      "supplier_credential_edit_preserves_client_identity": true,
+      "supplier_restored_exact_exit": true,
+      "subscription_opt_out_enforced": true,
+      "stopped_resource_vless_blocked": true,
+      "re_enabled_resource_same_identity": true,
+      "re_enabled_resource_exact_exit": true,
+      "controlled_upstream_full_vless_chain": true,
+      "closed_upstream_vless_blocked": true,
+      "supplier_independent_of_other_upstream_failure": true,
+      "deleted_resource_vless_blocked": true
+    },
+    "version": "v0.6.0",
+    "temporary_resource_removed": true
+  },
+  "restart_scope_privacy_and_backup": {
+    "version": "v0.6.0",
+    "status": "passed",
+    "checks": {
+      "final_supplier_probe_passed": true,
+      "original_upstream_credentials_and_subscription_restored": true,
+      "service_restored_healthy": true,
+      "paid_resource_identity_credentials_labels_flags_preserved": true,
+      "paid_observation_persisted": true,
+      "backup_contains_exact_paid_private_config": true,
+      "temporary_resource_removed": true,
+      "only_selected_third_party_scope": true,
+      "default_subscription_includes_paid_resource": true,
+      "explicit_third_party_exclusion": true,
+      "old_direct_only_scope_still_direct_only": true,
+      "vpn_gate_source_label_present": true,
+      "supplier_remark_present_in_client_name": true,
+      "supplier_subscription_uses_reality": true,
+      "list_no_supplier_credentials": true,
+      "editor_never_returns_saved_password": true,
+      "resource_list_no_store": true,
+      "resource_list_requires_login": true,
+      "scoped_qr_png_no_store": true,
+      "served_ui_contains_third_party_tab": true,
+      "after_restart_original_client_exact_two_echoes": true,
+      "after_restart_https_content": true
+    },
+    "backup": {
+      "consistent_project_backup_retained": true,
+      "sha256": "7452ad10e019b8e2e9072910d352157c56cfbc6866b659ecc0e984d7960cfd58",
+      "contains_private_supplier_config": true
+    },
+    "vpn_gate_scope": {
+      "status": "non_empty_source_labels_verified",
+      "links": 5
+    }
+  },
+  "external_mac": {
+    "vantage": "external_mac",
+    "status": "passed",
+    "checks": {
+      "third_party_exact_two_echoes": true,
+      "third_party_https_content": true,
+      "vps_direct_exact_two_echoes": true,
+      "vps_direct_https_content": true,
+      "supplier_exit_differs_from_vps": true
+    },
+    "individual_requests": [
+      {
+        "resource": "third_party",
+        "request": 0,
+        "utc": "2026-10-18T16:33:07.892276+00:00",
+        "status": "passed",
+        "elapsed_ms": 3788
+      },
+      {
+        "resource": "third_party",
+        "request": 1,
+        "utc": "2026-10-18T16:33:11.679592+00:00",
+        "status": "passed",
+        "elapsed_ms": 4246
+      },
+      {
+        "resource": "third_party",
+        "request": 2,
+        "utc": "2026-10-18T16:33:15.925423+00:00",
+        "status": "passed",
+        "elapsed_ms": 3373
+      },
+      {
+        "resource": "vps_direct",
+        "request": 0,
+        "utc": "2026-10-18T16:33:19.408677+00:00",
+        "status": "passed",
+        "elapsed_ms": 2691
+      },
+      {
+        "resource": "vps_direct",
+        "request": 1,
+        "utc": "2026-10-18T16:33:22.099391+00:00",
+        "status": "passed",
+        "elapsed_ms": 2409
+      },
+      {
+        "resource": "vps_direct",
+        "request": 2,
+        "utc": "2026-10-18T16:33:24.508373+00:00",
+        "status": "passed",
+        "elapsed_ms": 2402
+      }
+    ],
+    "tls_certificate_verification": "normal",
+    "http_version": "curl_default",
+    "retries": 0
+  },
+  "backups": {
+    "before_deploy": {
+      "sha256": "8cd9150b390825c8084257356c58d7a8602d5eaf43f8ce3cfeae17bcb45dc20e",
+      "consistent_project_backup_retained": true,
+      "downloaded_to_mac_and_checksum_verified": true
+    },
+    "final_v0_6_0": {
+      "consistent_project_backup_retained": true,
+      "sha256": "7452ad10e019b8e2e9072910d352157c56cfbc6866b659ecc0e984d7960cfd58",
+      "contains_private_supplier_config": true,
+      "downloaded_to_mac_and_checksum_verified": true
+    }
+  },
+  "retained_failures": {
+    "initial_ci": {
+      "result": "failed",
+      "reason": "128 concurrent results exceeded existing three second fsync wait",
+      "fix_commit": "b5713b5",
+      "wait_seconds_after": 30,
+      "worker_parallelism_assertion_unchanged": true,
+      "subsequent_ci_and_race": "passed"
+    },
+    "initial_vps_client": {
+      "result": "failed",
+      "error": "curl_failed_35",
+      "counted_as_passed": false,
+      "targeted_diagnostic": {
+        "config_checks": {
+          "socks_outbound": true,
+          "upstream_matches_private_input": true,
+          "enabled": true,
+          "reality": true
+        },
+        "requests": [
+          {
+            "kind": "supplier",
+            "request": 0,
+            "status": "passed"
+          },
+          {
+            "kind": "supplier",
+            "request": 1,
+            "status": "passed"
+          },
+          {
+            "kind": "supplier",
+            "request": 2,
+            "status": "passed"
+          },
+          {
+            "kind": "direct",
+            "request": 0,
+            "status": "passed"
+          },
+          {
+            "kind": "direct",
+            "request": 1,
+            "status": "passed"
+          },
+          {
+            "kind": "direct",
+            "request": 2,
+            "status": "passed"
+          }
+        ]
+      },
+      "subsequent_full_chain_and_faults": "passed"
+    },
+    "external_mac_attempts": [
+      {
+        "result": "failed",
+        "error": "curl_failed_35",
+        "overlapped_backup_service_stop": true,
+        "counted_as_passed": false
+      },
+      {
+        "result": "failed",
+        "error": "curl_failed_16",
+        "after_service_restore": true,
+        "counted_as_passed": false
+      },
+      {
+        "result": "passed",
+        "scope": "six individually recorded requests, default HTTP version, normal TLS, no retries",
+        "report": "external_mac"
+      }
+    ],
+    "first_final_verification": {
+      "result": "interrupted",
+      "reason": "empty VPN Gate subscription immediately after project restart returned non-200",
+      "backup_and_restart_already_completed": true,
+      "follow_up": "read-only comparison against actual stopped backup; five VPN Gate source labels observed later",
+      "forced_country_or_node_count": false
+    }
+  },
+  "boundaries": {
+    "cf_paused_no_deployment_or_write": true,
+    "xui_original_process_and_running_config_preserved": true,
+    "unknown_not_residential": true,
+    "user_settings_ports_and_credentials_preserved": true,
+    "supplier_api_integration": false,
+    "github_node_publication_automation_added": false,
+    "windows_v2rayn_gui_tested": false,
+    "worker_end_to_end_tested": false,
+    "third_party_udp_tested": false,
+    "fresh_os_acceptance": "pending user Debian 12 reinstall",
+    "real_supplier_geography_and_credentials_omitted": true
+  }
+}
