@@ -21,6 +21,7 @@ type Manager struct {
 	maxSlots        int
 	jobs            JobStore
 	saveMu          sync.Mutex
+	shuttingDown    bool // protected by saveMu; transient teardown is not user intent
 	deletedSlots    map[int]bool
 	localEvidence   map[string]Node
 	stateWriteHook  func(string) error
@@ -751,8 +752,18 @@ func (m *Manager) syncCred(t *Tunnel) {
 
 // Shutdown 停掉运行态但保留状态文件，让下次启动能恢复同样的隧道。
 func (m *Manager) Shutdown() {
+	m.shutdownWithStop(func(t *Tunnel) { t.stop() })
+}
+
+func (m *Manager) shutdownWithStop(stop func(*Tunnel)) {
+	// Fence all writers before the first temporary stopped status. A worker
+	// completing another Slot during teardown must not persist half a shutdown
+	// as explicit operator stop intent. Wait for an existing commit first.
+	m.saveMu.Lock()
+	m.shuttingDown = true
+	m.saveMu.Unlock()
 	for _, t := range m.Tunnels() {
-		t.stop()
+		stop(t)
 	}
 }
 
