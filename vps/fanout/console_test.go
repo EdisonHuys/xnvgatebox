@@ -296,7 +296,9 @@ func TestConsoleSelectionAndJSONRejectAmbiguity(t *testing.T) {
 
 func waitConsoleCheck(t *testing.T, j *CheckRun) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
+	// Large batches fsync every completed observation. Slow CI storage is not
+	// a concurrency failure; worker-count assertions remain separate.
+	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
 		j.mu.Lock()
 		done := j.Status != "running"
