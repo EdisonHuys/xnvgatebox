@@ -27,6 +27,115 @@ func sstpObservation(n Node) CheckResult {
 	return CheckResult{Host: n.HostName, Status: "passed", ObservedBy: "vps", Protocol: "sstp", Port: 443, ActualIP: "8.8.8.8", IPType: "unknown", CheckedAt: time.Now().UTC(), ExpiresAt: time.Now().Add(time.Hour).UTC(), ProfileSHA: sstpProfile(n)}
 }
 
+func sstpRows(t *testing.T, s *SstpManager) map[string]struct {
+	Result  CheckResult  `json:"result"`
+	Attempt *CheckResult `json:"attempt"`
+} {
+	t.Helper()
+	w := httptest.NewRecorder()
+	s.apiView(w, httptest.NewRequest("GET", "/api/resources/sstp", nil))
+	var v struct {
+		Nodes []struct {
+			Host    string       `json:"hostname"`
+			Result  CheckResult  `json:"result"`
+			Attempt *CheckResult `json:"attempt"`
+		} `json:"nodes"`
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &v) != nil {
+		t.Fatal("invalid resource response")
+	}
+	out := map[string]struct {
+		Result  CheckResult  `json:"result"`
+		Attempt *CheckResult `json:"attempt"`
+	}{}
+	for _, n := range v.Nodes {
+		out[n.Host] = struct {
+			Result  CheckResult  `json:"result"`
+			Attempt *CheckResult `json:"attempt"`
+		}{n.Result, n.Attempt}
+	}
+	return out
+}
+
+func TestSstpViewKeepsDeferredAttemptAcrossJobsWithoutReplacingMeasuredEvidence(t *testing.T) {
+	s := sstpFixture(t)
+	s.probe = func(_ context.Context, n Node, _ SstpSettings, _ func(string)) CheckResult {
+		return CheckResult{Host: n.HostName, Status: "deferred", Code: "candidate_in_use"}
+	}
+	a, b := s.c.m.nodes[0], s.c.m.nodes[1]
+	for _, host := range []string{a.HostName, b.HostName} {
+		j, err := s.start(CheckRequest{Hosts: []string{host}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case <-j.finished:
+		case <-time.After(5 * time.Second):
+			t.Fatal("job did not finish")
+		}
+	}
+	row := sstpRows(t, s)[a.HostName]
+	if row.Result.Status != "not_tested" || row.Attempt == nil || row.Attempt.Status != "deferred" || row.Attempt.Code != "candidate_in_use" {
+		t.Fatal("deferred attempt disappeared after another job")
+	}
+	s.mu.Lock()
+	s.state.Results[a.HostName] = sstpObservation(a)
+	s.mu.Unlock()
+	j, err := s.start(CheckRequest{Hosts: []string{a.HostName}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-j.finished
+	row = sstpRows(t, s)[a.HostName]
+	if row.Result.Status != "passed" || row.Result.Stale || row.Attempt.Status != "deferred" {
+		t.Fatal("attempt changed earlier measured observation")
+	}
+	w := httptest.NewRecorder()
+	s.apiExport(w, httptest.NewRequest("GET", "/api/resources/sstp/export?format=text", nil))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), a.HostName) {
+		t.Fatal("deferred attempt removed still-valid private export")
+	}
+	s.c.m.mu.Lock()
+	s.c.m.nodes[0].IP = "1.1.1.1"
+	s.c.m.mu.Unlock()
+	if sstpRows(t, s)[a.HostName].Attempt != nil {
+		t.Fatal("old attempt attributed to a changed candidate")
+	}
+}
+
+func TestSstpViewShowsCancelledQueueAfterNextJob(t *testing.T) {
+	s := sstpFixture(t)
+	s.state.Settings.Parallelism = 1
+	started := make(chan struct{}, 1)
+	s.probe = func(ctx context.Context, n Node, _ SstpSettings, _ func(string)) CheckResult {
+		started <- struct{}{}
+		<-ctx.Done()
+		return CheckResult{Host: n.HostName, Status: "cancelled", Code: "cancelled"}
+	}
+	j, err := s.start(CheckRequest{All: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-started
+	j.cancel()
+	<-j.finished
+	s.probe = func(_ context.Context, n Node, _ SstpSettings, _ func(string)) CheckResult {
+		return CheckResult{Host: n.HostName, Status: "failed", Code: "sstp_unreachable"}
+	}
+	j, err = s.start(CheckRequest{Hosts: []string{s.c.m.nodes[0].HostName}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-j.finished
+	rows := sstpRows(t, s)
+	for _, n := range s.c.m.nodes[1:] {
+		row := rows[n.HostName]
+		if row.Attempt == nil || row.Attempt.Status != "cancelled" || row.Result.Status != "not_tested" {
+			t.Fatal("cancelled queue reverted to not tested")
+		}
+	}
+}
+
 func TestSstpExportRejectsExpiredChangedUnboundAndUnmeasured(t *testing.T) {
 	s := sstpFixture(t)
 	n := s.c.m.nodes[0]
