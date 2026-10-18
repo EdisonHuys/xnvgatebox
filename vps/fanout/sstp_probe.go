@@ -80,6 +80,12 @@ func (s *SstpManager) probeNode(parent context.Context, n Node, settings SstpSet
 	lease := s.c.m.reserveDiagnostic(n, cancelLease)
 	if lease == nil {
 		r.Status, r.Code = "deferred", "candidate_in_use"
+		s.c.m.mu.RLock()
+		full := len(s.c.m.tunnels)+len(s.c.m.diagnostics) >= networkLinkCount
+		s.c.m.mu.RUnlock()
+		if full {
+			r.Status, r.Code = "failed", "network_capacity_exhausted"
+		}
 		return r
 	}
 	defer func() {

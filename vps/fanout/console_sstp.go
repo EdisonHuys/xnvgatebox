@@ -37,7 +37,10 @@ type SstpManager struct {
 }
 
 func validateSstpSettings(v SstpSettings) error {
-	if validateCheckParallelism(v.Parallelism) != nil || v.IntervalMinutes < 0 || v.IntervalMinutes > 525600 || v.ValidMinutes < 1 || v.ValidMinutes > 10080 || v.TimeoutSeconds < 10 || v.TimeoutSeconds > 3600 {
+	if err := validateCheckParallelism(v.Parallelism); err != nil {
+		return err
+	}
+	if v.IntervalMinutes < 0 || v.IntervalMinutes > 525600 || v.ValidMinutes < 1 || v.ValidMinutes > 10080 || v.TimeoutSeconds < 10 || v.TimeoutSeconds > 3600 {
 		return fmt.Errorf("并发须为正整数；周期 0 表示关闭，有效期 1–10080 分钟，超时 10–3600 秒")
 	}
 	return nil
@@ -251,19 +254,23 @@ func (s *SstpManager) watch() {
 		select {
 		case <-s.c.ctx.Done():
 			return
-		case <-ticker.C:
-			s.mu.Lock()
-			due := s.state.Settings.IntervalMinutes > 0 && time.Since(s.state.LastStarted) >= time.Duration(s.state.Settings.IntervalMinutes)*time.Minute
-			if s.job != nil {
-				s.job.mu.Lock()
-				due = due && s.job.Status != "running"
-				s.job.mu.Unlock()
-			}
-			s.mu.Unlock()
-			if due {
-				_, _ = s.start(CheckRequest{All: true})
-			}
+		case now := <-ticker.C:
+			s.runScheduled(now)
 		}
+	}
+}
+
+func (s *SstpManager) runScheduled(now time.Time) {
+	s.mu.Lock()
+	due := s.state.Settings.IntervalMinutes > 0 && now.Sub(s.state.LastStarted) >= time.Duration(s.state.Settings.IntervalMinutes)*time.Minute
+	if s.job != nil {
+		s.job.mu.Lock()
+		due = due && s.job.Status != "running"
+		s.job.mu.Unlock()
+	}
+	s.mu.Unlock()
+	if due {
+		_, _ = s.start(CheckRequest{All: true})
 	}
 }
 
@@ -395,7 +402,7 @@ func (s *SstpManager) apiExport(w http.ResponseWriter, r *http.Request) {
 		}
 		u := &url.URL{Scheme: "sstp", Host: fmt.Sprintf("%s:%d", n.HostName, result.Port), User: url.UserPassword("vpn", "vpn")}
 		links = append(links, u.String())
-		rows = append(rows, map[string]any{"hostname": n.HostName, "port": result.Port, "username": "vpn", "password": "vpn", "source_country": n.CountryCode, "result": result, "uri": u.String()})
+		rows = append(rows, map[string]any{"hostname": n.HostName, "server_ip": n.IP, "port": result.Port, "username": "vpn", "password": "vpn", "source_country": n.CountryCode, "result": result, "uri": u.String()})
 	}
 	s.mu.Unlock()
 	if len(rows) == 0 {

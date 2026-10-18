@@ -232,3 +232,41 @@ func TestSstpPrivatePPPFilesAndProcessOwnership(t *testing.T) {
 	m.releaseDiagnostic("a", a)
 	m.releaseDiagnostic("b", bLease)
 }
+
+func TestSstpOptionalSchedulerDoesNotOverlapOrRestartEarly(t *testing.T) {
+	s := sstpFixture(t)
+	s.runScheduled(time.Now())
+	if s.job != nil {
+		t.Fatal("disabled scheduler started scan")
+	}
+	s.state.Settings.IntervalMinutes = 60
+	s.state.LastStarted = time.Now().Add(-2 * time.Hour)
+	started := make(chan struct{}, 3)
+	release := make(chan struct{})
+	s.probe = func(ctx context.Context, n Node, _ SstpSettings, _ func(string)) CheckResult {
+		started <- struct{}{}
+		select {
+		case <-release:
+		case <-ctx.Done():
+		}
+		return sstpObservation(n)
+	}
+	s.runScheduled(time.Now())
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("due scheduler did not start")
+	}
+	j := s.job
+	s.runScheduled(time.Now().Add(2 * time.Hour))
+	if s.job != j {
+		t.Fatal("overlapping automatic job")
+	}
+	close(release)
+	waitConsoleCheck(t, j)
+	<-j.finished
+	s.runScheduled(time.Now())
+	if s.job != j {
+		t.Fatal("restart before interval elapsed")
+	}
+}
