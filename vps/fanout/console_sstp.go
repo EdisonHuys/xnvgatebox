@@ -32,6 +32,7 @@ type SstpManager struct {
 	c            *Console
 	state        sstpState
 	job          *CheckRun
+	lastAttempts map[string]CheckResult // Session attempts, separate from exportable observations.
 	probe        func(context.Context, Node, SstpSettings, func(string)) CheckResult
 	dependencies func() error
 }
@@ -60,6 +61,7 @@ func (c *Console) loadSstpManager() error {
 		s.state.Results = map[string]CheckResult{}
 	}
 	s.probe = s.probeNode
+	s.lastAttempts = map[string]CheckResult{}
 	s.dependencies = sstpDependencies
 	c.sstp = s
 	return nil
@@ -183,6 +185,12 @@ func (s *SstpManager) start(in CheckRequest) (*CheckRun, error) {
 			}
 			return j, nil
 		}
+		// Keep terminal attempts when a new job replaces the previous job. A
+		// deferred/cancelled attempt must not turn back into "not tested", or
+		// overwrite an earlier measured observation used by private exports.
+		for _, result := range j.Items {
+			s.lastAttempts[result.Host] = result
+		}
 		j.mu.Unlock()
 	}
 	settings := s.state.Settings
@@ -229,6 +237,9 @@ func (s *SstpManager) runItem(ctx context.Context, j *CheckRun, index int, item 
 		}
 		s.mu.Unlock()
 	}
+	s.mu.Lock()
+	s.lastAttempts[n.HostName] = r
+	s.mu.Unlock()
 	j.mu.Lock()
 	j.Items[index] = r
 	j.Done++
@@ -313,6 +324,19 @@ func (s *SstpManager) apiView(w http.ResponseWriter, r *http.Request) {
 	nodes, _ := s.c.m.Nodes()
 	s.mu.Lock()
 	settings, last := s.state.Settings, s.state.LastStarted
+	attempts := map[string]CheckResult{}
+	for host, result := range s.lastAttempts {
+		attempts[host] = result
+	}
+	var job any
+	if s.job != nil {
+		s.job.mu.Lock()
+		for _, result := range s.job.Items {
+			attempts[result.Host] = result
+		}
+		s.job.mu.Unlock()
+		job = s.job.view()
+	}
 	rows := []map[string]any{}
 	for _, n := range nodes {
 		if len(n.SSTPCandidates) == 0 {
@@ -324,11 +348,14 @@ func (s *SstpManager) apiView(w http.ResponseWriter, r *http.Request) {
 		} else {
 			result = CheckResult{Host: n.HostName, Status: "not_tested", IPType: "unknown", CFStatus: "not_tested", ObservedBy: "vps"}
 		}
-		rows = append(rows, map[string]any{"hostname": n.HostName, "server_ip": n.IP, "source_country": n.CountryCode, "candidates": n.SSTPCandidates, "result": result})
-	}
-	var job any
-	if s.job != nil {
-		job = s.job.view()
+		row := map[string]any{"hostname": n.HostName, "server_ip": n.IP, "source_country": n.CountryCode, "candidates": n.SSTPCandidates, "result": result}
+		if attempt, ok := attempts[n.HostName]; ok && attempt.ProfileSHA == sstpProfile(n) {
+			if attempt.Status == "passed" || attempt.Status == "failed" {
+				attempt = freshSstpResult(n, attempt, time.Now())
+			}
+			row["attempt"] = attempt
+		}
+		rows = append(rows, row)
 	}
 	s.mu.Unlock()
 	dependency := ""

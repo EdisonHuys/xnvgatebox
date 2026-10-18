@@ -345,6 +345,7 @@
       .badge.starting,
       .badge.running,
       .badge.queued,
+      .badge.deferred,
       .badge.stale {
         color: var(--amber);
       }
@@ -1193,6 +1194,27 @@
               VPS 出网结果；CF 仍暂停，全部标记为 CF
               待验证。来源地区不代表实际出口国家。
             </div>
+            <details class="card pad" style="margin: 20px 0">
+              <summary>原始 SSTP 怎样使用？</summary>
+              <p style="margin: 12px 0">
+                “复制”得到的是 SSTP 连接参数，不是 v2rayN 的 VLESS 订阅。 在支持
+                SSTP 的客户端中，填写导出的服务器域名、检测通过的端口，
+                用户名和密码均为 vpn。保留域名以正常验证服务器证书。
+              </p>
+              <p>
+                也可交给支持 SSTP 的 Worker 使用，但需要该 Worker
+                的配置格式和自身实测。 保存参数后直接连接不经过本
+                VPS；节点可能失效，需要重新检测。
+              </p>
+              <p style="margin-top: 12px">
+                <a
+                  href="https://www.vpngate.net/cn/howto_sstp.aspx"
+                  target="_blank"
+                  rel="noopener"
+                  >VPN Gate 官方 SSTP 连接说明 ↗</a
+                >
+              </p>
+            </details>
             <div id="sstpDependency" class="notice error" hidden></div>
             <div class="card pad" style="margin: 20px 0">
               <h2>检测与更新</h2>
@@ -1250,6 +1272,8 @@
                 <option value="">所有检测状态</option>
                 <option value="passed">VPS 实测通过</option>
                 <option value="failed">未通过</option>
+                <option value="deferred">暂缓检测</option>
+                <option value="cancelled">已取消</option>
                 <option value="not_tested">未检测</option>
                 <option value="stale">已过期</option>
               </select>
@@ -1369,14 +1393,6 @@
               <h2>xnvgatebox</h2>
               <p class="muted" style="margin: 10px 0">
                 从候选发现到独立出口和订阅，在同一个控制台完成。
-              </p>
-              <p>
-                <a
-                  href="https://github.com/hanhaoops/xnvgatebox"
-                  target="_blank"
-                  rel="noopener"
-                  >项目与更新 ↗</a
-                >
               </p>
               <details style="margin-bottom: 16px">
                 <summary>高级设置</summary>
@@ -1565,7 +1581,8 @@
         resourceData = { nodes: [] },
         resourceSelected = new Set(),
         resourceSubmitting = new Set(),
-        resourcesPolling = false,
+        resourcesPolling = null,
+        resourceEpoch = 0,
         sstpSettingsDirty = false,
         currentExit = null,
         polling = false,
@@ -2218,15 +2235,20 @@
         probe_environment_failed: "无法准备检测环境",
         cancelled: "已取消",
       };
-      async function loadResourceSstp() {
-        if (resourcesPolling) return;
-        resourcesPolling = true;
-        try {
-          resourceData = await api("api/resources/sstp");
-          if (currentPage === "resources") renderResources();
-        } finally {
-          resourcesPolling = false;
-        }
+      function loadResourceSstp(force = false) {
+        if (resourcesPolling && !force) return resourcesPolling;
+        const epoch = resourceEpoch;
+        const request = api("api/resources/sstp")
+          .then((data) => {
+            if (epoch !== resourceEpoch) return;
+            resourceData = data;
+            if (currentPage === "resources") renderResources();
+          })
+          .finally(() => {
+            if (resourcesPolling === request) resourcesPolling = null;
+          });
+        resourcesPolling = request;
+        return request;
       }
       function resourceSocksURL(e) {
         const pub = e.public_socks?.enable;
@@ -2245,11 +2267,13 @@
       }
       function resourceResult(n) {
         if (resourceSubmitting.has(n.hostname)) return { status: "submitting" };
-        const active = (resourceData.check?.items || []).find(
-          (i) =>
-            i.host === n.hostname && ["queued", "running"].includes(i.status),
-        );
-        return active || n.result || { status: "not_tested" };
+        const attempt = n.attempt;
+        // Use the server's freshness/identity checks for completed evidence.
+        if (attempt && ["passed", "failed"].includes(attempt.status)) {
+          if (attempt.checked_at && n.result?.checked_at === attempt.checked_at)
+            return n.result;
+        }
+        return attempt || n.result || { status: "not_tested" };
       }
       function resourceFiltered() {
         const q = $("sstpSearch").value.trim().toLowerCase(),
@@ -2364,13 +2388,20 @@
             .map((n) => {
               const r = resourceResult(n),
                 active = ["running", "submitting"].includes(r.status),
-                label = r.stale
-                  ? "结果已过期"
-                  : r.status === "passed"
-                    ? "VPS 实测通过"
-                    : r.status === "not_tested"
-                      ? "未检测"
-                      : labels[r.status] || r.status;
+                previousValid =
+                  ["deferred", "cancelled"].includes(r.status) &&
+                  n.result?.status === "passed" &&
+                  !n.result.stale,
+                label =
+                  r.status === "deferred"
+                    ? "暂缓检测"
+                    : r.stale
+                      ? "结果已过期"
+                      : r.status === "passed"
+                        ? "VPS 实测通过"
+                        : r.status === "not_tested"
+                          ? "未检测"
+                          : labels[r.status] || r.status;
               return (
                 '<tr><td><input type="checkbox" data-sstp-select="' +
                 esc(n.hostname) +
@@ -2399,6 +2430,7 @@
                 esc(label) +
                 '</span><small style="display:block">' +
                 esc(sstpPhases[r.phase] || sstpCodes[r.code] || "") +
+                (previousValid ? " · 上次通过结果仍有效" : "") +
                 "</small></td><td>" +
                 esc(r.latency_ms ? Math.round(r.latency_ms) + " ms" : "—") +
                 "</td><td><small>" +
@@ -2416,10 +2448,12 @@
                     ? "优先检测"
                     : "检测") +
                 "</button>" +
-                (!r.stale && r.status === "passed"
+                ((!r.stale && r.status === "passed") || previousValid
                   ? '<button data-sstp-copy="' +
                     esc(n.hostname) +
-                    '">复制</button>'
+                    '">' +
+                    (previousValid ? "复制上次通过" : "复制") +
+                    "</button>"
                   : "") +
                 "</div></td></tr>"
               );
@@ -2428,12 +2462,23 @@
           '<tr><td colspan="9">没有符合筛选条件的 SSTP 候选。</td></tr>';
       }
       async function checkSstpResources(body) {
-        const hosts = body.hosts || [];
+        const hosts = body.all
+          ? (resourceData.nodes || []).map((n) => n.hostname)
+          : body.hosts || [];
+        resourceEpoch++;
         hosts.forEach((h) => resourceSubmitting.add(h));
         renderResources();
         try {
-          await api("api/resources/sstp/check", body);
-          await loadResourceSstp();
+          const job = await api("api/resources/sstp/check", body);
+          resourceEpoch++;
+          resourceData.check = job;
+          for (const item of job.items || []) {
+            const row = (resourceData.nodes || []).find(
+              (n) => n.hostname === item.host,
+            );
+            if (row) row.attempt = item;
+          }
+          await loadResourceSstp(true);
         } finally {
           hosts.forEach((h) => resourceSubmitting.delete(h));
           renderResources();
