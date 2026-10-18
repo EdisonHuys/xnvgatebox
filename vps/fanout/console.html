@@ -924,6 +924,19 @@
             </button>
           </div>
           <div class="grid" id="overviewExits"></div>
+          <div class="card pad" style="margin-top: 20px" id="hostDirectCard">
+            <div class="row" style="justify-content: space-between">
+              <div>
+                <h2>VPS 本机直出</h2>
+                <p class="muted">
+                  使用服务器本身的网络，独立加入订阅。VPN Gate
+                  故障时不会自动切换到这里。
+                </p>
+                <small id="hostDirectStatus"></small>
+              </div>
+              <button id="hostDirectToggle">启用直出</button>
+            </div>
+          </div>
           <div class="bottomgrid">
             <div class="card pad callout">
               <div>
@@ -1008,6 +1021,10 @@
                   />所有出口（包括今后新增的出口）</label
                 >
                 <div id="subSlots"></div>
+                <label class="choice"
+                  ><input id="subDirect" type="checkbox" checked />包含 VPS
+                  本机直出（启用后生效）</label
+                >
               </div>
             </div>
             <div class="card pad qr">
@@ -1295,6 +1312,7 @@
         subscription = {},
         selected = new Set(),
         subSelected = new Set(),
+        hostDirect = [],
         currentExit = null,
         polling = false,
         settingsLoaded = false,
@@ -1572,6 +1590,17 @@
       }
       function render() {
         const s = summary;
+        const directOn = hostDirect.some((i) => i.enable);
+        $("hostDirectStatus").textContent = directOn
+          ? "已启用 · 端口 " +
+            hostDirect
+              .filter((i) => i.enable)
+              .map((i) => i.port)
+              .join(" / ") +
+            " · 刷新客户端订阅即可看到"
+          : "未启用";
+        $("hostDirectToggle").textContent = directOn ? "停用直出" : "启用直出";
+        $("hostDirectCard").hidden = s.backend !== "native";
         $("version").textContent = s.version || "开发版";
         if (
           document.activeElement !== $("checkParallelism") &&
@@ -1829,13 +1858,19 @@
       }
       function selectedSubURL() {
         if (!subscription.url) return "";
-        if ($("subAll").checked) return subscription.url;
+        const all = $("subAll").checked;
         const ids = exits
           .filter((e) => subSelected.has(e.slot))
           .map((e) => e.slot);
-        if (!ids.length) return "";
+        const direct = $("subDirect").checked;
+        if (!all && !ids.length && !direct) return "";
         const u = new URL(subscription.url, location.href);
-        u.searchParams.set("slots", ids.join(","));
+        if (!direct) u.searchParams.set("direct", "0");
+        else if (!all) u.searchParams.set("direct", "1");
+        if (!all) {
+          if (ids.length) u.searchParams.set("slots", ids.join(","));
+          else u.searchParams.set("vpn", "0");
+        }
         return u.href;
       }
       function renderSubscription() {
@@ -1856,7 +1891,10 @@
             (s, e) => s + (e.inbounds || []).filter((i) => i.enable).length,
             0,
           ) +
-          " 个启用入站";
+          " 个 VPN Gate 入站" +
+          ($("subDirect").checked && hostDirect.some((i) => i.enable)
+            ? " + VPS 本机直出"
+            : "");
         $("subSlots").innerHTML = exits
           .map(
             (e) =>
@@ -1876,17 +1914,9 @@
         const qr = $("qr");
         qr.hidden = !u;
         if (u) {
-          const path =
-            "api/console/qr" +
-            (all
-              ? ""
-              : "?slots=" +
-                encodeURIComponent(
-                  exits
-                    .filter((e) => subSelected.has(e.slot))
-                    .map((e) => e.slot)
-                    .join(","),
-                ));
+          const params = new URL(u).searchParams;
+          params.delete("token");
+          const path = "api/console/qr?" + params.toString();
           if (qr.getAttribute("src") !== path) qr.src = path;
         }
       }
@@ -1901,6 +1931,8 @@
             api("api/sub"),
           ]);
           summary = s;
+          summary.backend = e.backend;
+          hostDirect = e.host_direct || [];
           exits = (e.exits || []).sort((a, b) => a.slot - b.slot);
           nodes = n.nodes || [];
           subscription = sub;
@@ -2197,6 +2229,15 @@
           renderSubscription();
         }
       });
+      $("subDirect").onchange = renderSubscription;
+      $("hostDirectToggle").onclick = () =>
+        action(async () => {
+          await api("api/console/direct", {
+            enabled: !hostDirect.some((i) => i.enable),
+          });
+          await poll();
+          toast("本机直出设置已保存，请刷新客户端订阅");
+        }, $("hostDirectToggle"));
       $("subAll").onchange = () => {
         if (!$("subAll").checked && !subSelected.size)
           exits.forEach((e) => subSelected.add(e.slot));

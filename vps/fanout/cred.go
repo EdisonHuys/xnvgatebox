@@ -3,6 +3,9 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -81,8 +84,9 @@ func socksServerJSON(t *Tunnel) map[string]any {
 
 // socksURL 拼出客户端能直接粘贴的 socks5:// 地址。
 func socksURL(host string, port int, cred SocksCred) string {
-	if cred.User == "" {
-		return fmt.Sprintf("socks5://%s:%d", host, port)
+	u := &url.URL{Scheme: "socks5", Host: net.JoinHostPort(strings.Trim(host, "[]"), strconv.Itoa(port))}
+	if cred.User != "" {
+		u.User = url.UserPassword(cred.User, cred.Pass)
 	}
-	return fmt.Sprintf("socks5://%s:%s@%s:%d", cred.User, cred.Pass, host, port)
+	return u.String()
 }

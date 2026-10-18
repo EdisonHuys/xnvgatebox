@@ -7,14 +7,15 @@ import (
 
 // ExitInbound 是挂在某个出口上的一个受管入站。
 type ExitInbound struct {
-	BoundSlot int    `json:"bound_slot,omitempty"`
-	NameMode  string `json:"name_mode,omitempty"`
-	ID        int    `json:"id"`
-	Port      int    `json:"port"`
-	Remark    string `json:"remark"`
-	Protocol  string `json:"protocol"`
-	Enable    bool   `json:"enable"`
-	Tag       string `json:"tag"`
+	HostDirect bool   `json:"host_direct,omitempty"`
+	BoundSlot  int    `json:"bound_slot,omitempty"`
+	NameMode   string `json:"name_mode,omitempty"`
+	ID         int    `json:"id"`
+	Port       int    `json:"port"`
+	Remark     string `json:"remark"`
+	Protocol   string `json:"protocol"`
+	Enable     bool   `json:"enable"`
+	Tag        string `json:"tag"`
 }
 
 // Exit 是界面上的一行：一条隧道加上挂在它出口的所有入站。
@@ -34,14 +35,16 @@ type Exit struct {
 	LatencyMS         float64        `json:"latency_ms,omitempty"`
 	CanRollbackPolicy bool           `json:"can_rollback_policy"`
 	// SOCKS5 凭据：界面要能看、能复制、能改
-	SocksUser string        `json:"socks_user"`
-	SocksPass string        `json:"socks_pass"`
-	Inbounds  []ExitInbound `json:"inbounds"`
+	PublicSocks *SocksExposure `json:"public_socks,omitempty"`
+	SocksUser   string         `json:"socks_user"`
+	SocksPass   string         `json:"socks_pass"`
+	Inbounds    []ExitInbound  `json:"inbounds"`
 }
 
 // ExitsView 是主界面需要的全部数据。
 type ExitsView struct {
-	Exits []Exit `json:"exits"`
+	Exits      []Exit        `json:"exits"`
+	HostDirect []ExitInbound `json:"host_direct"`
 	// Direct 是没绑到任何出口的入站，仍然要能看见，否则用户会以为它们不见了
 	Direct []ExitInbound `json:"direct"`
 	Panel  string        `json:"panel"` // 面板不可用时的原因，空表示正常
@@ -130,6 +133,14 @@ func (m *Manager) ExitsOf() ExitsView {
 		})
 	}
 
+	if p, err := openPanel(); err == nil {
+		if n, ok := p.(*Native); ok {
+			exposures := n.socksExposures()
+			for i := range view.Exits {
+				view.Exits[i].PublicSocks = exposures[view.Exits[i].Slot]
+			}
+		}
+	}
 	list, err := cachedInbounds(live)
 	if err != nil {
 		view.Panel = err.Error()
@@ -139,7 +150,11 @@ func (m *Manager) ExitsOf() ExitsView {
 	for _, ib := range list {
 		row := ExitInbound{
 			ID: ib.ID, Port: ib.Port, Remark: ib.Remark,
-			Protocol: ib.Protocol, Enable: ib.Enable, Tag: ib.Tag, BoundSlot: ib.BoundSlot, NameMode: ib.NameMode,
+			Protocol: ib.Protocol, Enable: ib.Enable, Tag: ib.Tag, BoundSlot: ib.BoundSlot, NameMode: ib.NameMode, HostDirect: ib.HostDirect,
+		}
+		if ib.HostDirect {
+			view.HostDirect = append(view.HostDirect, row)
+			continue
 		}
 		if ib.BoundSlot > 0 {
 			if i, ok := bySlot[ib.BoundSlot]; ok {

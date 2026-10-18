@@ -291,6 +291,8 @@ func (c *Console) routes(mux *http.ServeMux) {
 		}
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
+	mux.HandleFunc("/api/console/direct", c.apiHostDirect)
+	mux.HandleFunc("/api/console/socks", c.apiPublicSocks)
 	mux.HandleFunc("/api/console/refresh", c.apiPoolRefresh)
 	mux.HandleFunc("/api/console/check/settings", c.apiCheckSettings)
 	mux.HandleFunc("/api/console/check", c.apiCheck)
@@ -312,6 +314,15 @@ func (c *Console) routes(mux *http.ServeMux) {
 		link := subFullURL(r, tok)
 		if slots := r.URL.Query().Get("slots"); slots != "" {
 			link += "&slots=" + slots
+		}
+		for _, key := range []string{"direct", "vpn"} {
+			if v := r.URL.Query().Get(key); v != "" {
+				if v != "0" && v != "1" {
+					http.Error(w, "订阅范围无效", 400)
+					return
+				}
+				link += "&" + key + "=" + v
+			}
 		}
 		png, err := qrcode.Encode(link, qrcode.Medium, 256)
 		if err != nil {

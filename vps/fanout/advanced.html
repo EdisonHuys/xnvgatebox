@@ -935,6 +935,11 @@
           </button>
         </div>
         <div class="body">
+          <label class="chk"
+            ><input id="crpublic" type="checkbox" />允许其他电脑或 Worker 通过
+            SOCKS5 接入</label
+          >
+          <div class="hint" id="crscope"></div>
           <div class="share" id="crurl"></div>
           <div class="credrow">
             <label class="ef"
@@ -954,7 +959,8 @@
             </button>
           </div>
           <div class="hint">
-            改完立即生效，已连上的会话不断；用旧凭据的客户端要改配置。
+            SOCKS5
+            无需域名证书，连接本身不加密。外部接入使用独立端口和本出口的账号口令；出口故障时阻断，不回落服务器直出。修改凭据或接入设置可能短暂中断连接。
           </div>
         </div>
         <div class="foot">
@@ -1324,6 +1330,30 @@
               .join("")
           : '<div class="empty">还没有出口，先在控制台设置数量。<br><a href="./#exits">前往出口管理 →</a></div>';
       }
+      function renderHostDirect() {
+        let box = $("#hostConnections");
+        if (!box) {
+          box = document.createElement("div");
+          box.id = "hostConnections";
+          $("#orphans").before(box);
+        }
+        box.innerHTML = (view.host_direct || [])
+          .map(
+            (i) =>
+              '<article class="slot"><h3>VPS 本机直出</h3><p class="hint">独立使用服务器网络，' +
+              (i.enable ? "已启用" : "已停用") +
+              '。VPN Gate 故障时不会自动切换。</p><div class="connection"><div class="connection-main"><strong>' +
+              esc(i.remark) +
+              "</strong><small>" +
+              esc(i.protocol.toUpperCase()) +
+              " · 端口 " +
+              i.port +
+              '</small></div><button data-detail="' +
+              i.id +
+              '">配置 →</button></div></article>',
+          )
+          .join("");
+      }
       function renderOrphans() {
         const box = $("#orphans");
         const list = view.direct || [];
@@ -1397,6 +1427,7 @@
           $("#exportAll").hidden = isXCL();
           $("#rollbackNative").hidden = !isNative();
           renderExits();
+          renderHostDirect();
           renderOrphans();
         } catch (e) {
           $("#loadError").textContent = "读取失败：" + e.message;
@@ -1645,11 +1676,13 @@
         const editable = !isXCL();
         $("#dbody").innerHTML =
           '<dl class="kv">' +
-          '<dt>出口</dt><dd><select id="dbind" data-tag="' +
-          esc(d.tag) +
-          '">' +
-          exitOptions(owner ? owner.host : "") +
-          "</select></dd>" +
+          (d.host_direct
+            ? "<dt>出口</dt><dd>VPS 本机直出（独立入口）</dd>"
+            : '<dt>出口</dt><dd><select id="dbind" data-tag="' +
+              esc(d.tag) +
+              '">' +
+              exitOptions(owner ? owner.host : "") +
+              "</select></dd>") +
           "<dt>协议</dt><dd>" +
           esc(d.protocol) +
           "　" +
@@ -1719,7 +1752,7 @@
         }
       });
 
-      // 出口下拉改动即生效。绑定按 inboundTag 走，host 传空表示解绑回直连。
+      // 出口下拉改动即生效；内置模式 host 传空只解绑并阻断。
       document.addEventListener("change", async (e) => {
         const sel = e.target.closest("#dbind");
         if (!sel) return;
@@ -1875,12 +1908,20 @@
 
       function socksURL(host, port, user, pass) {
         if (!user) return "socks5://" + host + ":" + port;
-        return "socks5://" + user + ":" + pass + "@" + host + ":" + port;
+        return (
+          "socks5://" +
+          encodeURIComponent(user) +
+          ":" +
+          encodeURIComponent(pass) +
+          "@" +
+          host +
+          ":" +
+          port
+        );
       }
 
-      // SOCKS5 端口监听在母机（跑 VPN Gate Box 的这台服务器）上，客户端要连的是母机的
-      // 公网 IPv4，流量再从出口 IP 出去。出口 IP 是"出去以后"的地址，不能当连接地址。
-      // public_ip 是后端探测到的母机公网地址；探测不到才退回访问面板用的主机名。
+      // Only the explicitly enabled external listener uses this public address.
+      // The internal Slot port always stays on loopback.
       function credHost(e) {
         return view.public_ip || location.hostname || e.host;
       }
@@ -1891,7 +1932,14 @@
           toast("这个出口不在了", true);
           return;
         }
-        curCred = { slot: slot, port: e.port, host: credHost(e) };
+        curCred = {
+          slot: slot,
+          port: e.port,
+          host: credHost(e),
+          public: e.public_socks,
+          label: exitName(e),
+        };
+        $("#crpublic").checked = !!e.public_socks?.enable;
         $("#crtitle").textContent = exitName(e) + " · :" + e.port;
         $("#cruser").value = e.socks_user || "";
         $("#crpass").value = e.socks_pass || "";
@@ -1901,13 +1949,25 @@
 
       function refreshCredURL() {
         if (!curCred) return;
+        const pub = $("#crpublic").checked && curCred.public?.enable;
+        $("#crtitle").textContent =
+          curCred.label +
+          " · :" +
+          (pub ? curCred.public.port : curCred.port) +
+          (pub ? " · 外部接入" : " · 仅本机");
+        $("#crscope").textContent = pub
+          ? "外部接入已启用。复制此地址到其他电脑或私有 Worker 配置；服务器防火墙须允许该端口。"
+          : $("#crpublic").checked
+            ? "保存后分配外部端口；当前地址仅供服务器本机使用。"
+            : "仅服务器本机可用。开启外部接入并保存后可复制公网地址。";
         $("#crurl").textContent = socksURL(
-          curCred.host,
-          curCred.port,
+          pub ? curCred.host : "127.0.0.1",
+          pub ? curCred.public.port : curCred.port,
           $("#cruser").value.trim(),
           $("#crpass").value.trim(),
         );
       }
+      $("#crpublic").onchange = refreshCredURL;
       $("#cruser").oninput = refreshCredURL;
       $("#crpass").oninput = refreshCredURL;
 
@@ -1940,6 +2000,18 @@
           const r = await api("/api/cred?" + q, { method: "POST" });
           $("#cruser").value = r.user;
           $("#crpass").value = r.pass;
+          await api("/api/console/socks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              slot: curCred.slot,
+              enabled: $("#crpublic").checked,
+            }),
+          });
+          view = await api("/api/exits");
+          curCred.public = view.exits.find(
+            (x) => x.slot === curCred.slot,
+          )?.public_socks;
           refreshCredURL();
           toast("已保存，立即生效");
           poll();
@@ -1954,9 +2026,10 @@
         window.location.href = "api/export/xray";
       };
       $("#exportAll").onclick = async () => {
-        const ids = view.exits.flatMap((x) =>
-          (x.inbounds || []).map((i) => i.id),
-        );
+        const ids = [
+          ...view.exits.flatMap((x) => (x.inbounds || []).map((i) => i.id)),
+          ...(view.host_direct || []).filter((i) => i.enable).map((i) => i.id),
+        ];
         if (!ids.length) {
           toast("还没有节点可导出", true);
           return;

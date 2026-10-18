@@ -70,15 +70,33 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 		}
 	}
 
+	bySlot := map[int]*Tunnel{}
+	for _, t := range tunnels {
+		bySlot[t.Slot] = t
+	}
 	ins := make([]any, 0, len(inbounds))
 	for _, ib := range inbounds {
 		if !ib.Enable {
 			continue
 		}
+		if ib.SocksSlot > 0 {
+			copy := *ib
+			if t := bySlot[ib.SocksSlot]; t != nil {
+				c := t.credential()
+				copy.Clients = []nativeClient{{Email: c.User, Password: c.Pass, Enable: true}}
+			}
+			ib = &copy
+		}
 		ins = append(ins, nativeInboundJSON(ib))
 	}
 
 	outs := slotOutbounds(tunnels)
+	for _, ib := range inbounds {
+		if ib.Enable && ib.HostDirect && ib.BoundSlot == 0 && ib.BoundTo == "" && ib.SocksSlot == 0 {
+			outs = append(outs, map[string]any{"tag": "host-direct", "protocol": "freedom"})
+			break
+		}
+	}
 
 	rules := []any{}
 	for _, ib := range inbounds {
@@ -91,6 +109,9 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 			if slots[ib.BoundSlot] {
 				tag = slotOutboundTag(ib.BoundSlot)
 			}
+		}
+		if ib.HostDirect && ib.BoundSlot == 0 && ib.BoundTo == "" && ib.SocksSlot == 0 {
+			tag = "host-direct"
 		}
 		if tag == "" {
 			tag = "block"
@@ -131,6 +152,15 @@ func nativeInboundJSON(ib *nativeInbound) map[string]any {
 		}
 	}
 	settings["clients"] = clients
+	if ib.Protocol == "socks" {
+		accounts := []any{}
+		for _, c := range ib.Clients {
+			if c.Enable {
+				accounts = append(accounts, map[string]any{"user": c.Email, "pass": c.Password})
+			}
+		}
+		settings = map[string]any{"auth": "password", "accounts": accounts, "udp": false}
+	}
 	if ib.Protocol == "vless" {
 		settings["decryption"] = "none"
 	}

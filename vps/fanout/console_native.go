@@ -59,7 +59,7 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 		v := t.snapshot()
 		found := false
 		for _, ib := range n.store.Inbounds {
-			if ib.BoundSlot == v.Slot {
+			if ib.SocksSlot == 0 && ib.BoundSlot == v.Slot {
 				found = true
 				break
 			}

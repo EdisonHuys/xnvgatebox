@@ -80,6 +80,9 @@ func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 	list := n.store.sorted()
 	out := make([]Inbound, 0, len(list))
 	for _, ib := range list {
+		if ib.SocksSlot > 0 {
+			continue
+		}
 		boundUp := live[ib.BoundTo]
 		if ib.BoundSlot > 0 {
 			boundUp = live[slotOutboundTag(ib.BoundSlot)]
@@ -87,7 +90,7 @@ func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 		out = append(out, Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			BoundTo: ib.BoundTo, BoundUp: boundUp, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
+			HostDirect: ib.HostDirect, BoundTo: ib.BoundTo, BoundUp: boundUp, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		})
 	}
 	return out, nil
@@ -108,7 +111,7 @@ func (n *Native) InboundDetail(id int, publicHost string) (*InboundDetail, error
 		Inbound: Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			BoundTo: ib.BoundTo, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
+			HostDirect: ib.HostDirect, BoundTo: ib.BoundTo, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		},
 		Listen:  "0.0.0.0",
 		Network: ib.netOrTCP(),
@@ -135,7 +138,7 @@ func (n *Native) InboundLinks(ids []int, publicHost string) ([]string, error) {
 	var out []string
 	for _, id := range ids {
 		ib := n.store.byID(id)
-		if ib == nil {
+		if ib == nil || ib.SocksSlot > 0 {
 			continue
 		}
 		for _, c := range ib.Clients {
@@ -181,6 +184,9 @@ func (n *Native) Bind(inboundTag string, hostname string, tunnels []*Tunnel) err
 		return fmt.Errorf("入站 %s 不存在", inboundTag)
 	}
 
+	if found.HostDirect || found.SocksSlot > 0 {
+		return fmt.Errorf("此入口由本机直出或 SOCKS 访问设置管理")
+	}
 	if target == nil {
 		found.BoundTo = ""
 		found.BoundSlot = 0
