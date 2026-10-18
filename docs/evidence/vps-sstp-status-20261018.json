@@ -1,0 +1,129 @@
+{
+  "recorded_at": "2026-10-18T09:22:35.075809+00:00",
+  "release": {
+    "tag": "v0.5.1",
+    "source_commit": "64efc1765b881be18d52a15cd49ac65fe7bf6320",
+    "package_sha256": "b0e88d455d2b80b155a0488d5ee1550275ec90eb6960c37ea836315c61cdb08b",
+    "build_run": 39114674761,
+    "publish_run": 39114753937,
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.1"
+  },
+  "observed_before": {
+    "version": "v0.5.0",
+    "job_status": "done",
+    "job_items": 1,
+    "latest_attempt_counts": {
+      "deferred:candidate_in_use": 1
+    },
+    "displayed_not_tested_despite_terminal_attempt": 1,
+    "saved_parallelism": 16
+  },
+  "linux_tests": {
+    "passed": true,
+    "top_level_pass": 248,
+    "all_pass_events": 311,
+    "skips": 3
+  },
+  "javascript_regressions": {
+    "status": "passed",
+    "file": "tests/test_console_sstp.mjs",
+    "covers": [
+      "terminal/deferred/cancelled status",
+      "expired measured evidence",
+      "late GET after POST cannot erase state",
+      "batch submission feedback",
+      "accepted job survives refresh failure"
+    ]
+  },
+  "browser_demo": {
+    "actual_click_shows_deferred_reason": true,
+    "passed_row_retained": true,
+    "duplicate_project_link_count": 0,
+    "online_update_heading_count": 1
+  },
+  "online_update": {
+    "status": "passed",
+    "checks": {
+      "api_accepted_202": true,
+      "worker_has_independent_systemd_cgroup": true,
+      "manager_process_replaced": true,
+      "installed_version_is_formal": true,
+      "status_completed": true,
+      "complete_backup_reported": true,
+      "same_version_has_no_update": true,
+      "same_version_apply_does_not_restart": true,
+      "no_pending_recovery": true,
+      "login_required_api/update/status": true,
+      "login_required_api/update/apply": true,
+      "clean_source_release_build": true
+    },
+    "phases_observed": [
+      "preparing",
+      "downloading",
+      "verifying",
+      "pool",
+      "stopping",
+      "complete"
+    ],
+    "build": {
+      "git_head": "64efc1765b881be18d52a15cd49ac65fe7bf6320",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "ab3a657aa16e1b38f6a89c2f68e238b2cfeae57381910046c414f776af2574a6",
+      "version": "v0.5.1",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "preservation": {
+    "version": "v0.5.1",
+    "status": "passed",
+    "checks": {
+      "management_subscription_target_parallelism_preserved": true,
+      "all_inbound_ports_credentials_and_bindings_preserved": true,
+      "all_slots_ports_credentials_policies_intent_preserved": true,
+      "sstp_settings_and_observations_preserved": true,
+      "xui_original_process_and_config_preserved": true,
+      "native_backend_without_error": true,
+      "saved_target_and_parallelism": true,
+      "update_card_served": true,
+      "clean_source": true
+    },
+    "ready_snapshot": 0
+  },
+  "real_occupied_candidates": {
+    "status": "passed",
+    "checks": {
+      "occupied_candidate_1_shows_deferred_with_reason": true,
+      "occupied_candidate_2_shows_deferred_with_reason": true,
+      "previous_attempt_survives_next_job": true,
+      "measured_observations_not_overwritten": true,
+      "duplicate_project_link_removed": true,
+      "online_update_retained": true,
+      "direct_usage_help_present": true,
+      "formal_patch_version_active": true
+    }
+  },
+  "backup": {
+    "consistent_project_backup_retained": true,
+    "sha256": "004b47ee29925749ce9ec5cadef45209849fe598312ed4e17db235dafc4ff676",
+    "downloaded_to_mac_and_checksum_verified": true
+  },
+  "reference_sources": {
+    "gate_main": "4ff9b273cba0c02fb413444f1a515f2dd0e75cb5",
+    "gate_successful_run": 37086455758,
+    "gate_successful_run_commit": "19438b2b66f1360b75f96263b7c727133dbab431",
+    "successful_run_and_current_main_generate_different_files": true,
+    "cf_vpngate_main": "a53b8c1d11aff978d623d493df8479b5e9f3f923",
+    "cf_vpngate_published_file_protocol_verified": "vless/tls/ws with SSTP in path",
+    "reference_workflows_dispatched": false
+  },
+  "boundaries": {
+    "cf_paused_no_deployment_or_write": true,
+    "xui_original_process_and_running_config_preserved": true,
+    "unknown_not_residential": true,
+    "user_settings_ports_and_credentials_preserved": true,
+    "windows_GUI_or_external_worker_end_to_end_tested": false,
+    "fresh_OS_acceptance": "pending user reinstall",
+    "transient_attempt_history_is_session_only": "measured observations remain persisted and separately filtered for export"
+  }
+}
