@@ -200,6 +200,7 @@ func TestConsoleManualPriorityJoinsBatchAndDeduplicates(t *testing.T) {
 
 func TestConsoleFullSourceAndTargetBeyond32(t *testing.T) {
 	c := consoleFixture(t)
+	t.Cleanup(c.shutdown)
 	for i := 0; i < 321; i++ {
 		c.m.nodes = append(c.m.nodes, Node{HostName: fmt.Sprint(i)})
 	}
@@ -228,8 +229,14 @@ func TestConsoleFullSourceAndTargetBeyond32(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitConsoleCheck(t, j)
-	<-j.finished
+	// This case durably writes 321 observations. Race instrumentation and
+	// shared CI disks can exceed the small-job helper's 3-second deadline.
+	select {
+	case <-j.finished:
+	case <-time.After(30 * time.Second):
+		t.Fatal("full source check did not finish durable writes")
+	}
+
 	if j.Total != 321 || j.Done != 321 {
 		t.Fatal("batch truncated")
 	}
