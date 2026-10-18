@@ -31,6 +31,15 @@ v2rayN 的本项目订阅使用 VLESS；不能把上述 `sstp://...` 文本当�
 | `hezhanleiok/gate`，提交 `4ff9b273cba0c02fb413444f1a515f2dd0e75cb5` | `check.yml` 调用 `vpngate.py`，输出 `public/data.json`、`public/index.html`、`public/nodes.txt`，再将整个 public 发布到 Pages | nodes.txt 每行类似 `CF入口:443#节点名称$sstp://vpn:vpn@服务器域名:端口`，用于懂这种格式的 Worker/订阅生成器；不是单独的标准 VLESS 链接 |
 | `xibabro/CF-vpngate`，提交 `a53b8c1d11aff978d623d493df8479b5e9f3f923` | 维护 CSV，检测后输出 `vpngate-v2ray.txt`（每行 VLESS）、`vpngate-clash.yaml`，另有 XHTTP 文件，并提交回仓库 | VLESS 使用 TLS/WebSocket，路径内包含 URL 编码的 `/fdip=sstp://vpn:vpn@域名:端口?ed=2560`，仍需其配套 Worker 的域名、入口及认证配置 |
 
+另外核对了 `gate` 最后一次成功 [Actions 运行 37086455758](https://github.com/hezhanleiok/gate/actions/runs/37086455758)，其源码为 `19438b2b66f1360b75f96263b7c727133dbab431`，与上述当前 main 不同。[该运行所用的生成器](https://github.com/hezhanleiok/gate/blob/19438b2b66f1360b75f96263b7c727133dbab431/vpngate.py) 写出：
+
+- `data.json` / `index.html`：结果数据及展示页面。
+- `chains.txt`：`名称$sstp://vpn:vpn@域名:端口`，供配套 Worker 的链式指令读取。
+- `hosts.txt`：`CF入口:443#名称$sstp://vpn:vpn@域名:端口`，供自定义入口列表读取。
+- `sub.txt`：完整 `vless://...` 行，TLS/WebSocket 的 `/video/...` 路径中携带按该 Worker UUID 编码的 SSTP 配置。需要匹配的 Worker 域名、UUID 和解码实现。
+
+因此“Actions 的输出”需绑定运行所用提交，不能只用当前主分支模板替代历史成功运行的格式。这里核实了成功运行对应的生成代码，没有将其工作流重新执行或其公开 Worker 实测当作本项目验收。
+
 固定来源：[gate 产物生成](https://github.com/hezhanleiok/gate/blob/4ff9b273cba0c02fb413444f1a515f2dd0e75cb5/vpngate.py)、[gate 工作流](https://github.com/hezhanleiok/gate/blob/4ff9b273cba0c02fb413444f1a515f2dd0e75cb5/.github/workflows/check.yml)、[CF-vpngate 工作流](https://github.com/xibabro/CF-vpngate/blob/a53b8c1d11aff978d623d493df8479b5e9f3f923/.github/workflows/sync.yml)、[CF-vpngate 链接生成](https://github.com/xibabro/CF-vpngate/blob/a53b8c1d11aff978d623d493df8479b5e9f3f923/vpngate-daily.py)。
 
 核对时公开 `vpngate-v2ray.txt` 确为逐行 VLESS，首条的传输为 WebSocket、TLS，路径嵌入 SSTP。文件数量、上次成功运行和生成链接都不证明全部节点当前仍可用。Gate 的类型命名规则也不作为本项目的住宅证据；unknown 仍是 unknown。
