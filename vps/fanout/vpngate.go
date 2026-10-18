@@ -38,7 +38,13 @@ func mirrorAccessKey() string {
 }
 
 // Node 是一个 VPN Gate 节点。
+type SstpEndpoint struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
 type Node struct {
+	SSTPCandidates    []SstpEndpoint `json:"sstp_candidates,omitempty"`
 	PoolNodeID        string         `json:"pool_node_id,omitempty"`
 	HostName          string         `json:"hostname"`
 	IP                string         `json:"ip"`

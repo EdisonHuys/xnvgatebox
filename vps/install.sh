@@ -14,7 +14,7 @@ done
 command -v systemctl >/dev/null || { echo '需要 systemd'; exit 1; }
 command -v apt-get >/dev/null || { echo '当前安装入口支持 Debian / Ubuntu'; exit 1; }
 DEBIAN_FRONTEND=noninteractive apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl python3 openvpn iproute2 iptables
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl python3 openvpn iproute2 iptables sstp-client ppp util-linux
 task_tmp=$(mktemp -d)
 trap 'rm -rf "$task_tmp"' EXIT
 if [[ -z $package ]]; then

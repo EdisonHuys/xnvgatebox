@@ -128,6 +128,7 @@ func main() {
 	startConfiguredSlot(mgr)
 
 	go console.watch()
+	go console.sstp.watch()
 
 	go mgr.WatchHealth()
 	go mgr.WatchNodePool()

@@ -1429,6 +1429,15 @@
           renderExits();
           renderHostDirect();
           renderOrphans();
+          if (!window.resourceSlotOpened) {
+            const requested = Number(
+              new URLSearchParams(location.search).get("slot"),
+            );
+            if (requested && view.exits.some((e) => e.slot === requested)) {
+              window.resourceSlotOpened = true;
+              openCred(requested);
+            }
+          }
         } catch (e) {
           $("#loadError").textContent = "读取失败：" + e.message;
           $("#loadError").hidden = false;

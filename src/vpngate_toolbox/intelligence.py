@@ -71,19 +71,25 @@ def profile_openvpn_exit(ip: str, settings: dict, cache_path: Path, transport=ge
     This command does not verify the tunnel. The manager must independently
     establish the baseline and check its fixed SOCKS port before publishing it.
     """
+    return profile_measured_exit(ip, settings, cache_path, "openvpn", transport)
+
+
+def profile_measured_exit(ip: str, settings: dict, cache_path: Path, protocol_name: str, transport=get_json) -> dict:
+    if protocol_name not in ("openvpn", "sstp"):
+        raise ToolError("unsupported_profile_protocol")
     ip = public_ipv4(ip)
     protocol = {"status": "passed", "expected_exit_ip": ip}
     try:
-        stats = enrich([{"protocols": {"openvpn": protocol}}], settings, cache_path,
-                       transport, protocol_name="openvpn")
+        stats = enrich([{"protocols": {protocol_name: protocol}}], settings, cache_path,
+                       transport, protocol_name=protocol_name)
     except ToolError as exc:
         stats = {"enabled": True}
         protocol["intelligence_error"] = str(exc)
     if "egress" in protocol:
-        return {**protocol["egress"], "protocol": "openvpn", "intelligence_status": "passed"}
+        return {**protocol["egress"], "protocol": protocol_name, "intelligence_status": "passed"}
     error = protocol.get("intelligence_error", "intelligence_not_configured" if not stats["enabled"]
                          else "intelligence_unavailable")
-    return {"ip": ip, "protocol": "openvpn", "country": None, "asn": None, "isp": None,
+    return {"ip": ip, "protocol": protocol_name, "country": None, "asn": None, "isp": None,
             "ip_type": "unknown", "hosting": None, "mobile": None, "residential": None,
             "proxy": None, "vpn": None, "abuse": None, "confidence": "unknown",
             "reason": error, "intelligence_error": error,

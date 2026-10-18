@@ -838,6 +838,39 @@
           padding: 20px;
         }
       }
+      .resourcefilters {
+        display: flex;
+        align-items: end;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin: 16px 0;
+      }
+      .resourcefilters label {
+        flex: 1;
+        min-width: 180px;
+      }
+      .resourcefilters label input {
+        width: 100%;
+      }
+      .resourcefilters > input {
+        flex: 2;
+        min-width: 200px;
+      }
+      .resourcefilters > select {
+        flex: 1;
+        min-width: 160px;
+      }
+      #resources .tablewrap {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--card);
+      }
+      #resourceCredentials {
+        padding: 28px;
+      }
+      #resources small {
+        color: var(--muted);
+      }
     </style>
   </head>
   <body>
@@ -874,6 +907,13 @@
           title="候选节点"
         >
           <span>◎</span><span class="navtext">候选节点</span></button
+        ><button
+          class="nav"
+          data-page="resources"
+          aria-label="代理资源"
+          title="代理资源"
+        >
+          <span>◈</span><span class="navtext">代理资源</span></button
         ><button
           class="nav"
           data-page="settings"
@@ -1106,6 +1146,149 @@
             </table>
           </div>
         </section>
+        <section class="page" id="resources">
+          <div class="pagehead">
+            <div>
+              <div class="eyebrow">PROXY RESOURCES</div>
+              <h1>代理资源</h1>
+              <p>管理服务器代理与原始连接，各自有明确的用途。</p>
+            </div>
+            <button data-action="refresh">↻ 刷新来源</button>
+          </div>
+          <div class="actions" style="margin-bottom: 20px">
+            <button id="resourceSocksTab" class="primary">VPS SOCKS5</button
+            ><button id="resourceSstpTab">原始 SSTP</button>
+          </div>
+          <div id="resourceSocksPane">
+            <div class="notice">
+              这些 SOCKS5 入口由 VPS 转换并持续提供服务。复制到其他设备时，VPS
+              和对应出口都需要在线。
+            </div>
+            <div class="sectionhead">
+              <h2>VPS SOCKS5</h2>
+              <div class="actions">
+                <button id="resourceExportSocks">导出已启用且就绪的连接</button
+                ><a href="advanced">接入管理 →</a>
+              </div>
+            </div>
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>出口</th>
+                    <th>实际 IP</th>
+                    <th>内部端口</th>
+                    <th>外部端口</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="resourceSocksRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="resourceSstpPane" hidden>
+            <div class="notice">
+              原始 SSTP 直接连接 VPN Gate，不是 VPS 的 SOCKS5 端口。这里验证的是
+              VPS 出网结果；CF 仍暂停，全部标记为 CF
+              待验证。来源地区不代表实际出口国家。
+            </div>
+            <div id="sstpDependency" class="notice error" hidden></div>
+            <div class="card pad" style="margin: 20px 0">
+              <h2>检测与更新</h2>
+              <div class="resourcefilters" style="margin: 16px 0">
+                <label
+                  >检测并发<input
+                    id="sstpParallelism"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="2"
+                /></label>
+                <label
+                  >自动检测间隔（分钟，0 关闭）<input
+                    id="sstpInterval"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value="0"
+                /></label>
+                <label
+                  >结果有效期（分钟）<input
+                    id="sstpValid"
+                    type="number"
+                    min="1"
+                    max="10080"
+                    step="1"
+                    value="60"
+                /></label>
+                <label
+                  >单节点超时（秒）<input
+                    id="sstpTimeout"
+                    type="number"
+                    min="10"
+                    max="3600"
+                    step="1"
+                    value="90"
+                /></label>
+                <button id="sstpSaveSettings">保存设置</button>
+              </div>
+              <small
+                >自动检测与手动任务共用本页的并发额度。运行中修改并发用于下一轮；SSTP
+                不占用现有出口数量。刷新来源沿用现有候选池更新。</small
+              >
+            </div>
+            <div class="resourcefilters">
+              <input
+                id="sstpSearch"
+                type="search"
+                placeholder="搜索节点或 IP"
+                aria-label="搜索 SSTP"
+              /><select id="sstpCountry" aria-label="SSTP 来源国家">
+                <option value="">所有来源国家</option></select
+              ><select id="sstpStatus" aria-label="SSTP 结果">
+                <option value="">所有检测状态</option>
+                <option value="passed">VPS 实测通过</option>
+                <option value="failed">未通过</option>
+                <option value="not_tested">未检测</option>
+                <option value="stale">已过期</option>
+              </select>
+            </div>
+            <div class="actions" style="margin: 16px 0">
+              <button id="sstpCheckSelected">检测勾选</button
+              ><button id="sstpCheckAll">检测全部 SSTP 候选</button
+              ><button id="sstpCancel">取消检测</button
+              ><button id="sstpExportAll">导出全部有效 JSON</button
+              ><button id="sstpExportSelected">导出勾选 JSON</button
+              ><button id="sstpCopySelected">复制勾选 SSTP</button>
+            </div>
+            <div id="sstpProgress" class="notice">正在读取 SSTP 候选…</div>
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>
+                      <input
+                        id="sstpSelectVisible"
+                        type="checkbox"
+                        aria-label="勾选当前筛选的 SSTP"
+                      />
+                    </th>
+                    <th>来源节点</th>
+                    <th>来源地区</th>
+                    <th>候选端口</th>
+                    <th>实际出口</th>
+                    <th>VPS 检测</th>
+                    <th>HTTPS 延迟</th>
+                    <th>检测 / 到期</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="sstpRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
         <section class="page" id="settings">
           <div class="pagehead">
             <div>
@@ -1290,6 +1473,37 @@
       <h3 style="margin: 25px 0 10px">订阅显示名称</h3>
       <div id="nameEdits"></div>
     </dialog>
+    <dialog id="resourceCredentials">
+      <div class="dialoghead">
+        <h2 id="resourceCredentialTitle">SOCKS5 访问凭据</h2>
+        <button
+          type="button"
+          id="resourceCredClose"
+          aria-label="关闭 SOCKS 凭据"
+        >
+          ×
+        </button>
+      </div>
+      <p id="resourceCredentialScope"></p>
+      <label
+        >连接地址<textarea
+          id="resourceCredentialURL"
+          rows="3"
+          readonly
+        ></textarea>
+      </label>
+      <div class="resourcefilters">
+        <label>用户名<input id="resourceCredentialUser" readonly /></label
+        ><label>口令<input id="resourceCredentialPass" readonly /></label>
+      </div>
+      <p class="muted">
+        SOCKS5 无需域名证书，连接自身不加密。请通过私有方式分享。
+      </p>
+      <div class="dialogfoot">
+        <button id="resourceCredCopy">复制地址</button
+        ><a id="resourceCredAdvanced" href="advanced">修改凭据与接入设置 →</a>
+      </div>
+    </dialog>
     <div class="toast" id="toast" role="status" hidden></div>
     <script>
       "use strict";
@@ -1313,6 +1527,13 @@
         selected = new Set(),
         subSelected = new Set(),
         hostDirect = [],
+        resourcePublicIP = "",
+        resourceTab = "socks",
+        resourceData = { nodes: [] },
+        resourceSelected = new Set(),
+        resourceSubmitting = new Set(),
+        resourcesPolling = false,
+        sstpSettingsDirty = false,
         currentExit = null,
         polling = false,
         settingsLoaded = false,
@@ -1498,6 +1719,7 @@
             "subscription",
             "candidates",
             "settings",
+            "resources",
           ].includes(page)
         )
           page = "overview";
@@ -1514,6 +1736,10 @@
           history.replaceState(null, "", "#" + page);
         if (page === "settings" && !settingsLoaded) action(loadSettings);
         if (page === "subscription") renderSubscription();
+        if (page === "resources") {
+          renderResources();
+          action(loadResourceSstp);
+        }
       }
       function exitCards(list) {
         return list.length
@@ -1590,6 +1816,10 @@
       }
       function render() {
         const s = summary;
+        if (currentPage === "resources") {
+          renderResources();
+          loadResourceSstp().catch((e) => toast(e.message));
+        }
         const directOn = hostDirect.some((i) => i.enable);
         $("hostDirectStatus").textContent = directOn
           ? "已启用 · 端口 " +
@@ -1920,6 +2150,419 @@
           if (qr.getAttribute("src") !== path) qr.src = path;
         }
       }
+      const sstpPhases = {
+        sstp_tls: "验证 SSTP 证书",
+        setup: "准备隔离连接",
+        sstp_connecting: "建立 SSTP / PPP",
+        verify_exit: "核验实际出网",
+        profile: "查询出口信息",
+        cleanup: "清理临时连接",
+      };
+      const sstpCodes = {
+        sstp_certificate_rejected: "服务器证书未通过验证",
+        sstp_unreachable: "SSTP 入口不可达",
+        sstp_handshake_failed: "SSTP / PPP 协商失败",
+        sstp_https_failed: "HTTPS 出网失败",
+        sstp_content_failed: "HTTPS 内容验证失败",
+        exit_ip_mismatch: "出口不符合验证要求",
+        candidate_in_use: "节点正在用于正式出口或其他检测",
+        exit_recovery_priority: "已让位于出口恢复",
+        check_timeout: "检测超时",
+        invalid_sstp_candidate: "候选地址无效",
+        sstp_cleanup_failed: "临时资源清理失败",
+        result_save_failed: "结果保存失败",
+        probe_environment_failed: "无法准备检测环境",
+        cancelled: "已取消",
+      };
+      async function loadResourceSstp() {
+        if (resourcesPolling) return;
+        resourcesPolling = true;
+        try {
+          resourceData = await api("api/resources/sstp");
+          if (currentPage === "resources") renderResources();
+        } finally {
+          resourcesPolling = false;
+        }
+      }
+      function resourceSocksURL(e) {
+        const pub = e.public_socks?.enable;
+        const host = pub ? resourcePublicIP : "127.0.0.1",
+          port = pub ? e.public_socks.port : e.port;
+        return (
+          "socks5://" +
+          encodeURIComponent(e.socks_user) +
+          ":" +
+          encodeURIComponent(e.socks_pass) +
+          "@" +
+          host +
+          ":" +
+          port
+        );
+      }
+      function resourceResult(n) {
+        if (resourceSubmitting.has(n.hostname)) return { status: "submitting" };
+        const active = (resourceData.check?.items || []).find(
+          (i) =>
+            i.host === n.hostname && ["queued", "running"].includes(i.status),
+        );
+        return active || n.result || { status: "not_tested" };
+      }
+      function resourceFiltered() {
+        const q = $("sstpSearch").value.trim().toLowerCase(),
+          c = $("sstpCountry").value,
+          status = $("sstpStatus").value;
+        return (resourceData.nodes || []).filter((n) => {
+          const r = resourceResult(n);
+          return (
+            (!q ||
+              [n.hostname, n.server_ip, r.actual_ip]
+                .join(" ")
+                .toLowerCase()
+                .includes(q)) &&
+            (!c || n.source_country === c) &&
+            (!status ||
+              (status === "stale" ? r.stale : !r.stale && r.status === status))
+          );
+        });
+      }
+      function renderResources() {
+        $("resourceSocksPane").hidden = resourceTab !== "socks";
+        $("resourceSstpPane").hidden = resourceTab !== "sstp";
+        $("resourceSocksTab").classList.toggle(
+          "primary",
+          resourceTab === "socks",
+        );
+        $("resourceSstpTab").classList.toggle(
+          "primary",
+          resourceTab === "sstp",
+        );
+        $("resourceSocksRows").innerHTML =
+          exits
+            .map(
+              (e) =>
+                "<tr><td>" +
+                esc(name(e)) +
+                "</td><td>" +
+                esc(e.exit_ip || "—") +
+                "</td><td>仅本机 · " +
+                e.port +
+                "</td><td>" +
+                esc(e.public_socks?.enable ? e.public_socks.port : "未启用") +
+                "</td><td>" +
+                badge(e.status) +
+                '</td><td><div class="actions"><button data-resource-cred="' +
+                e.slot +
+                '">查看 / 复制</button><button data-resource-toggle="' +
+                e.slot +
+                '">' +
+                (e.public_socks?.enable ? "关闭外部" : "启用外部") +
+                "</button></div></td></tr>",
+            )
+            .join("") ||
+          '<tr><td colspan="6">暂无出口，请先在出口管理中创建。</td></tr>';
+        $("sstpDependency").hidden = !resourceData.dependency_error;
+        $("sstpDependency").textContent = resourceData.dependency_error || "";
+        if (!sstpSettingsDirty && resourceData.settings) {
+          for (const [id, key] of [
+            ["sstpParallelism", "parallelism"],
+            ["sstpInterval", "interval_minutes"],
+            ["sstpValid", "valid_minutes"],
+            ["sstpTimeout", "timeout_seconds"],
+          ])
+            if (document.activeElement !== $(id))
+              $(id).value = resourceData.settings[key];
+        }
+        const selectedCountry = $("sstpCountry").value;
+        $("sstpCountry").innerHTML =
+          '<option value="">所有来源国家</option>' +
+          [...new Set((resourceData.nodes || []).map((n) => n.source_country))]
+            .sort()
+            .map(
+              (c) =>
+                '<option value="' +
+                esc(c) +
+                '">' +
+                esc(country(c)) +
+                "</option>",
+            )
+            .join("");
+        $("sstpCountry").value = selectedCountry;
+        const j = resourceData.check,
+          running = j?.status === "running",
+          valid = (resourceData.nodes || []).filter(
+            (n) => n.result?.status === "passed" && !n.result.stale,
+          ).length;
+        $("sstpProgress").textContent = running
+          ? "正在检测 " + j.done + " / " + j.total + " · 并发 " + j.parallelism
+          : "共 " +
+            (resourceData.nodes || []).length +
+            " 个候选 · " +
+            valid +
+            " 个有效的 VPS 实测结果 · CF 待验证";
+        $("sstpCheckAll").disabled =
+          running ||
+          !resourceData.nodes?.length ||
+          !!resourceData.dependency_error;
+        $("sstpCheckSelected").disabled =
+          !resourceSelected.size || running || !!resourceData.dependency_error;
+        $("sstpCancel").disabled = !running;
+        $("sstpExportSelected").disabled = $("sstpCopySelected").disabled =
+          !resourceSelected.size;
+        const visibleSstp = resourceFiltered();
+        $("sstpSelectVisible").checked =
+          visibleSstp.length > 0 &&
+          visibleSstp.every((n) => resourceSelected.has(n.hostname));
+        $("sstpSelectVisible").indeterminate =
+          visibleSstp.some((n) => resourceSelected.has(n.hostname)) &&
+          !$("sstpSelectVisible").checked;
+        $("sstpRows").innerHTML =
+          resourceFiltered()
+            .map((n) => {
+              const r = resourceResult(n),
+                active = ["running", "submitting"].includes(r.status),
+                label = r.stale
+                  ? "结果已过期"
+                  : r.status === "passed"
+                    ? "VPS 实测通过"
+                    : r.status === "not_tested"
+                      ? "未检测"
+                      : labels[r.status] || r.status;
+              return (
+                '<tr><td><input type="checkbox" data-sstp-select="' +
+                esc(n.hostname) +
+                '" ' +
+                (resourceSelected.has(n.hostname) ? "checked" : "") +
+                ' aria-label="选择 ' +
+                esc(n.hostname) +
+                '" /></td><td>' +
+                esc(n.server_ip) +
+                '<small style="display:block">' +
+                esc(n.hostname) +
+                "</small></td><td>" +
+                esc(country(n.source_country)) +
+                "</td><td>" +
+                esc((n.candidates || []).map((c) => c.port).join(" / ")) +
+                "</td><td>" +
+                esc(r.actual_ip || "—") +
+                '<small style="display:block">' +
+                esc(r.country ? country(r.country) : "实际国家待验证") +
+                '</small></td><td><span class="badge ' +
+                (r.stale ? "stale" : r.status) +
+                '">' +
+                (active
+                  ? '<span class="check-spinner" aria-hidden="true"></span>'
+                  : "") +
+                esc(label) +
+                '</span><small style="display:block">' +
+                esc(sstpPhases[r.phase] || sstpCodes[r.code] || "") +
+                "</small></td><td>" +
+                esc(r.latency_ms ? Math.round(r.latency_ms) + " ms" : "—") +
+                "</td><td><small>" +
+                date(r.checked_at) +
+                "<br>" +
+                date(r.expires_at) +
+                '</small></td><td><div class="actions"><button data-sstp-check="' +
+                esc(n.hostname) +
+                '" ' +
+                (active ? "disabled" : "") +
+                ">" +
+                (active
+                  ? "检测中"
+                  : r.status === "queued"
+                    ? "优先检测"
+                    : "检测") +
+                "</button>" +
+                (!r.stale && r.status === "passed"
+                  ? '<button data-sstp-copy="' +
+                    esc(n.hostname) +
+                    '">复制</button>'
+                  : "") +
+                "</div></td></tr>"
+              );
+            })
+            .join("") ||
+          '<tr><td colspan="9">没有符合筛选条件的 SSTP 候选。</td></tr>';
+      }
+      async function checkSstpResources(body) {
+        const hosts = body.hosts || [];
+        hosts.forEach((h) => resourceSubmitting.add(h));
+        renderResources();
+        try {
+          await api("api/resources/sstp/check", body);
+          await loadResourceSstp();
+        } finally {
+          hosts.forEach((h) => resourceSubmitting.delete(h));
+          renderResources();
+        }
+      }
+      async function resourceExport(hosts, format, copyOnly = false) {
+        const q = new URLSearchParams({ format });
+        if (hosts?.length) q.set("hosts", hosts.join(","));
+        const r = await fetch("api/resources/sstp/export?" + q, {
+          cache: "no-store",
+        });
+        const text = await r.text();
+        if (!r.ok) throw Error(text || "导出失败");
+        if (copyOnly) {
+          await copy(text);
+          return;
+        }
+        const u = URL.createObjectURL(
+          new Blob([text], {
+            type: format === "json" ? "application/json" : "text/plain",
+          }),
+        );
+        const a = document.createElement("a");
+        a.href = u;
+        a.download = "xnvgatebox-sstp." + (format === "json" ? "json" : "txt");
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(u), 1000);
+      }
+      $("resourceSocksTab").onclick = () => {
+        resourceTab = "socks";
+        renderResources();
+      };
+      $("resourceSstpTab").onclick = () => {
+        resourceTab = "sstp";
+        renderResources();
+        action(loadResourceSstp);
+      };
+      $("sstpCheckAll").onclick = () =>
+        action(() => checkSstpResources({ all: true }), $("sstpCheckAll"));
+      $("sstpCheckSelected").onclick = () =>
+        action(
+          () => checkSstpResources({ hosts: [...resourceSelected] }),
+          $("sstpCheckSelected"),
+        );
+      $("sstpCancel").onclick = () =>
+        action(async () => {
+          await api("api/resources/sstp/cancel", {});
+          await loadResourceSstp();
+        }, $("sstpCancel"));
+      $("sstpSaveSettings").onclick = () =>
+        action(async () => {
+          const settings = {};
+          for (const [id, key] of [
+            ["sstpParallelism", "parallelism"],
+            ["sstpInterval", "interval_minutes"],
+            ["sstpValid", "valid_minutes"],
+            ["sstpTimeout", "timeout_seconds"],
+          ]) {
+            const n = Number($(id).value);
+            if (!Number.isSafeInteger(n)) throw Error("请输入整数设置");
+            settings[key] = n;
+          }
+          await api("api/resources/sstp/settings", settings);
+          sstpSettingsDirty = false;
+          await loadResourceSstp();
+          toast("SSTP 设置已保存");
+        }, $("sstpSaveSettings"));
+      for (const id of [
+        "sstpParallelism",
+        "sstpInterval",
+        "sstpValid",
+        "sstpTimeout",
+      ])
+        $(id).oninput = () => {
+          sstpSettingsDirty = true;
+        };
+      for (const id of ["sstpSearch", "sstpCountry", "sstpStatus"])
+        $(id).addEventListener(
+          id === "sstpSearch" ? "input" : "change",
+          renderResources,
+        );
+      $("sstpSelectVisible").onchange = (e) => {
+        resourceFiltered().forEach((n) =>
+          e.target.checked
+            ? resourceSelected.add(n.hostname)
+            : resourceSelected.delete(n.hostname),
+        );
+        renderResources();
+      };
+      $("sstpExportAll").onclick = () =>
+        action(() => resourceExport([], "json"), $("sstpExportAll"));
+      $("sstpExportSelected").onclick = () =>
+        action(
+          () => resourceExport([...resourceSelected], "json"),
+          $("sstpExportSelected"),
+        );
+      $("sstpCopySelected").onclick = () =>
+        action(
+          () => resourceExport([...resourceSelected], "text", true),
+          $("sstpCopySelected"),
+        );
+      $("resourceExportSocks").onclick = () =>
+        action(async () => {
+          const data = await api("api/console/socks");
+          const u = URL.createObjectURL(
+            new Blob([JSON.stringify(data, null, 2)], {
+              type: "application/json",
+            }),
+          );
+          const a = document.createElement("a");
+          a.href = u;
+          a.download = "xnvgatebox-socks.json";
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(u), 1000);
+        }, $("resourceExportSocks"));
+      $("resourceCredClose").onclick = () => $("resourceCredentials").close();
+      $("resourceCredCopy").onclick = () =>
+        action(() => copy($("resourceCredentialURL").value));
+      document.addEventListener("change", (e) => {
+        if (e.target.dataset.sstpSelect) {
+          e.target.checked
+            ? resourceSelected.add(e.target.dataset.sstpSelect)
+            : resourceSelected.delete(e.target.dataset.sstpSelect);
+          renderResources();
+        }
+      });
+      document.addEventListener("click", (e) => {
+        const check = e.target.closest("[data-sstp-check]");
+        if (check)
+          return action(
+            () =>
+              checkSstpResources({
+                hosts: [check.dataset.sstpCheck],
+                priority: true,
+              }),
+            check,
+          );
+        const copyButton = e.target.closest("[data-sstp-copy]");
+        if (copyButton)
+          return action(
+            () => resourceExport([copyButton.dataset.sstpCopy], "text", true),
+            copyButton,
+          );
+        const toggle = e.target.closest("[data-resource-toggle]");
+        if (toggle) {
+          const row = exits.find(
+            (x) => x.slot === Number(toggle.dataset.resourceToggle),
+          );
+          return action(async () => {
+            await api("api/console/socks", {
+              slot: row.slot,
+              enabled: !row.public_socks?.enable,
+            });
+            await poll();
+          }, toggle);
+        }
+        const cred = e.target.closest("[data-resource-cred]");
+        if (cred) {
+          const row = exits.find(
+            (x) => x.slot === Number(cred.dataset.resourceCred),
+          );
+          $("resourceCredentialTitle").textContent = name(row) + " · SOCKS5";
+          $("resourceCredentialScope").textContent = row.public_socks?.enable
+            ? "外部接入已开启，使用独立外部端口。"
+            : "当前仅 VPS 本机可用，启用外部接入后才能供其他设备使用。";
+          $("resourceCredentialURL").value = resourceSocksURL(row);
+          $("resourceCredentialUser").value = row.socks_user;
+          $("resourceCredentialPass").value = row.socks_pass;
+          $("resourceCredAdvanced").href = "advanced?slot=" + row.slot;
+          $("resourceCredentials").showModal();
+        }
+      });
+
       async function poll() {
         if (polling) return;
         polling = true;
@@ -1933,6 +2576,7 @@
           summary = s;
           summary.backend = e.backend;
           hostDirect = e.host_direct || [];
+          resourcePublicIP = e.public_ip || location.hostname;
           exits = (e.exits || []).sort((a, b) => a.slot - b.slot);
           nodes = n.nodes || [];
           subscription = sub;

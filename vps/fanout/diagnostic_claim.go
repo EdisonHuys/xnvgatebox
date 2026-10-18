@@ -11,6 +11,7 @@ var errDiagnosticPreempted = errors.New("diagnostic yielded to exit recovery")
 // from displacing one another. Production can cancel a diagnostic, but must
 // wait for all its network resources to be cleaned before using that host.
 type diagnosticLease struct {
+	slot         int
 	cancel       context.CancelCauseFunc
 	done         chan struct{}
 	ip           string
@@ -53,7 +54,15 @@ func (m *Manager) reserveDiagnostic(node Node, cancel context.CancelCauseFunc) *
 	if index < 0 {
 		return nil
 	}
-	lease := &diagnosticLease{cancel: cancel, done: make(chan struct{}), ip: node.IP, networkIndex: index}
+	usedSlots := map[int]bool{}
+	for _, existing := range m.diagnostics {
+		usedSlots[existing.slot] = true
+	}
+	slot := diagnosticFirstSlot
+	for usedSlots[slot] {
+		slot--
+	}
+	lease := &diagnosticLease{slot: slot, cancel: cancel, done: make(chan struct{}), ip: node.IP, networkIndex: index}
 	m.diagnostics[node.HostName] = lease
 	return lease
 }

@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / 'src'))
 from vpngate_toolbox.cli import main
 from vpngate_toolbox.common import ServiceError, ToolError
 from vpngate_toolbox.config import load_settings
-from vpngate_toolbox.intelligence import enrich, profile_openvpn_exit
+from vpngate_toolbox.intelligence import enrich, profile_openvpn_exit, profile_measured_exit
 
 SETTINGS = load_settings(ROOT / 'config/settings.json')
 IP = '73.1.1.1'
@@ -138,6 +138,23 @@ class OpenVPNIntelligenceTests(unittest.TestCase):
             self.cache.write_text(json.dumps(value))
             image = profile_openvpn_exit(IP, SETTINGS, self.cache, lambda *a, **k: observation())
             self.assertEqual(image['ip_type'], 'likely_residential')
+
+    def test_sstp_profiles_its_measured_ip_and_keeps_protocol(self):
+        image = profile_measured_exit(IP, SETTINGS, self.cache, 'sstp', lambda *a, **k: observation())
+        self.assertEqual(image['protocol'], 'sstp')
+        self.assertEqual(image['country'], 'US')
+        with self.assertRaises(ToolError):
+            profile_measured_exit(IP, SETTINGS, self.cache, 'tcp', lambda *a, **k: self.fail('must not query'))
+        env_file = Path(self.tmp.name) / 'sstp.env'
+        env_file.write_text('INTELLIGENCE_URL_TEMPLATE=\n')
+        with patch.dict(os.environ, {}, clear=True), contextlib.redirect_stdout(io.StringIO()) as stream:
+            code = main(['--config', str(ROOT / 'config/settings.json'), '--env-file', str(env_file),
+                         'profile-sstp', '--ip', IP, '--cache', str(self.cache)])
+        self.assertEqual(code, 0)
+        image = json.loads(stream.getvalue())
+        self.assertEqual(image['protocol'], 'sstp')
+        self.assertEqual(image['ip_type'], 'unknown')
+        self.assertIsNone(image['country'])
 
     def test_cli_uses_no_cf_credentials_and_does_not_write_pool(self):
         env_file = Path(self.tmp.name) / 'intelligence.env'

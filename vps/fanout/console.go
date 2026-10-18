@@ -29,6 +29,7 @@ type ExitPlan struct {
 }
 
 type Console struct {
+	sstp             *SstpManager
 	ctx              context.Context
 	cancel           context.CancelFunc
 	refreshDone      chan struct{}
@@ -90,6 +91,10 @@ func newConsole(m *Manager) (*Console, error) {
 		c.results = map[string]CheckResult{}
 	}
 	if err := c.loadCheckSettings(); err != nil {
+		return nil, err
+	}
+	if err := c.loadSstpManager(); err != nil {
+		c.cancel()
 		return nil, err
 	}
 	m.console = c
@@ -274,6 +279,7 @@ func readConsoleJSON(w http.ResponseWriter, r *http.Request, v any) error {
 }
 
 func (c *Console) routes(mux *http.ServeMux) {
+	c.sstp.routes(mux)
 	mux.HandleFunc("/api/console", c.apiConsole)
 	mux.HandleFunc("/api/console/target", func(w http.ResponseWriter, r *http.Request) {
 		var p ExitPlan

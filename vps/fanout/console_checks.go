@@ -15,20 +15,26 @@ import (
 )
 
 type CheckResult struct {
-	Host       string    `json:"host"`
-	Slot       int       `json:"slot,omitempty"`
-	Status     string    `json:"status"`
-	Phase      string    `json:"phase,omitempty"`
-	StartedAt  time.Time `json:"started_at,omitempty"`
-	Code       string    `json:"code,omitempty"`
-	ActualIP   string    `json:"actual_ip,omitempty"`
-	Country    string    `json:"country,omitempty"`
-	IPType     string    `json:"ip_type,omitempty"`
-	LatencyMS  float64   `json:"latency_ms,omitempty"`
-	CheckedAt  time.Time `json:"checked_at"`
-	ProfileSHA string    `json:"profile_sha256"`
-	Stale      bool      `json:"stale"`
-	Priority   bool      `json:"priority,omitempty"`
+	Protocol   string         `json:"protocol,omitempty"`
+	Egress     *EgressProfile `json:"egress,omitempty"`
+	Port       int            `json:"port,omitempty"`
+	ExpiresAt  time.Time      `json:"expires_at,omitempty"`
+	ObservedBy string         `json:"observed_by,omitempty"`
+	CFStatus   string         `json:"cf_status,omitempty"`
+	Host       string         `json:"host"`
+	Slot       int            `json:"slot,omitempty"`
+	Status     string         `json:"status"`
+	Phase      string         `json:"phase,omitempty"`
+	StartedAt  time.Time      `json:"started_at,omitempty"`
+	Code       string         `json:"code,omitempty"`
+	ActualIP   string         `json:"actual_ip,omitempty"`
+	Country    string         `json:"country,omitempty"`
+	IPType     string         `json:"ip_type,omitempty"`
+	LatencyMS  float64        `json:"latency_ms,omitempty"`
+	CheckedAt  time.Time      `json:"checked_at"`
+	ProfileSHA string         `json:"profile_sha256"`
+	Stale      bool           `json:"stale"`
+	Priority   bool           `json:"priority,omitempty"`
 }
 
 type CheckRun struct {
@@ -109,6 +115,7 @@ func (c *Console) probeCandidate(parent context.Context, node Node, slot int, pr
 	// Registered before resource defers: production cannot claim the same host
 	// until the temporary OpenVPN, namespace, SOCKS and files are all gone.
 	defer c.m.releaseDiagnostic(node.HostName, lease)
+	slot = lease.slot
 	ctx, cancel := context.WithTimeout(leaseCtx, 120*time.Second)
 	defer cancel()
 	progress("precheck")
@@ -143,7 +150,7 @@ func (c *Console) probeCandidate(parent context.Context, node Node, slot int, pr
 	}
 	policy := SlotPolicy{AllowedIPTypes: []string{"strict_residential", "likely_residential", "mobile", "datacenter", "business_isp", "unknown"}}
 	index := lease.networkIndex
-	manifest, _ := json.Marshal(diagnosticResource{Slot: slot, NetworkIndex: index, Node: node})
+	manifest, _ := json.Marshal(diagnosticResource{Config: node.Config, Slot: slot, NetworkIndex: index, Node: node})
 	if err := atomicConfigWrite(filepath.Join(dir, "diagnostic.json"), manifest); err != nil {
 		result.Code = "probe_environment_failed"
 		return result
@@ -363,6 +370,10 @@ func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 // One dispatcher owns all running diagnostic identities. Manual items can join
 // a batch and take the next free permit without exceeding its configured limit.
 func (c *Console) runChecks(ctx context.Context, j *CheckRun) {
+	dispatchCheckRun(ctx, j, &c.checksMu, func(index, slot int, item CheckResult, node Node) { c.runCheckItem(ctx, j, index, item, node, slot) })
+}
+
+func dispatchCheckRun(ctx context.Context, j *CheckRun, ownerMu *sync.Mutex, runItem func(int, int, CheckResult, Node)) {
 	defer close(j.finished)
 	defer j.cancel()
 	finished := make(chan int, j.Parallelism)
@@ -390,7 +401,7 @@ func (c *Console) runChecks(ctx context.Context, j *CheckRun) {
 			item := j.Items[next]
 			node := j.nodes[item.Host]
 			go func(index, slot int, item CheckResult, node Node) {
-				c.runCheckItem(ctx, j, index, item, node, slot)
+				runItem(index, slot, item, node)
 				finished <- slot
 			}(next, slot, item, node)
 		}
@@ -407,7 +418,7 @@ func (c *Console) runChecks(ctx context.Context, j *CheckRun) {
 		if idle {
 			// Serialize completion with startCheck's append, so no late manual item
 			// can be accepted after the last worker has gone away.
-			c.checksMu.Lock()
+			ownerMu.Lock()
 			j.mu.Lock()
 			queued := false
 			for _, i := range j.Items {
@@ -422,11 +433,11 @@ func (c *Console) runChecks(ctx context.Context, j *CheckRun) {
 					j.Status = "cancelled"
 				}
 				j.mu.Unlock()
-				c.checksMu.Unlock()
+				ownerMu.Unlock()
 				return
 			}
 			j.mu.Unlock()
-			c.checksMu.Unlock()
+			ownerMu.Unlock()
 			continue
 		}
 		select {

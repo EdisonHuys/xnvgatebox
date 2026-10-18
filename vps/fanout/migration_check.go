@@ -84,6 +84,12 @@ func checkMigrationState(dir string, maxSlots, defaultPort int) migrationReport 
 			issue("console.json", "invalid_exit_plan")
 		}
 	}
+	if blob, ok := read("sstp.json", true); ok {
+		var state sstpState
+		if json.Unmarshal(blob, &state) != nil || validateSstpSettings(state.Settings) != nil {
+			issue("sstp.json", "invalid_sstp_settings")
+		}
+	}
 	settings := WebSettings{Port: defaultPort}
 	if blob, ok := read("settings.json", false); ok {
 		loaded, err := decodeWebSettings(blob, defaultPort)
