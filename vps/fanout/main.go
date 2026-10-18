@@ -21,7 +21,7 @@ var version = "dev"
 func main() {
 	var (
 		webPort  = flag.Int("web", 8899, "Web 管理端口")
-		maxSlots = flag.Int("max", maximumSlots, "最多同时运行的隧道数")
+		maxSlots = flag.Int("max", maximumSlots, "管理员设置的出口容量（默认使用实例地址容量）")
 		workDir  = flag.String("dir", "/var/lib/xnvgatebox/fanout", "工作目录")
 	)
 	panelMode := flag.String("panel", "", "节点链接后端: 留空按界面设置/自动探测, 3x-ui, native, xray-cf-lite")
@@ -110,6 +110,13 @@ func main() {
 		log.Printf("已获取 %d 个节点", n)
 	}
 
+	console, err := newConsole(mgr)
+	if err != nil {
+		log.Fatalf("加载出口计划失败: %v", err)
+	}
+	if err := console.cleanupDiagnostics(); err != nil {
+		log.Fatalf("临时检测清理失败: %v", err)
+	}
 	if n, err := mgr.restoreState(); err != nil {
 		log.Fatalf("恢复上次状态失败，拒绝忽略已保存策略: %v", err)
 	} else if n > 0 {
@@ -120,13 +127,6 @@ func main() {
 	}
 	startConfiguredSlot(mgr)
 
-	console, err := newConsole(mgr)
-	if err != nil {
-		log.Fatalf("加载出口计划失败: %v", err)
-	}
-	if err := console.cleanupDiagnostics(); err != nil {
-		log.Fatalf("临时检测清理失败: %v", err)
-	}
 	go console.watch()
 
 	go mgr.WatchHealth()
@@ -239,9 +239,6 @@ func apiNodes(m *Manager) http.HandlerFunc {
 			nodes = kept
 		}
 		shown := len(nodes)
-		if len(nodes) > 200 {
-			nodes = nodes[:200]
-		}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"nodes":            nodes,
 			"fetched":          fetched,

@@ -253,6 +253,13 @@
         gap: 20px;
         margin-bottom: 27px;
       }
+      .pagehead .actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .pagehead .actions button {
+        white-space: nowrap;
+      }
       .pagehead p {
         margin-top: 5px;
         color: var(--muted);
@@ -340,6 +347,42 @@
       .badge.queued,
       .badge.stale {
         color: var(--amber);
+      }
+      .check-spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        vertical-align: -2px;
+        margin-right: 6px;
+        color: var(--accent);
+        animation: check-spin 0.8s linear infinite;
+      }
+      @keyframes check-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .check-spinner {
+          animation: none;
+        }
+      }
+      .parallel-setting {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .parallel-setting input {
+        width: 90px;
+      }
+      .badge.running,
+      .badge.submitting {
+        color: var(--accent);
       }
       .badge.failed,
       .badge.error {
@@ -707,10 +750,11 @@
           font-size: 25px;
         }
         .pagehead .actions {
+          justify-content: flex-start;
           width: 100%;
         }
         .pagehead .actions button {
-          flex: 1;
+          flex: 1 1 auto;
         }
         .formgrid {
           grid-template-columns: 1fr;
@@ -984,10 +1028,19 @@
             </div>
             <div class="actions">
               <button data-action="refresh">↻ 刷新来源</button
-              ><select id="checkParallelism" aria-label="同时检测数量">
-                <option value="2">同时检测 2 个</option>
-                <option value="1">逐个检测</option></select
-              ><button class="primary" id="testSelected">检测所选节点</button>
+              ><label class="parallel-setting"
+                >检测并发
+                <input
+                  id="checkParallelism"
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  aria-label="检测并发数"
+                  inputmode="numeric" /></label
+              ><button id="saveCheckSettings">保存</button
+              ><button class="primary" id="testSelected">检测所选节点</button
+              ><button id="testAllNodes">检测全部候选</button>
             </div>
           </div>
           <div class="notice">
@@ -1133,7 +1186,7 @@
             id="targetCount"
             type="number"
             min="0"
-            max="32"
+            step="1"
             required
           /><small id="targetHelp"></small>
         </div>
@@ -1247,6 +1300,17 @@
         settingsLoaded = false,
         currentPage = "overview",
         toastTimer;
+      const submittingChecks = new Set();
+      const phases = {
+        precheck: "快速端口预检",
+        setup: "准备临时连接",
+        connecting: "连接上游节点",
+        baseline: "确认隧道出口",
+        profile: "查询出口信息",
+        verify_exit: "核验实际出口",
+        waiting_exit: "等待出口操作完成",
+        cleanup: "清理临时连接",
+      };
       const types = {
         strict_residential: "确认住宅",
         likely_residential: "疑似住宅",
@@ -1268,7 +1332,9 @@
         not_tested: "未检测",
         stale: "结果已过期",
         queued: "排队中",
+        priority_queued: "优先等待",
         running: "检测中",
+        submitting: "提交中",
         done: "已完成",
         cancelled: "已取消",
         deferred: "稍后再测",
@@ -1288,6 +1354,7 @@
         allocation_failed: "出口分配等待重试",
         auto_binding_failed: "入站绑定等待重试",
         tcp_unreachable: "TCP 端口暂不可达",
+        network_capacity_exhausted: "实例网络地址已分配完，无法建立临时连接",
         candidate_in_use: "节点正在用于出口连接，避免重复拨号",
         exit_recovery_priority: "已让位给出口恢复，稍后再测",
         candidate_changed: "节点绑定已变化，请重新检测",
@@ -1324,6 +1391,11 @@
           '<span class="badge ' +
           esc(status) +
           '">' +
+          (["running", "submitting"].includes(status)
+            ? '<span class="check-spinner" aria-hidden="true"></span>'
+            : status === "passed"
+              ? "✓ "
+              : "") +
           esc(labels[status] || status || "—") +
           "</span>"
         );
@@ -1432,7 +1504,8 @@
                 const code = verified(e),
                   lat =
                     e.latency_ms > 0 ? Math.round(e.latency_ms) + " ms" : "—",
-                  ib = e.inbounds || [];
+                  ib = e.inbounds || [],
+                  checkState = exitCheckResult(e);
                 return (
                   '<article class="card exit"><div class="exithead"><div class="country"><span class="flag">' +
                   (code ? country(code).split(" ")[0] : "◎") +
@@ -1458,13 +1531,32 @@
                   ) +
                   "</b></span><span>入站 <b>" +
                   esc(ib.map((i) => i.port).join(" / ") || "等待绑定") +
-                  '</b></span></div><div class="exitfoot"><small>SOCKS · ' +
+                  "</b></span></div>" +
+                  (checkState
+                    ? "<small>最近检测 " +
+                      badge(checkState.stale ? "stale" : checkState.status) +
+                      " " +
+                      esc(
+                        phases[checkState.phase] ||
+                          errors[checkState.code] ||
+                          "",
+                      ) +
+                      " " +
+                      date(checkState.checked_at) +
+                      "</small>"
+                    : "") +
+                  '<div class="exitfoot"><small>SOCKS · ' +
                   esc(e.port) +
                   '</small><div class="actions"><button data-action="check" data-slot="' +
                   e.slot +
                   '" ' +
-                  (e.status === "up" ? "" : "disabled") +
-                  '>检测</button><button data-action="edit" data-slot="' +
+                  (e.status === "up" &&
+                  !["running", "submitting"].includes(checkState?.status)
+                    ? ""
+                    : "disabled") +
+                  " >" +
+                  checkButtonLabel(checkState) +
+                  '</button><button data-action="edit" data-slot="' +
                   e.slot +
                   '">管理</button><button data-action="' +
                   (e.status === "stopped" ? "resume" : "pause") +
@@ -1481,6 +1573,13 @@
       function render() {
         const s = summary;
         $("version").textContent = s.version || "开发版";
+        if (
+          document.activeElement !== $("checkParallelism") &&
+          !$("checkParallelism").dataset.dirty
+        )
+          $("checkParallelism").value = s.check_settings?.parallelism || 2;
+        $("testAllNodes").disabled =
+          !nodes.length || s.check?.status === "running";
         $("stats").innerHTML = [
           ["已就绪", s.ready || 0, "可加入订阅"],
           ["目标出口", s.target || 0, "独立出口数量"],
@@ -1543,16 +1642,6 @@
       }
       function renderProgress() {
         const j = summary.check;
-        const phases = {
-          precheck: "快速端口预检",
-          setup: "准备临时连接",
-          connecting: "连接上游节点",
-          baseline: "确认隧道出口",
-          profile: "查询出口信息",
-          verify_exit: "核验实际出口",
-          waiting_exit: "等待出口操作完成",
-          cleanup: "清理临时连接",
-        };
         document.querySelectorAll(".progressMount").forEach((m) => {
           if (!j) {
             m.innerHTML = "";
@@ -1560,7 +1649,7 @@
           }
           m.innerHTML =
             '<div class="card pad progress"><div class="row" style="justify-content:space-between"><h3>' +
-            (j.kind === "exits" ? "当前出口检测" : "候选连通性检测") +
+            "连通性检测" +
             " · " +
             j.done +
             " / " +
@@ -1600,6 +1689,8 @@
         });
       }
       function nodeResult(n) {
+        if (submittingChecks.has("host:" + n.hostname))
+          return { status: "submitting" };
         const pending =
           summary.check?.status === "running" &&
           summary.check.items?.find(
@@ -1611,6 +1702,27 @@
         return r
           ? { ...r, status: r.stale ? "stale" : r.status }
           : { status: "not_tested" };
+      }
+      function checkButtonLabel(r) {
+        return ["running", "submitting"].includes(r?.status)
+          ? '<span class="check-spinner" aria-hidden="true"></span>' +
+              esc(labels[r.status])
+          : r?.status === "queued"
+            ? "优先检测"
+            : "检测";
+      }
+      function exitCheckResult(e) {
+        if (submittingChecks.has("slot:" + e.slot))
+          return { status: "submitting" };
+        return (
+          (summary.check?.status === "running" &&
+            summary.check.items?.find(
+              (i) =>
+                (i.slot === e.slot || i.host === e.host) &&
+                ["running", "queued"].includes(i.status),
+            )) ||
+          summary.results?.[e.host]
+        );
       }
       function filteredNodes() {
         const q = $("search").value.trim().toLowerCase(),
@@ -1681,7 +1793,16 @@
                         : "",
                   ) +
                   "</small></td><td>" +
-                  badge(r.status) +
+                  badge(
+                    r.status === "queued" && r.priority
+                      ? "priority_queued"
+                      : r.status,
+                  ) +
+                  (r.status === "running"
+                    ? "<small>" +
+                      esc(phases[r.phase] || "开始检测") +
+                      "</small>"
+                    : "") +
                   (live ? " <small>运行出口</small>" : "") +
                   "</td><td>" +
                   (r.latency_ms > 0 ? Math.round(r.latency_ms) + " ms" : "—") +
@@ -1689,7 +1810,13 @@
                   date(r.checked_at) +
                   '</td><td><button data-action="testNode" data-host="' +
                   esc(n.hostname) +
-                  '">检测</button></td></tr>'
+                  '\" ' +
+                  (["running", "submitting"].includes(r.status)
+                    ? 'disabled aria-busy="true"'
+                    : "") +
+                  ">" +
+                  checkButtonLabel(r) +
+                  "</button></td></tr>"
                 );
               })
               .join("")
@@ -1791,14 +1918,14 @@
           return;
         }
         $("targetCount").value = summary.target;
-        $("targetCount").max = summary.capacity;
+
         $("targetCountry").value = summary.plan?.policy?.country || "";
         $("targetServer").value =
           summary.plan?.server_name ||
           summary.default_server_name ||
           "www.tesla.com";
         $("targetHelp").textContent =
-          "软件上限 " + summary.capacity + " 个。设为 0 会移除全部活动出口。";
+          "按服务器资源和上游供给设置数量。设为 0 会移除全部活动出口；端口或地址不足时会显示原因。";
         $("targetDialog").showModal();
       }
       function openExit(slot) {
@@ -1853,10 +1980,29 @@
         $("exitDialog").showModal();
       }
       async function check(req) {
-        if (req.kind === "candidates")
+        const keys = [
+          ...(req.hosts || []).map((h) => "host:" + h),
+          ...(req.slots || []).map((n) => "slot:" + n),
+        ];
+        if (keys.some((k) => submittingChecks.has(k))) return;
+        keys.forEach((k) => submittingChecks.add(k));
+        render();
+        try {
+          req.kind = "checks";
           req.parallelism = Number($("checkParallelism").value);
-        await api("api/console/check", req);
-        toast("检测任务已加入队列");
+          if (!Number.isSafeInteger(req.parallelism) || req.parallelism < 1)
+            throw Error("请输入正整数并发数");
+          const job = await api("api/console/check", req);
+          summary.check = job;
+          if (!req.priority) {
+            delete $("checkParallelism").dataset.dirty;
+            summary.check_settings = { parallelism: req.parallelism };
+          }
+          toast(req.priority ? "已提交优先检测" : "检测已开始");
+        } finally {
+          keys.forEach((k) => submittingChecks.delete(k));
+          render();
+        }
         await poll();
       }
       document.addEventListener("click", (e) => {
@@ -1881,7 +2027,7 @@
             toast("正在从官方来源刷新候选");
             await poll();
           }
-          if (a === "check") await check({ kind: "exits", slots: [slot] });
+          if (a === "check") await check({ slots: [slot], priority: true });
           if (a === "checkAll") {
             const slots = exits
               .filter((e) => e.status === "up")
@@ -1890,7 +2036,7 @@
             await check({ kind: "exits", slots });
           }
           if (a === "testNode")
-            await check({ kind: "candidates", hosts: [b.dataset.host] });
+            await check({ hosts: [b.dataset.host], priority: true });
           if (a === "cancelCheck") {
             await api("api/console/check/cancel", {});
             toast("正在取消并清理临时连接");
@@ -2000,6 +2146,27 @@
           $("exitDialog").close();
           await poll();
         }, $("rollbackPolicy"));
+      $("checkParallelism").oninput = () => {
+        $("checkParallelism").dataset.dirty = "1";
+      };
+      $("saveCheckSettings").onclick = () =>
+        action(async () => {
+          const n = Number($("checkParallelism").value);
+          if (!Number.isSafeInteger(n) || n < 1)
+            throw Error("请输入正整数并发数");
+          const saved = await api("api/console/check/settings", {
+            parallelism: n,
+          });
+          summary.check_settings = saved;
+          delete $("checkParallelism").dataset.dirty;
+          toast(
+            summary.check?.status === "running"
+              ? "已保存，将用于下一轮检测"
+              : "检测并发已保存",
+          );
+        }, $("saveCheckSettings"));
+      $("testAllNodes").onclick = () =>
+        action(() => check({ all: true }), $("testAllNodes"));
       $("testSelected").onclick = () =>
         action(
           () => check({ kind: "candidates", hosts: [...selected] }),
@@ -2090,7 +2257,7 @@
       );
       showPage(location.hash.slice(1));
       poll();
-      setInterval(poll, 4000);
+      setInterval(poll, 2000);
     </script>
   </body>
 </html>

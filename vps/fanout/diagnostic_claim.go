@@ -5,18 +5,16 @@ import (
 	"errors"
 )
 
-const diagnosticFirstSlot = 240
-const diagnosticWorkers = 2
-
 var errDiagnosticPreempted = errors.New("diagnostic yielded to exit recovery")
 
 // A lease prevents a temporary login and a live exit login to the same host
 // from displacing one another. Production can cancel a diagnostic, but must
 // wait for all its network resources to be cleaned before using that host.
 type diagnosticLease struct {
-	cancel context.CancelCauseFunc
-	done   chan struct{}
-	ip     string
+	cancel       context.CancelCauseFunc
+	done         chan struct{}
+	ip           string
+	networkIndex int
 }
 
 func (m *Manager) reserveDiagnostic(node Node, cancel context.CancelCauseFunc) *diagnosticLease {
@@ -41,7 +39,21 @@ func (m *Manager) reserveDiagnostic(node Node, cancel context.CancelCauseFunc) *
 			return nil
 		}
 	}
-	lease := &diagnosticLease{cancel: cancel, done: make(chan struct{}), ip: node.IP}
+	used := map[int]bool{}
+	for _, t := range m.tunnels {
+		used[slotNetworkIndex(t.Slot)] = true
+	}
+	for _, l := range m.diagnostics {
+		used[l.networkIndex] = true
+	}
+	index := networkLinkCount - 1
+	for index >= 0 && used[index] {
+		index--
+	}
+	if index < 0 {
+		return nil
+	}
+	lease := &diagnosticLease{cancel: cancel, done: make(chan struct{}), ip: node.IP, networkIndex: index}
 	m.diagnostics[node.HostName] = lease
 	return lease
 }

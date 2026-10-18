@@ -13,6 +13,9 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 	defer finish()
 	changed := false
 	used := n.store.usedPorts()
+	for _, t := range tunnels {
+		used[t.Port] = true
+	}
 	checkedReality := false
 	// A restored Slot can already be dialing a new host while its legacy
 	// inbound still names the previous host. Migrate all previous bindings
@@ -114,7 +117,7 @@ func inboundNameMode(mode, remark string) string {
 // Old standalone installs used slot-01..32 before name_mode existed. Only
 // these exact placeholders are inferred; an explicit custom mode always wins.
 func isLegacySlotName(remark string) bool {
-	for slot := 1; slot <= maximumSlots; slot++ {
+	for slot := 1; slot <= 32; slot++ {
 		if remark == fmt.Sprintf("slot-%02d", slot) {
 			return true
 		}

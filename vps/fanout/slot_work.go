@@ -61,9 +61,9 @@ func (m *Manager) claimNode(t *Tunnel, node Node, ctx context.Context) bool {
 			return false
 		}
 		lease := m.diagnostics[node.HostName]
-		if lease == nil && node.IP != "" {
+		if lease == nil {
 			for _, other := range m.diagnostics {
-				if other.ip == node.IP {
+				if (node.IP != "" && other.ip == node.IP) || other.networkIndex == slotNetworkIndex(t.Slot) {
 					lease = other
 					break
 				}

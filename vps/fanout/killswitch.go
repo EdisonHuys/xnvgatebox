@@ -105,7 +105,7 @@ func installKillSwitch(t *Tunnel) error {
 	if len(remotes) == 0 {
 		return fmt.Errorf("OpenVPN 配置没有可验证的 remote endpoint")
 	}
-	cidr := t.subnet() + ".0/30"
+	cidr := t.linkCIDR()
 	// Put the reject in place first; endpoint allows are inserted at chain
 	// position 1 and therefore end up before it.
 	ensureRuleInsert("filter", "FORWARD", "-i", veth, "-s", cidr, "-j", "REJECT", "--reject-with", "icmp-admin-prohibited")
@@ -131,7 +131,7 @@ func removeKillSwitch(t *Tunnel) {
 	veth := ""
 	peer := ""
 	veth, peer = t.vethNames()
-	cidr := t.subnet() + ".0/30"
+	cidr := t.linkCIDR()
 	remotes := parseVPNRemotes(t.Node.Config, t.Node.IP)
 	for _, r := range remotes {
 		removeRule("filter", "FORWARD", "-i", veth, "-s", cidr, "-d", r.ip, "-p", r.proto, "--dport", r.port, "-j", "ACCEPT")

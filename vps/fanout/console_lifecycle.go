@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -38,20 +39,57 @@ func diagnosticConfigOwned(workDir, ns, executable, config string) bool {
 	return filepath.Dir(dir) == filepath.Clean(workDir) && strings.HasPrefix(filepath.Base(dir), ".connectivity-")
 }
 
-// Called only by the root service at startup, after acquiring the instance
-// lock. SIGKILL cannot run defers, so recover only our reserved diagnostic
-// namespace and private temporary directories before accepting new jobs.
+type diagnosticResource struct {
+	Slot         int  `json:"slot"`
+	NetworkIndex int  `json:"network_index"`
+	Node         Node `json:"node"`
+}
+
+// Each resource manifest is written before any kernel resources are created.
+// Startup runs under the instance lock and before restoring production work.
 func (c *Console) cleanupDiagnostics() error {
-	for slot := diagnosticFirstSlot; slot < diagnosticFirstSlot+diagnosticWorkers; slot++ {
-		if err := c.cleanupDiagnosticSlot(slot); err != nil {
-			return err
-		}
-	}
 	dirs, err := filepath.Glob(filepath.Join(c.m.workDir, ".connectivity-*"))
 	if err != nil {
 		return err
 	}
+	seen := map[int]bool{}
 	for _, dir := range dirs {
+		info, err := os.Lstat(dir)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("检测临时目录类型异常")
+		}
+		blob, err := os.ReadFile(filepath.Join(dir, "diagnostic.json"))
+		if err == nil {
+			var r diagnosticResource
+			if json.Unmarshal(blob, &r) != nil || r.Slot >= 0 || r.Slot < -networkLinkCount || r.NetworkIndex < 0 || r.NetworkIndex >= networkLinkCount || seen[r.Slot] {
+				return fmt.Errorf("检测资源记录异常，保留现场")
+			}
+			seen[r.Slot] = true
+			t := &Tunnel{Slot: r.Slot, networkIndex: &r.NetworkIndex, Node: r.Node}
+			if err := c.cleanupDiagnosticTunnel(t); err != nil {
+				return err
+			}
+		} else if !os.IsNotExist(err) {
+			return err
+		} else {
+			// Upgrade compatibility: old releases only used 240/241. A private
+			// diagnostic config, rather than just the number, identifies ownership.
+			for _, slot := range []int{240, 241} {
+				t := &Tunnel{Slot: slot}
+				config := filepath.Join(dir, t.nsName()+".ovpn")
+				if data, err := os.ReadFile(config); err == nil {
+					t.Node.Config = string(data)
+					if err := c.cleanupDiagnosticTunnel(t); err != nil {
+						return err
+					}
+				} else if !os.IsNotExist(err) {
+					return err
+				}
+			}
+		}
 		if err := os.RemoveAll(dir); err != nil {
 			return fmt.Errorf("无法清理检测临时目录")
 		}
@@ -59,8 +97,7 @@ func (c *Console) cleanupDiagnostics() error {
 	return nil
 }
 
-func (c *Console) cleanupDiagnosticSlot(slot int) error {
-	t := &Tunnel{Slot: slot}
+func (c *Console) cleanupDiagnosticTunnel(t *Tunnel) error {
 	nsPath := filepath.Join("/run/netns", t.nsName())
 	nsInfo, err := os.Stat(nsPath)
 	if err == nil {

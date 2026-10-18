@@ -74,7 +74,7 @@ func TestConsoleTargetCapacityWaitingAndPersistence(t *testing.T) {
 			t.Fatal("decrease changed retained slots")
 		}
 	}
-	p.Count = 33
+	p.Count = maximumSlots + 1
 	if c.applyTarget(p) == nil {
 		t.Fatal("over limit accepted")
 	}
@@ -276,12 +276,12 @@ func TestConsoleSubscriptionActualCountrySelectionCustomNames(t *testing.T) {
 }
 
 func TestConsoleSelectionAndJSONRejectAmbiguity(t *testing.T) {
-	for _, v := range []string{"0", "33", "1,1", "1,x", "1,", "-1"} {
+	for _, v := range []string{"0", "16385", "1,1", "1,x", "1,", "-1"} {
 		if _, err := subscriptionSlots(v); err == nil {
 			t.Fatal("invalid selection accepted", v)
 		}
 	}
-	got, err := subscriptionSlots("1,5,32")
+	got, err := subscriptionSlots("1,128,16384")
 	if err != nil || len(got) != 3 {
 		t.Fatal(err)
 	}
@@ -427,7 +427,7 @@ func TestConsoleQRLocalPNGAndValidation(t *testing.T) {
 	for _, tc := range []struct {
 		path string
 		code int
-	}{{"/api/console/qr?slots=1,32", 200}, {"/api/console/qr?slots=33", 400}} {
+	}{{"/api/console/qr?slots=1,32", 200}, {"/api/console/qr?slots=16385", 400}} {
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, httptest.NewRequest("GET", tc.path, nil))
 		if w.Code != tc.code {

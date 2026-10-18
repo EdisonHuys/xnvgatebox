@@ -48,6 +48,7 @@ type Tunnel struct {
 	validating          bool // permits only the manager's own expected/actual probe
 	validationCred      *SocksCred
 	onProbePhase        func(string)
+	networkIndex        *int
 	egress              *EgressProfile
 	egressExpectedIP    string
 	egressActualIP      string
@@ -131,7 +132,6 @@ func (t *Tunnel) forgetSwaps() {
 // 名字里都带上实例标识，否则同机第二个 fanout 会把这条隧道拆掉（见 instance.go）。
 // 默认工作目录下 instTag 是空串、instBase 是 99，名字与老版本完全一致。
 func (t *Tunnel) nsName() string { return fmt.Sprintf("fo%s%d", instTag, t.Slot) }
-func (t *Tunnel) subnet() string { return fmt.Sprintf("10.%d.%d", instBase, t.Slot) }
 
 // vethNames 返回母机侧与 netns 侧的网卡名。
 // 网卡名上限 15 个字符，"fov" + 4 位标识 + 槽位最多 9 个，留足余量。
@@ -159,7 +159,10 @@ func runQuiet(name string, args ...string) {
 
 // setupNetns 建立 netns 与 veth 链路，并配好 NAT 与转发放行。
 func (t *Tunnel) setupNetns() error {
-	ns, sub := t.nsName(), t.subnet()
+	if t.linkIndex() < 0 || t.linkIndex() >= networkLinkCount {
+		return fmt.Errorf("网络地址分配无效")
+	}
+	ns := t.nsName()
 	veth, peer := t.vethNames()
 
 	t.teardownNetns()
@@ -176,19 +179,19 @@ func (t *Tunnel) setupNetns() error {
 	if err := run("ip", "link", "set", peer, "netns", ns); err != nil {
 		return err
 	}
-	if err := run("ip", "addr", "add", sub+".1/30", "dev", veth); err != nil {
+	if err := run("ip", "addr", "add", t.linkAddress(1)+"/30", "dev", veth); err != nil {
 		return err
 	}
 	if err := run("ip", "link", "set", veth, "up"); err != nil {
 		return err
 	}
-	if err := run("ip", "netns", "exec", ns, "ip", "addr", "add", sub+".2/30", "dev", peer); err != nil {
+	if err := run("ip", "netns", "exec", ns, "ip", "addr", "add", t.linkAddress(2)+"/30", "dev", peer); err != nil {
 		return err
 	}
 	if err := run("ip", "netns", "exec", ns, "ip", "link", "set", peer, "up"); err != nil {
 		return err
 	}
-	if err := run("ip", "netns", "exec", ns, "ip", "route", "add", "default", "via", sub+".1"); err != nil {
+	if err := run("ip", "netns", "exec", ns, "ip", "route", "add", "default", "via", t.linkAddress(1)); err != nil {
 		return err
 	}
 
@@ -201,7 +204,7 @@ func (t *Tunnel) setupNetns() error {
 		return fmt.Errorf("写 resolv.conf 失败: %w", err)
 	}
 
-	cidr := sub + ".0/30"
+	cidr := t.linkCIDR()
 	ensureRule("nat", "POSTROUTING", "-s", cidr, "-j", "MASQUERADE")
 	if err := installKillSwitch(t); err != nil {
 		return err
@@ -232,8 +235,8 @@ func ensureRuleInsert(table, chain string, spec ...string) {
 
 func (t *Tunnel) teardownNetns() {
 	t.clearEgress()
-	ns, sub := t.nsName(), t.subnet()
-	cidr := sub + ".0/30"
+	ns := t.nsName()
+	cidr := t.linkCIDR()
 	veth, _ := t.vethNames()
 	// Candidate rotation can reach teardown after OpenVPN has failed before
 	// startOpenVPN returned. Kill that process here as well; otherwise the

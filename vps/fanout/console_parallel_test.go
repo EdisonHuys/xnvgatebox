@@ -21,7 +21,7 @@ func TestConsoleTwoWorkersIsolateSlotsAndPublishOnlyAfterCompletion(t *testing.T
 	active := map[int]bool{}
 	c.probe = func(ctx context.Context, node Node, slot int, progress func(string)) CheckResult {
 		mu.Lock()
-		if active[slot] || slot < diagnosticFirstSlot || slot >= diagnosticFirstSlot+diagnosticWorkers {
+		if active[slot] || slot > diagnosticFirstSlot || slot < -defaultCheckParallelism {
 			t.Error("diagnostics collided or entered user namespace")
 		}
 		active[slot] = true
@@ -119,7 +119,7 @@ func TestConsoleCancellationWaitsForBothWorkerCleanups(t *testing.T) {
 func TestConsoleParallelismValidationAndSerialOption(t *testing.T) {
 	c := consoleFixture(t)
 	c.m.nodes = []Node{{HostName: "a"}}
-	for _, n := range []int{-1, 3, 100} {
+	for _, n := range []int{-1, networkLinkCount + 1} {
 		if _, err := c.startCheck(CheckRequest{Kind: "candidates", Hosts: []string{"a"}, Parallelism: n}); err == nil {
 			t.Fatal("unbounded concurrency accepted")
 		}

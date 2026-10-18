@@ -19,7 +19,6 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 )
 
-const maximumSlots = 32
 const consoleJournal = ".console-transaction.json"
 
 type ExitPlan struct {
@@ -30,20 +29,21 @@ type ExitPlan struct {
 }
 
 type Console struct {
-	ctx          context.Context
-	cancel       context.CancelFunc
-	refreshDone  chan struct{}
-	m            *Manager
-	targetMu     sync.Mutex
-	plan         *ExitPlan
-	planError    string
-	refreshMu    sync.Mutex
-	refreshState string
-	refreshAt    string
-	refreshError string
-	checksMu     sync.Mutex
-	check        *CheckRun
-	results      map[string]CheckResult
+	ctx              context.Context
+	cancel           context.CancelFunc
+	refreshDone      chan struct{}
+	m                *Manager
+	targetMu         sync.Mutex
+	plan             *ExitPlan
+	planError        string
+	refreshMu        sync.Mutex
+	refreshState     string
+	refreshAt        string
+	refreshError     string
+	checksMu         sync.Mutex
+	check            *CheckRun
+	results          map[string]CheckResult
+	checkParallelism int
 	// Test seams exercise intent/persistence without creating real namespaces.
 	start  func(Node, SlotPolicy) (*Tunnel, error)
 	remove func(int) error
@@ -89,13 +89,21 @@ func newConsole(m *Manager) (*Console, error) {
 	if c.results == nil {
 		c.results = map[string]CheckResult{}
 	}
+	if err := c.loadCheckSettings(); err != nil {
+		return nil, err
+	}
 	m.console = c
 	return c, nil
 }
 
 func validateExitPlan(p *ExitPlan, limit int) error {
 	if p.Count < 0 || p.Count > limit || p.Count > maximumSlots {
-		return fmt.Errorf("出口数量须为 0-%d", limit)
+		return fmt.Errorf("出口数量须为非负整数，不能超过本实例地址/管理员容量 %d", limit)
+	}
+	if p.Count > 0 {
+		if _, _, err := fixedSlotPort(p.Count); err != nil {
+			return err
+		}
 	}
 	if p.RemoveSlot < 0 || p.RemoveSlot > limit {
 		return fmt.Errorf("待移除出口编号无效")
@@ -254,7 +262,7 @@ func readConsoleJSON(w http.ResponseWriter, r *http.Request, v any) error {
 	if r.Method != http.MethodPost {
 		return fmt.Errorf("只接受 POST")
 	}
-	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32768))
+	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<20))
 	d.DisallowUnknownFields()
 	if err := d.Decode(v); err != nil {
 		return fmt.Errorf("请求格式无效")
@@ -284,6 +292,7 @@ func (c *Console) routes(mux *http.ServeMux) {
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("/api/console/refresh", c.apiPoolRefresh)
+	mux.HandleFunc("/api/console/check/settings", c.apiCheckSettings)
 	mux.HandleFunc("/api/console/check", c.apiCheck)
 	mux.HandleFunc("/api/console/check/cancel", c.apiCheckCancel)
 	mux.HandleFunc("/api/console/qr", func(w http.ResponseWriter, r *http.Request) {
@@ -355,6 +364,7 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 		results[k] = v
 	}
 	check := c.check
+	parallelism := c.checkParallelism
 	c.checksMu.Unlock()
 	var checkView any
 	if check != nil {
@@ -399,7 +409,7 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, map[string]any{"version": version, "capacity": c.m.maxSlots, "target": target, "allocated": len(view.Exits), "ready": ready, "stopped": stopped, "waiting": max(0, target-ready-stopped), "candidates": len(nodes), "pool_read_at": fetched, "pool_generated_at": generated, "default_server_name": serverName, "plan": plan, "plan_error": planErr, "refresh": refresh, "check": checkView, "results": results, "memory": memory})
+	writeJSON(w, 200, map[string]any{"version": version, "capacity": c.m.maxSlots, "target": target, "allocated": len(view.Exits), "ready": ready, "stopped": stopped, "waiting": max(0, target-ready-stopped), "candidates": len(nodes), "pool_read_at": fetched, "pool_generated_at": generated, "default_server_name": serverName, "plan": plan, "plan_error": planErr, "refresh": refresh, "check": checkView, "check_settings": map[string]int{"parallelism": parallelism}, "results": results, "memory": memory})
 }
 
 func (c *Console) apiPoolRefresh(w http.ResponseWriter, r *http.Request) {
