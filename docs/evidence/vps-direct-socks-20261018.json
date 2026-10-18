@@ -1,0 +1,291 @@
+{
+  "scope": "explicit_vps_host_direct_subscription_and_authenticated_reusable_external_socks",
+  "verified_at": "2026-10-18T02:49:16.700157Z",
+  "build": {
+    "git_head": "ff10d2a56d4249df00e0226a81bbc99d391ef4c4",
+    "manager_origin": "built_from_source",
+    "source_dirty": false,
+    "source_snapshot_sha256": "75c43e3e845531dd82eaddd8a01a4925d32ac45bb0a21f537b38e49631eedace",
+    "version": "dev-direct-reuse-20261018",
+    "xray_version": "v26.3.27",
+    "package_sha256": "64df5c4289a6c9badf8499c49f36edb3d237b545ca1a291768d218693f01d4ec"
+  },
+  "tests": {
+    "go_linux": {
+      "passed": true,
+      "top_level_pass": 231,
+      "all_pass_events": 287,
+      "live_transaction_tests_enabled": true,
+      "skipped_child_helper": 1
+    },
+    "go_vet": "passed",
+    "embedded_js_syntax": "passed",
+    "github_checks_including_access_and_scheduler_race": "passed",
+    "browser_demo": [
+      "host_direct_enable_disable_immediate_feedback",
+      "subscription_include_and_exclude_direct",
+      "separate_direct_connection_card",
+      "external_socks_scope_and_port",
+      "loopback_when_external_access_disabled"
+    ]
+  },
+  "backup": {
+    "archive_sha256": "50fc933cc918865604c455c8af2369ebf5e4506bea8ea61cf1d5df039487a994",
+    "private_archive_retained_on_vps_and_mac": true
+  },
+  "upgrade_preservation_checks": {
+    "all_saved_connections_and_credentials_preserved": true,
+    "management_settings_preserved": true,
+    "quantity_plan_preserved": true,
+    "slot_ports_socks_credentials_and_policies_preserved": true,
+    "xui_runtime_config_preserved": true,
+    "xui_original_process_preserved": true,
+    "clean_source_installed": true,
+    "native_backend": true,
+    "target_preserved": true,
+    "one_connection_per_slot": true,
+    "legacy_slot_01_inferred_auto": true,
+    "legacy_slot_03_inferred_auto": true,
+    "new_login_served": true,
+    "new_connection_page_served": true,
+    "internal_binary_path_removed": true,
+    "direct_api_describe_has_no_binary_path": true,
+    "real_subscription_country_names": true,
+    "host_direct_and_socks_controls_served": true,
+    "numeric_parallelism_and_all_candidates_served": true,
+    "quantity_input_has_no_old_32_cap": true,
+    "instance_capacity_exceeds_32": true,
+    "current_source_not_truncated": true,
+    "historical_observation_keys_preserved": true
+  },
+  "final_verification": {
+    "verified_at": "2026-10-18T02:48:32.326726Z",
+    "status": "passed",
+    "checks": {
+      "xui_config_preserved": true,
+      "xui_process_preserved": true,
+      "original_inbound_clients_and_ports_preserved": true,
+      "original_slot_credentials_policies_preserved": true,
+      "original_management_and_plan_preserved": true,
+      "access_setup_passed": true,
+      "restart_passed": true,
+      "server_stop_blocks_without_fallback": true,
+      "paused_slot_resumed": true,
+      "server_real_clients_passed": true
+    },
+    "target": 32,
+    "parallelism": 16,
+    "ready_snapshot": 8,
+    "enabled_public_socks_slots": [
+      1,
+      2
+    ],
+    "backup_sha256": "50fc933cc918865604c455c8af2369ebf5e4506bea8ea61cf1d5df039487a994"
+  },
+  "access_setup": {
+    "verified_at": "2026-10-18T02:41:51.213322Z",
+    "status": "passed",
+    "checks": {
+      "default_subscription_contains_direct": true,
+      "direct_label_is_explicit": true,
+      "only_direct_scope": true,
+      "exclude_direct_scope": true,
+      "external_socks_have_separate_ports": true,
+      "saved_access_store_valid": true,
+      "private_socks_export_matches_ready": true,
+      "internal_socks_stay_loopback": true,
+      "public_socks_listeners_exist": true
+    },
+    "ready_slots": [
+      1,
+      2
+    ],
+    "upstream_conditions_insufficient": false
+  },
+  "restart": {
+    "verified_at": "2026-10-18T02:46:18.724950Z",
+    "checks": {
+      "stopped_intent_preserved": true,
+      "stopped_intent_after_restart": true,
+      "access_credentials_ports_and_intent_preserved": true,
+      "direct_loaded_after_restart": true,
+      "public_socks_loaded_after_restart": true
+    },
+    "status": "passed"
+  },
+  "real_clients": {
+    "server": {
+      "verified_at": "2026-10-18T02:47:36.395943Z",
+      "vantage": "server-local-public-client",
+      "blocked": false,
+      "checks": [
+        {
+          "kind": "direct",
+          "slot": null,
+          "status": "passed"
+        },
+        {
+          "kind": "vpn",
+          "slot": 1,
+          "status": "passed"
+        },
+        {
+          "kind": "socks",
+          "slot": 1,
+          "status": "passed",
+          "incorrect_password_rejected": true
+        },
+        {
+          "kind": "vpn",
+          "slot": 2,
+          "status": "passed"
+        },
+        {
+          "kind": "socks",
+          "slot": 2,
+          "status": "passed",
+          "incorrect_password_rejected": true
+        }
+      ],
+      "public_subscription_fetch": "passed",
+      "status": "passed"
+    },
+    "mac": {
+      "verified_at": "2026-10-18T02:49:16.700157Z",
+      "vantage": "external-client",
+      "blocked": false,
+      "checks": [
+        {
+          "kind": "direct",
+          "slot": null,
+          "status": "passed"
+        },
+        {
+          "kind": "vpn",
+          "slot": 1,
+          "status": "passed"
+        },
+        {
+          "kind": "socks",
+          "slot": 1,
+          "status": "passed",
+          "incorrect_password_rejected": true
+        },
+        {
+          "kind": "vpn",
+          "slot": 2,
+          "status": "passed",
+          "transport_errors_before_retry": [
+            {
+              "endpoint": 2,
+              "code": "curl_failed_35"
+            }
+          ]
+        },
+        {
+          "kind": "socks",
+          "slot": 2,
+          "status": "passed",
+          "incorrect_password_rejected": true
+        }
+      ],
+      "public_subscription_fetch": "passed",
+      "status": "passed"
+    },
+    "coverage": "one explicit direct entry plus original Slot 1/2 VLESS and external SOCKS; each successful route requires two independent exact IP echoes and verified HTTPS content; wrong SOCKS passwords rejected",
+    "all_target_slots_tested": false
+  },
+  "stop_without_fallback": {
+    "server": {
+      "verified_at": "2026-10-18T02:45:25.704254Z",
+      "vantage": "server-local-public-client",
+      "blocked": true,
+      "checks": [
+        {
+          "kind": "direct",
+          "slot": null,
+          "status": "passed"
+        },
+        {
+          "kind": "vpn",
+          "slot": 1,
+          "status": "passed",
+          "blocked_code": "curl_failed_35"
+        },
+        {
+          "kind": "socks",
+          "slot": 1,
+          "status": "passed",
+          "blocked_code": "curl_failed_35"
+        }
+      ],
+      "status": "passed"
+    },
+    "mac": {
+      "verified_at": "2026-10-18T02:46:51.666519Z",
+      "vantage": "external-client",
+      "blocked": true,
+      "checks": [
+        {
+          "kind": "direct",
+          "slot": null,
+          "status": "passed"
+        },
+        {
+          "kind": "vpn",
+          "slot": 1,
+          "status": "passed",
+          "blocked_code": "curl_failed_35"
+        },
+        {
+          "kind": "socks",
+          "slot": 1,
+          "status": "passed",
+          "blocked_code": "curl_failed_35"
+        }
+      ],
+      "status": "passed"
+    },
+    "resumed": {
+      "verified_at": "2026-10-18T02:46:59.947543Z",
+      "slot": 1,
+      "stopped_intent_removed": true,
+      "ready": true,
+      "upstream_conditions_insufficient": false,
+      "ready_socks_slots": [
+        1,
+        2
+      ],
+      "public_ports_and_credentials_preserved": true,
+      "private_socks_export_requires_login": true
+    },
+    "control": "Slot 1 was stopped through its lifecycle API; its old VLESS and SOCKS requests failed while the explicit direct entry continued to pass. Original running intent was restored; subsequent normal restart and client verification passed."
+  },
+  "retained_failures": {
+    "first_server_transport_codes": [
+      "curl_failed_18",
+      "curl_failed_35"
+    ],
+    "first_mac_transport_codes": [
+      "curl_failed_16",
+      "curl_failed_97"
+    ],
+    "first_listener_check": "Verifier initially matched only 0.0.0.0; Xray uses a wildcard listener. Corrected the verifier, retained the first report and independently verified real external requests.",
+    "final_mac_retry": "Slot 2 VLESS content request had curl_failed_35 once and passed the single allowed retry; exact IP matching and TLS verification were retained."
+  },
+  "limits": {
+    "upstream_availability_remains_variable": true,
+    "default_subscription_contains_enabled_direct": true,
+    "vpn_slots_never_fallback_to_direct": true,
+    "internal_socks_remains_loopback": true,
+    "external_socks_is_authenticated_tcp_and_opt_in": true,
+    "credential_export_requires_login": true,
+    "cf_remains_paused": true,
+    "worker_end_to_end_not_tested": true,
+    "no_automatic_github_credential_publication": true,
+    "automatic_certificate_issuance_deferred": true,
+    "xui_runtime_untouched": true,
+    "unknown_is_not_residential": true,
+    "formal_release_unchanged": "v0.4.0"
+  }
+}
