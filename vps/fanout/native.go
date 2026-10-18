@@ -80,7 +80,7 @@ func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 	list := n.store.sorted()
 	out := make([]Inbound, 0, len(list))
 	for _, ib := range list {
-		if ib.SocksSlot > 0 {
+		if ib.SocksSlot > 0 || ib.ThirdParty != nil {
 			continue
 		}
 		boundUp := live[ib.BoundTo]
@@ -184,7 +184,7 @@ func (n *Native) Bind(inboundTag string, hostname string, tunnels []*Tunnel) err
 		return fmt.Errorf("入站 %s 不存在", inboundTag)
 	}
 
-	if found.HostDirect || found.SocksSlot > 0 {
+	if found.HostDirect || found.SocksSlot > 0 || found.ThirdParty != nil {
 		return fmt.Errorf("此入口由本机直出或 SOCKS 访问设置管理")
 	}
 	if target == nil {
@@ -242,6 +242,9 @@ func (n *Native) CloneToTunnels(templateID int, hosts []string, tunnels []*Tunne
 	tpl := n.store.byID(templateID)
 	if tpl == nil {
 		return nil, fmt.Errorf("模板入站 %d 不存在", templateID)
+	}
+	if tpl.ThirdParty != nil {
+		return nil, fmt.Errorf("第三方代理请在代理资源中管理")
 	}
 
 	byHost := map[string]*Tunnel{}

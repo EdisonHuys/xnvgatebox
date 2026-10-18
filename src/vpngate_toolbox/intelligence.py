@@ -75,7 +75,7 @@ def profile_openvpn_exit(ip: str, settings: dict, cache_path: Path, transport=ge
 
 
 def profile_measured_exit(ip: str, settings: dict, cache_path: Path, protocol_name: str, transport=get_json) -> dict:
-    if protocol_name not in ("openvpn", "sstp"):
+    if protocol_name not in ("openvpn", "sstp", "socks5"):
         raise ToolError("unsupported_profile_protocol")
     ip = public_ipv4(ip)
     protocol = {"status": "passed", "expected_exit_ip": ip}

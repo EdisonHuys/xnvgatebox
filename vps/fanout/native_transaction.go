@@ -23,6 +23,10 @@ func cloneNativeStore(s *nativeStore) *nativeStore {
 	for _, in := range s.Inbounds {
 		ib := *in
 		ib.Clients = append([]nativeClient(nil), in.Clients...)
+		if in.ThirdParty != nil {
+			p := *in.ThirdParty
+			ib.ThirdParty = &p
+		}
 		if in.TLS != nil {
 			v := *in.TLS
 			ib.TLS = &v

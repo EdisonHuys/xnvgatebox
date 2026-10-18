@@ -29,6 +29,7 @@ type ExitPlan struct {
 }
 
 type Console struct {
+	third            *ThirdPartyManager
 	sstp             *SstpManager
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -97,6 +98,7 @@ func newConsole(m *Manager) (*Console, error) {
 		c.cancel()
 		return nil, err
 	}
+	c.loadThirdPartyManager()
 	m.console = c
 	return c, nil
 }
@@ -280,6 +282,7 @@ func readConsoleJSON(w http.ResponseWriter, r *http.Request, v any) error {
 
 func (c *Console) routes(mux *http.ServeMux) {
 	c.sstp.routes(mux)
+	c.third.routes(mux)
 	mux.HandleFunc("/api/console", c.apiConsole)
 	mux.HandleFunc("/api/console/target", func(w http.ResponseWriter, r *http.Request) {
 		var p ExitPlan
@@ -312,6 +315,10 @@ func (c *Console) routes(mux *http.ServeMux) {
 			http.Error(w, "出口选择无效", 400)
 			return
 		}
+		if _, err := subscriptionProxyIDs(r.URL.Query().Get("proxies")); err != nil {
+			http.Error(w, "第三方选择无效", 400)
+			return
+		}
 		tok, err := subToken()
 		if err != nil {
 			http.Error(w, "订阅未就绪", 500)
@@ -321,7 +328,14 @@ func (c *Console) routes(mux *http.ServeMux) {
 		if slots := r.URL.Query().Get("slots"); slots != "" {
 			link += "&slots=" + slots
 		}
-		for _, key := range []string{"direct", "vpn"} {
+		if ids := r.URL.Query().Get("proxies"); ids != "" {
+			if r.URL.Query().Get("third") == "0" {
+				http.Error(w, "第三方选择无效", 400)
+				return
+			}
+			link += "&proxies=" + ids
+		}
+		for _, key := range []string{"direct", "vpn", "third"} {
 			if v := r.URL.Query().Get(key); v != "" {
 				if v != "0" && v != "1" {
 					http.Error(w, "订阅范围无效", 400)

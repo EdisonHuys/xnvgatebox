@@ -41,11 +41,12 @@ type nativeInbound struct {
 	Enable   bool           `json:"enable"`
 	Clients  []nativeClient `json:"clients"`
 	// BoundTo 保留旧版主机名绑定；BoundSlot 存在时以稳定编号为准。空绑定默认阻断
-	BoundTo    string `json:"bound_to"`
-	BoundSlot  int    `json:"bound_slot,omitempty"`
-	NameMode   string `json:"name_mode,omitempty"`
-	HostDirect bool   `json:"host_direct,omitempty"` // only explicit direct entries may use the host
-	SocksSlot  int    `json:"socks_slot,omitempty"`  // managed external SOCKS entry, separate from loopback
+	BoundTo    string           `json:"bound_to"`
+	BoundSlot  int              `json:"bound_slot,omitempty"`
+	NameMode   string           `json:"name_mode,omitempty"`
+	HostDirect bool             `json:"host_direct,omitempty"` // only explicit direct entries may use the host
+	SocksSlot  int              `json:"socks_slot,omitempty"`  // managed external SOCKS entry, separate from loopback
+	ThirdParty *ThirdPartyProxy `json:"third_party,omitempty"`
 }
 
 // tlsConfig 是标准 TLS 的配置。证书要么由用户提供路径，要么 fanout 生成自签的。
@@ -136,6 +137,14 @@ func validateNativeStore(st *nativeStore) error {
 		}
 		if ib.HostDirect && (ib.BoundSlot != 0 || ib.BoundTo != "" || ib.SocksSlot != 0) {
 			return fmt.Errorf("本机直出不能同时绑定 VPN Gate")
+		}
+		if ib.ThirdParty != nil {
+			if ib.HostDirect || ib.BoundSlot != 0 || ib.BoundTo != "" || ib.SocksSlot != 0 || ib.Protocol != "vless" || ib.securityOrNone() != "reality" {
+				return fmt.Errorf("第三方代理不能同时绑定其他出口，且须使用加密接入")
+			}
+			if err := validateThirdParty(*ib.ThirdParty); err != nil {
+				return err
+			}
 		}
 		if ib.SocksSlot != 0 && (ib.SocksSlot < 1 || ib.SocksSlot > maximumSlots || ib.BoundSlot != ib.SocksSlot || ib.Protocol != "socks" || ib.securityOrNone() != "none" || ib.netOrTCP() != "tcp" || len(ib.Clients) != 1 || validateCred(SocksCred{User: ib.Clients[0].Email, Pass: ib.Clients[0].Password}) != nil) {
 			return fmt.Errorf("外部 SOCKS 配置无效")

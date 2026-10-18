@@ -92,6 +92,12 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 
 	outs := slotOutbounds(tunnels)
 	for _, ib := range inbounds {
+		if thirdPartyBound(ib) && ib.Enable {
+			p := ib.ThirdParty
+			outs = append(outs, map[string]any{"tag": thirdPartyTag(ib.ID), "protocol": "socks", "settings": map[string]any{"servers": []any{map[string]any{"address": p.Host, "port": p.Port, "users": []any{map[string]any{"user": p.Username, "pass": p.Password}}}}}})
+		}
+	}
+	for _, ib := range inbounds {
 		if ib.Enable && ib.HostDirect && ib.BoundSlot == 0 && ib.BoundTo == "" && ib.SocksSlot == 0 {
 			outs = append(outs, map[string]any{"tag": "host-direct", "protocol": "freedom"})
 			break
@@ -112,6 +118,12 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 		}
 		if ib.HostDirect && ib.BoundSlot == 0 && ib.BoundTo == "" && ib.SocksSlot == 0 {
 			tag = "host-direct"
+		}
+		if ib.ThirdParty != nil {
+			tag = ""
+			if thirdPartyBound(ib) {
+				tag = thirdPartyTag(ib.ID)
+			}
 		}
 		if tag == "" {
 			tag = "block"

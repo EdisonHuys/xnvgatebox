@@ -1055,13 +1055,15 @@
               <div class="card pad" style="margin-top: 20px">
                 <h2>选择订阅范围</h2>
                 <label class="choice"
-                  ><input
-                    type="checkbox"
-                    id="subAll"
-                    checked
-                  />所有出口（包括今后新增的出口）</label
+                  ><input type="checkbox" id="subAll" checked />VPN Gate
+                  全选（包括今后新增）</label
                 >
                 <div id="subSlots"></div>
+                <label class="choice"
+                  ><input id="subThirdAll" type="checkbox" checked />第三方
+                  SOCKS5 全选（包括今后新增）</label
+                >
+                <div id="subThirdRows"></div>
                 <label class="choice"
                   ><input id="subDirect" type="checkbox" checked />包含 VPS
                   本机直出（启用后生效）</label
@@ -1158,7 +1160,39 @@
           </div>
           <div class="actions" style="margin-bottom: 20px">
             <button id="resourceSocksTab" class="primary">VPS SOCKS5</button
-            ><button id="resourceSstpTab">原始 SSTP</button>
+            ><button id="resourceSstpTab">原始 SSTP</button
+            ><button id="resourceThirdTab">第三方 SOCKS5</button>
+          </div>
+          <div id="resourceThirdPane" hidden>
+            <div class="notice">
+              手动添加自己的 SOCKS5，独立加入订阅。流量经本 VPS 转发，VPN Gate
+              不可用时仍可手动选择；故障不会切换出口。供应商账号和密码不会进入客户端订阅。
+            </div>
+            <div
+              class="actions"
+              style="justify-content: space-between; margin: 24px 0 16px"
+            >
+              <h2>第三方 SOCKS5</h2>
+              <button class="primary" id="thirdAdd">＋ 添加代理</button>
+            </div>
+            <div class="tablewrap card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>名称 / 服务器</th>
+                    <th>手动标注</th>
+                    <th>实际出口 / 地区</th>
+                    <th>检测</th>
+                    <th>订阅</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="thirdRows"></tbody>
+              </table>
+            </div>
+            <p class="muted" style="margin-top: 16px">
+              国家和城市选填，检测结果单独展示。地区检测不到时保留待验证；购买或手填不代表住宅属性已经验证。检测针对固定出口；本期不自动提取或轮换代理。
+            </p>
           </div>
           <div id="resourceSocksPane">
             <div class="notice">
@@ -1522,6 +1556,88 @@
       <h3 style="margin: 25px 0 10px">订阅显示名称</h3>
       <div id="nameEdits"></div>
     </dialog>
+    <dialog id="thirdDialog" aria-labelledby="thirdTitle">
+      <form id="thirdForm" autocomplete="off">
+        <div class="dialoghead">
+          <h2 id="thirdTitle">添加第三方 SOCKS5</h2>
+          <button type="button" data-close="thirdDialog" aria-label="关闭">
+            ×
+          </button>
+        </div>
+        <div class="field">
+          <label for="thirdRemark">备注（选填）</label
+          ><input
+            id="thirdRemark"
+            maxlength="160"
+            placeholder="例如 nov proxy-los"
+          /><small>显示在订阅名称中；留空使用“第三方”。</small>
+        </div>
+        <div class="resourcefilters">
+          <label
+            >服务器地址<input
+              id="thirdHost"
+              required
+              placeholder="域名或 IP，不含协议" /></label
+          ><label
+            >端口<input
+              id="thirdPort"
+              type="number"
+              min="1"
+              max="65535"
+              required
+          /></label>
+        </div>
+        <div class="resourcefilters">
+          <label>账号<input id="thirdUser" required autocomplete="off" /></label
+          ><label
+            >密码<input
+              id="thirdPassword"
+              type="password"
+              autocomplete="new-password"
+          /></label>
+        </div>
+        <div class="resourcefilters">
+          <label
+            >国家（选填）<select id="thirdCountry">
+              <option value="">检测后确认</option>
+            </select></label
+          ><label
+            >城市（选填）<input
+              id="thirdCity"
+              maxlength="100"
+              placeholder="例如 洛杉矶"
+          /></label>
+        </div>
+        <label class="choice"
+          ><input id="thirdEnabled" type="checkbox" checked />启用此代理</label
+        >
+        <label class="choice"
+          ><input
+            id="thirdSubscribe"
+            type="checkbox"
+            checked
+          />允许加入订阅</label
+        >
+        <p class="muted">
+          保存后自动检测，实测信息不会覆盖备注或手动标注。编辑代理可能短暂中断现有连接。
+        </p>
+        <div class="dialogfoot">
+          <button type="button" data-close="thirdDialog">取消</button
+          ><button class="primary" id="thirdSave" type="submit">
+            保存并检测
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="thirdDeleteDialog" aria-labelledby="thirdDeleteTitle">
+      <div class="dialoghead"><h2 id="thirdDeleteTitle">删除代理</h2></div>
+      <p id="thirdDeleteHelp"></p>
+      <p class="muted">该代理的原订阅入口将停止服务，不会转到其他出口。</p>
+      <div class="dialogfoot">
+        <button data-close="thirdDeleteDialog">取消</button
+        ><button class="danger" id="thirdDeleteConfirm">删除</button>
+      </div>
+    </dialog>
     <dialog id="resourceCredentials">
       <div class="dialoghead">
         <h2 id="resourceCredentialTitle">SOCKS5 访问凭据</h2>
@@ -1575,6 +1691,13 @@
         subscription = {},
         selected = new Set(),
         subSelected = new Set(),
+        subThirdSelected = new Set(),
+        thirdProxies = [],
+        thirdCountries = [],
+        thirdEditing = 0,
+        thirdDeleting = 0,
+        thirdSubmitting = new Set(),
+        thirdEpoch = 0,
         hostDirect = [],
         resourcePublicIP = "",
         resourceTab = "socks",
@@ -2153,14 +2276,25 @@
           .filter((e) => subSelected.has(e.slot))
           .map((e) => e.slot);
         const direct = $("subDirect").checked;
-        if (!all && !ids.length && !direct) return "";
+        const thirdAll = $("subThirdAll").checked;
+        const thirdIDs = thirdProxies
+          .filter((p) => subThirdSelected.has(p.id))
+          .map((p) => p.id);
+        if (!all && !ids.length && !direct && !thirdAll && !thirdIDs.length)
+          return "";
         const u = new URL(subscription.url, location.href);
+        for (const k of ["slots", "vpn", "direct", "proxies", "third"])
+          u.searchParams.delete(k);
         if (!direct) u.searchParams.set("direct", "0");
         else if (!all) u.searchParams.set("direct", "1");
         if (!all) {
           if (ids.length) u.searchParams.set("slots", ids.join(","));
           else u.searchParams.set("vpn", "0");
         }
+        if (thirdAll) u.searchParams.set("third", "1");
+        else if (thirdIDs.length)
+          u.searchParams.set("proxies", thirdIDs.join(","));
+        else u.searchParams.set("third", "0");
         return u.href;
       }
       function renderSubscription() {
@@ -2184,7 +2318,15 @@
           " 个 VPN Gate 入站" +
           ($("subDirect").checked && hostDirect.some((i) => i.enable)
             ? " + VPS 本机直出"
-            : "");
+            : "") +
+          " + " +
+          thirdProxies.filter(
+            (p) =>
+              p.enabled &&
+              p.subscribe &&
+              ($("subThirdAll").checked || subThirdSelected.has(p.id)),
+          ).length +
+          " 个第三方入口";
         $("subSlots").innerHTML = exits
           .map(
             (e) =>
@@ -2201,6 +2343,28 @@
               "</label>",
           )
           .join("");
+        const thirdAll = $("subThirdAll").checked;
+        $("subThirdRows").innerHTML = thirdProxies.length
+          ? thirdProxies
+              .map(
+                (p) =>
+                  '<label class="choice"><input type="checkbox" data-sub-third="' +
+                  p.id +
+                  '" ' +
+                  (thirdAll || subThirdSelected.has(p.id) ? "checked " : "") +
+                  (thirdAll ? "disabled " : "") +
+                  ">" +
+                  esc(p.name) +
+                  " " +
+                  (!p.enabled
+                    ? " <small>已停用</small>"
+                    : !p.subscribe
+                      ? " <small>未允许订阅</small>"
+                      : "") +
+                  "</label>",
+              )
+              .join("")
+          : '<p class="muted">尚未添加第三方代理</p>';
         const qr = $("qr");
         qr.hidden = !u;
         if (u) {
@@ -2210,6 +2374,247 @@
           if (qr.getAttribute("src") !== path) qr.src = path;
         }
       }
+      function renderThirdParties() {
+        const reasons = {
+          proxy_https_failed: "认证、连接或 HTTPS 请求失败",
+          invalid_exit_ip: "未取得合法公网出口",
+          exit_changed: "两次出口不同，请使用固定或粘性会话",
+          proxy_content_failed: "HTTPS 内容验证失败",
+          check_cancelled: "检测已取消",
+          result_save_failed: "检测结果保存失败",
+        };
+        $("thirdRows").innerHTML = thirdProxies.length
+          ? thirdProxies
+              .map((p) => {
+                const r = thirdSubmitting.has(p.id)
+                  ? { status: "running" }
+                  : p.check || { status: "not_tested" };
+                const place = r.country
+                  ? country(r.country) + (r.city ? " · " + r.city : "")
+                  : "地区待验证";
+                return (
+                  "<tr><td><strong>" +
+                  esc(p.name) +
+                  "</strong><small>" +
+                  esc(p.host) +
+                  ":" +
+                  p.port +
+                  "</small><small>加密接入端口 " +
+                  p.entry_port +
+                  (p.enabled ? "" : " · 已停用") +
+                  "</small></td><td>" +
+                  esc(p.country ? country(p.country) : "未填写") +
+                  "<small>" +
+                  esc(p.city || "城市未填写") +
+                  "</small></td><td>" +
+                  esc(r.actual_ip || "—") +
+                  "<small>" +
+                  esc(place) +
+                  "</small><small>" +
+                  esc(types[r.ip_type] || "unknown") +
+                  "</small>" +
+                  (p.country_mismatch || p.city_mismatch
+                    ? '<small class="warn">实测地区与手动标注不同</small>'
+                    : "") +
+                  "</td><td>" +
+                  badge(r.status) +
+                  (r.latency_ms > 0
+                    ? "<small>" + Math.round(r.latency_ms) + " ms</small>"
+                    : "") +
+                  "<small>" +
+                  esc(reasons[r.code] || "") +
+                  "</small><small>" +
+                  date(r.checked_at) +
+                  '</small></td><td><label><input type="checkbox" data-third-subscribe="' +
+                  p.id +
+                  '" ' +
+                  (p.subscribe ? "checked" : "") +
+                  '> 加入订阅</label></td><td><div class="actions"><button data-third-check="' +
+                  p.id +
+                  '" ' +
+                  (r.status === "running" ? 'disabled aria-busy="true"' : "") +
+                  ">" +
+                  (r.status === "running" ? "检测中" : "检测") +
+                  '</button><button data-third-edit="' +
+                  p.id +
+                  '">编辑</button><button data-third-toggle="' +
+                  p.id +
+                  '">' +
+                  (p.enabled ? "停用" : "启用") +
+                  '</button><button data-third-delete="' +
+                  p.id +
+                  '">删除</button></div></td></tr>'
+                );
+              })
+              .join("")
+          : '<tr><td colspan="6" class="empty">添加自己的固定 SOCKS5，即可独立加入订阅。</td></tr>';
+      }
+      async function refreshThirdParties() {
+        const epoch = thirdEpoch;
+        const data = await api("api/resources/third-party");
+        if (epoch !== thirdEpoch) return;
+        thirdProxies = data.proxies || [];
+        thirdCountries = data.countries || thirdCountries;
+        renderThirdParties();
+        renderSubscription();
+      }
+      async function checkThirdParty(id) {
+        thirdEpoch++;
+        thirdSubmitting.add(id);
+        renderThirdParties();
+        try {
+          await api("api/resources/third-party/check", { id });
+          thirdEpoch++;
+          const p = thirdProxies.find((p) => p.id === id);
+          if (p) p.check = { status: "running" };
+          await refreshThirdParties();
+        } finally {
+          thirdSubmitting.delete(id);
+          renderThirdParties();
+        }
+      }
+      async function openThirdParty(id = 0) {
+        let p = {},
+          enabled = true;
+        if (!thirdCountries.length) await refreshThirdParties();
+        if (id) {
+          const data = await api("api/resources/third-party?id=" + id);
+          p = data.proxy;
+          enabled = data.enabled;
+        }
+        thirdEditing = id;
+        $("thirdTitle").textContent = id
+          ? "编辑第三方 SOCKS5"
+          : "添加第三方 SOCKS5";
+        $("thirdCountry").innerHTML =
+          '<option value="">检测后确认</option>' +
+          thirdCountries
+            .map(
+              (c) =>
+                '<option value="' +
+                esc(c.code) +
+                '">' +
+                esc(c.name) +
+                "</option>",
+            )
+            .join("");
+        for (const [field, key] of [
+          ["thirdHost", "host"],
+          ["thirdPort", "port"],
+          ["thirdUser", "username"],
+          ["thirdCountry", "country"],
+          ["thirdCity", "city"],
+          ["thirdRemark", "remark"],
+        ])
+          $(field).value = p[key] || "";
+        $("thirdPassword").value = "";
+        $("thirdPassword").required = !id;
+        $("thirdPassword").placeholder = id ? "留空保留现有密码" : "供应商密码";
+        $("thirdEnabled").checked = enabled;
+        $("thirdSubscribe").checked = id ? p.subscribe : true;
+        $("thirdDialog").showModal();
+      }
+      $("thirdAdd").onclick = () => action(() => openThirdParty());
+      $("thirdForm").onsubmit = (e) => {
+        e.preventDefault();
+        action(async () => {
+          thirdEpoch++;
+          const body = {
+            id: thirdEditing,
+            enabled: $("thirdEnabled").checked,
+            subscribe: $("thirdSubscribe").checked,
+          };
+          for (const [field, key] of [
+            ["thirdHost", "host"],
+            ["thirdUser", "username"],
+            ["thirdCountry", "country"],
+            ["thirdCity", "city"],
+            ["thirdRemark", "remark"],
+            ["thirdPassword", "password"],
+          ])
+            body[key] = $(field).value;
+          body.port = Number($("thirdPort").value);
+          const result = await api("api/resources/third-party", body);
+          thirdEpoch++;
+          $("thirdPassword").value = "";
+          $("thirdDialog").close();
+          await refreshThirdParties();
+          toast("代理已保存，正在检测；客户端刷新订阅后生效");
+          await checkThirdParty(result.id);
+        }, $("thirdSave"));
+      };
+      $("thirdDeleteConfirm").onclick = () =>
+        action(async () => {
+          thirdEpoch++;
+          await api("api/resources/third-party/delete", { id: thirdDeleting });
+          thirdEpoch++;
+          subThirdSelected.delete(thirdDeleting);
+          $("thirdDeleteDialog").close();
+          await refreshThirdParties();
+          toast("代理已删除");
+        }, $("thirdDeleteConfirm"));
+      $("resourceThirdTab").onclick = () => {
+        resourceTab = "third";
+        renderResources();
+        action(refreshThirdParties);
+      };
+      document.addEventListener("click", (e) => {
+        const button = e.target.closest(
+          "[data-third-check],[data-third-edit],[data-third-toggle],[data-third-delete]",
+        );
+        if (!button) return;
+        if (button.dataset.thirdCheck)
+          return action(
+            () => checkThirdParty(Number(button.dataset.thirdCheck)),
+            button,
+          );
+        if (button.dataset.thirdEdit)
+          return action(
+            () => openThirdParty(Number(button.dataset.thirdEdit)),
+            button,
+          );
+        if (button.dataset.thirdToggle)
+          return action(async () => {
+            const id = Number(button.dataset.thirdToggle),
+              p = thirdProxies.find((p) => p.id === id);
+            thirdEpoch++;
+            await api("api/resources/third-party/toggle", {
+              id,
+              enabled: !p.enabled,
+            });
+            thirdEpoch++;
+            await refreshThirdParties();
+          }, button);
+        thirdDeleting = Number(button.dataset.thirdDelete);
+        $("thirdDeleteHelp").textContent =
+          "删除“" +
+          (thirdProxies.find((p) => p.id === thirdDeleting)?.name || "此代理") +
+          "”？";
+        $("thirdDeleteDialog").showModal();
+      });
+      document.addEventListener("change", (e) => {
+        if (e.target.dataset.subThird) {
+          const id = Number(e.target.dataset.subThird);
+          e.target.checked
+            ? subThirdSelected.add(id)
+            : subThirdSelected.delete(id);
+          renderSubscription();
+        }
+        if (e.target.dataset.thirdSubscribe)
+          action(async () => {
+            thirdEpoch++;
+            await api("api/resources/third-party/subscribe", {
+              id: Number(e.target.dataset.thirdSubscribe),
+              subscribe: e.target.checked,
+            });
+            thirdEpoch++;
+            await refreshThirdParties();
+          });
+      });
+      $("subThirdAll").onchange = () => {
+        if (!$("subThirdAll").checked) subThirdSelected.clear();
+        renderSubscription();
+      };
       const sstpPhases = {
         sstp_tls: "验证 SSTP 证书",
         setup: "准备隔离连接",
@@ -2294,6 +2699,12 @@
         });
       }
       function renderResources() {
+        $("resourceThirdPane").hidden = resourceTab !== "third";
+        $("resourceThirdTab").classList.toggle(
+          "primary",
+          resourceTab === "third",
+        );
+        renderThirdParties();
         $("resourceSocksPane").hidden = resourceTab !== "socks";
         $("resourceSstpPane").hidden = resourceTab !== "sstp";
         $("resourceSocksTab").classList.toggle(
@@ -2656,11 +3067,15 @@
         if (polling) return;
         polling = true;
         try {
-          const [s, e, n, sub] = await Promise.all([
+          const thirdPollEpoch = thirdEpoch;
+          const [s, e, n, sub, third] = await Promise.all([
             api("api/console"),
             api("api/exits"),
             api("api/nodes?all=1"),
             api("api/sub"),
+            api("api/resources/third-party").catch(() => ({
+              proxies: thirdProxies,
+            })),
           ]);
           summary = s;
           summary.backend = e.backend;
@@ -2669,6 +3084,10 @@
           exits = (e.exits || []).sort((a, b) => a.slot - b.slot);
           nodes = n.nodes || [];
           subscription = sub;
+          if (thirdPollEpoch === thirdEpoch) {
+            thirdProxies = third.proxies || [];
+            thirdCountries = third.countries || thirdCountries;
+          }
           render();
         } catch (e) {
           $("globalNotice").hidden = false;
@@ -2972,8 +3391,7 @@
           toast("本机直出设置已保存，请刷新客户端订阅");
         }, $("hostDirectToggle"));
       $("subAll").onchange = () => {
-        if (!$("subAll").checked && !subSelected.size)
-          exits.forEach((e) => subSelected.add(e.slot));
+        if (!$("subAll").checked) subSelected.clear();
         renderSubscription();
       };
       $("copySub").onclick = () => action(() => copy(selectedSubURL()));
