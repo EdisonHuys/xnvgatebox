@@ -4,13 +4,14 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
-最新发布：[v0.5.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.0)。本版包含独立控制台、自定出口数与检测并发、VPS 本机直出、外部 SOCKS5、原始 SSTP 资源管理及完整包在线更新。安装更新规范与验证范围见 [安装和更新说明](docs/INSTALL_UPDATE.md)。
+最新发布：[v0.5.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.0)。本版包含独立控制台、自定出口数与检测并发、VPS 本机直出、外部 SOCKS5、原始 SSTP 资源管理及完整包在线更新。已通过测试 VPS 的正式包在线更新、配置保留与真实订阅复验，完整私有备份保存在 VPS 和 Mac；全新操作系统验收待使用者重装后执行。见 [安装和更新说明](docs/INSTALL_UPDATE.md) 与 [脱敏发布证据](docs/evidence/vps-release-20261018.json)。
 
 ## Debian 12 安装
 
 已测环境为 Debian 12 amd64、systemd。Debian / Ubuntu amd64 可使用同一入口，其他系统尚未验收。以 root 执行：
 
 ```sh
+apt-get update && apt-get install -y ca-certificates curl
 curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.5.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.5.0
 ```
 

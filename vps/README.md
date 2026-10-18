@@ -7,6 +7,7 @@
 Debian 12 amd64、systemd，以 root 执行：
 
 ```sh
+apt-get update && apt-get install -y ca-certificates curl
 curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.5.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.5.0
 ```
 

@@ -1,4 +1,4 @@
-2026-10-18 v0.5.0 发布候选：干净包 `89c2e33` 已在 Debian 12 完整升级，9 项保留检查、实际安装故障恢复和独立新目录真实直出订阅通过；78 项 Python、246 个 Linux 顶层用例 / 309 个通过事件及 GitHub 含更新 race 全部通过。网页完整包更新独立于管理进程并保存进度，安装方式与全新系统验收见 [安装更新说明](INSTALL_UPDATE.md)。正式资产发布后继续验收真实在线更新；用户重装 OS 的验收仍待执行。CF 暂停，3x-ui 原进程/配置保留，unknown 不称家宽。
+2026-10-18 发布收尾：[v0.5.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.0) 已发布，来源 `7a65429`，PR #3 已合入 main。Debian 12 测试 VPS 真实完整包在线更新、12 项更新检查、9 项设置保留、实际安装故障恢复、独立新目录直出及最终 10 项复核通过；78 项 Python、246 个 Linux 顶层用例 / 309 个通过事件及 GitHub 含更新 race 通过。VPS/Mac 的直出、原 Slot 2 VLESS/SOCKS 复验通过，Mac 首轮 TLS 传输失败保留并按原标准针对性复核通过。正式版完整私有备份已保存在 VPS 与 Mac。安装、登录、在线更新及全新系统验收见 [安装更新说明](INSTALL_UPDATE.md) 和 [脱敏证据](evidence/vps-release-20261018.json)；用户重装 Debian 12 后的全新 OS 验收仍待执行。CF 暂停，3x-ui 原进程/配置保留，unknown 不称家宽。
 
 # 当前开发：控制台与可配置出口数量（2026-10-17）
 

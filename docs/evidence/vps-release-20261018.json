@@ -1,0 +1,226 @@
+{
+  "scope": "v0.5.0 complete-package installation, online update and release validation",
+  "recorded_at_on_mac": "2026-10-18T07:56:26.688101+00:00",
+  "release": {
+    "tag": "v0.5.0",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.0",
+    "source_commit": "7a654297acb66e9fc3ca3038766966182be608a9",
+    "build_run": 39097838298,
+    "publish_run": 39097941382,
+    "package_sha256": "36c78746ba9290d4e37b656bedd5ddacf6cf5bc1bb51ccb4351b12e0c4d7240d",
+    "anonymous_public_archive_and_bootstrap_verified": true
+  },
+  "python_tests": {
+    "passed": 78
+  },
+  "linux_tests": {
+    "passed": true,
+    "top_level_pass": 246,
+    "all_pass_events": 309,
+    "skips": 3
+  },
+  "candidate_migration_and_final_preservation": {
+    "version": "v0.5.0",
+    "status": "passed",
+    "checks": {
+      "management_subscription_target_parallelism_preserved": true,
+      "all_inbound_ports_credentials_and_bindings_preserved": true,
+      "all_slots_ports_credentials_policies_intent_preserved": true,
+      "sstp_settings_and_observations_preserved": true,
+      "xui_original_process_and_config_preserved": true,
+      "native_backend_without_error": true,
+      "saved_target_and_parallelism": true,
+      "update_card_served": true,
+      "clean_source": true
+    },
+    "ready_snapshot": 0
+  },
+  "fresh_work_directory": {
+    "kind": "fresh_work_directory_not_fresh_OS",
+    "status": "passed",
+    "version": "dev-updates-20261018",
+    "checks": {
+      "zero_target_and_allocated_on_fresh_workdir": true,
+      "new_management_and_subscription_credentials": true,
+      "default_subscription_includes_new_host_direct": true,
+      "new_host_direct_real_public_vless_https_and_exact_exit": true,
+      "sstp_not_auto_scanned": true,
+      "no_image_service_and_no_residential_claim": true
+    }
+  },
+  "controlled_real_installer_rollback": {
+    "fault": "controlled_exception_after_real_new_service_health",
+    "reached_new_package": true,
+    "failed_job_reported": true,
+    "rolled_back": true,
+    "new_marker_removed": true,
+    "journal_cleared": true
+  },
+  "formal_online_update": {
+    "status": "passed",
+    "checks": {
+      "api_accepted_202": true,
+      "worker_has_independent_systemd_cgroup": true,
+      "manager_process_replaced": true,
+      "installed_version_is_formal": true,
+      "status_completed": true,
+      "complete_backup_reported": true,
+      "same_version_has_no_update": true,
+      "same_version_apply_does_not_restart": true,
+      "no_pending_recovery": true,
+      "login_required_api/update/status": true,
+      "login_required_api/update/apply": true,
+      "clean_source_release_build": true
+    },
+    "phases_observed": [
+      "preparing",
+      "downloading",
+      "verifying",
+      "pool",
+      "stopping",
+      "complete"
+    ],
+    "build": {
+      "git_head": "7a654297acb66e9fc3ca3038766966182be608a9",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "e8eb1808dd79489c1dcedf02e85991046b1bafaca6c773992f4449491b15404a",
+      "version": "v0.5.0",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "server_local_public_client": {
+    "verified_at": "2026-10-18T07:50:24.657624Z",
+    "vantage": "server-local-public-client",
+    "status": "passed",
+    "public_subscription_fetch": "passed",
+    "checks": [
+      {
+        "kind": "direct",
+        "slot": null,
+        "status": "passed"
+      },
+      {
+        "kind": "vpn",
+        "slot": 2,
+        "status": "passed"
+      },
+      {
+        "kind": "socks",
+        "slot": 2,
+        "status": "passed",
+        "incorrect_password_rejected": true
+      }
+    ]
+  },
+  "external_client": {
+    "first_attempt": {
+      "verified_at": "2026-10-18T07:52:53.045865Z",
+      "vantage": "external-client",
+      "status": "failed",
+      "public_subscription_fetch": "passed",
+      "checks": [
+        {
+          "kind": "direct",
+          "slot": null,
+          "status": "passed",
+          "transport_errors_before_retry": [
+            {
+              "endpoint": 0,
+              "code": "curl_failed_35"
+            }
+          ]
+        },
+        {
+          "kind": "vpn",
+          "slot": 2,
+          "status": "failed",
+          "transport_errors_before_retry": [
+            {
+              "endpoint": 1,
+              "code": "curl_failed_35"
+            },
+            {
+              "endpoint": 2,
+              "code": "curl_failed_35"
+            }
+          ],
+          "error": "curl_failed_35"
+        },
+        {
+          "kind": "socks",
+          "slot": 2,
+          "status": "passed",
+          "transport_errors_before_retry": [
+            {
+              "endpoint": 1,
+              "code": "curl_failed_35"
+            }
+          ],
+          "incorrect_password_rejected": true
+        }
+      ]
+    },
+    "targeted_vless_recheck": {
+      "verified_at": "2026-10-18T07:54:33.844834Z",
+      "vantage": "external-client",
+      "status": "passed",
+      "public_subscription_fetch": "passed",
+      "checks": [
+        {
+          "kind": "vpn",
+          "slot": 2,
+          "status": "passed",
+          "transport_errors_before_retry": [
+            {
+              "endpoint": 0,
+              "code": "curl_failed_35"
+            }
+          ]
+        }
+      ]
+    },
+    "same_original_connection_and_expected_exit": true,
+    "coverage": [
+      "VPS host direct VLESS",
+      "original Slot 2 VLESS",
+      "original Slot 2 public authenticated SOCKS5"
+    ],
+    "transport_failures_preserved": true
+  },
+  "final_review": {
+    "status": "passed",
+    "checks": {
+      "formal_version_active": true,
+      "cli_update_status_completed": true,
+      "cli_check_update_succeeds": true,
+      "native_backend_healthy": true,
+      "target_and_parallelism_preserved": true,
+      "no_sstp_background_scan": true,
+      "pool_timer_active": true,
+      "no_pending_deploy_transaction": true,
+      "temporary_instances_stopped": true,
+      "xui_process_and_config_still_original": true
+    },
+    "ready_snapshot": 13
+  },
+  "private_backup": {
+    "consistent_project_backup_on_vps_and_mac": true,
+    "sha256": "a3153fb1a70286e1f08567585c26b19c67ecd0c3ed931d12e681a18c3f492afd",
+    "is_operating_system_image": false
+  },
+  "limits": {
+    "fresh_operating_system_acceptance": "pending user Debian 12 amd64 reinstall",
+    "all_32_planned_exits_end_to_end_tested": false,
+    "specified_country_or_count_not_guaranteed": true,
+    "cf_writes_or_deployments_performed": false,
+    "worker_end_to_end_tested": false,
+    "xui_original_process_and_running_config_preserved": true,
+    "unknown_is_not_residential": true
+  },
+  "retained_failures": [
+    "Linux live fixture initially absent, then not exactly three inbounds; corrected disposable fixture passed.",
+    "Fresh-workdir validator initially read lazy subscription token before first UI initialization; repeated real first-login sequence passed.",
+    "External Mac TLS transport errors (curl 35) preserved; same original VLESS and exact expected exit passed targeted recheck."
+  ]
+}
