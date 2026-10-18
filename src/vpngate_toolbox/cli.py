@@ -49,15 +49,18 @@ def main(argv=None):
     sstp_profile = sub.add_parser("profile-sstp", help="Profile a measured SSTP exit; not a tunnel check")
     sstp_profile.add_argument("--ip", required=True)
     sstp_profile.add_argument("--cache", type=Path, default=Path("runtime/intelligence/sstp-cache.json"))
+    socks_profile = sub.add_parser("profile-socks5", help="Profile a measured third-party SOCKS5 exit")
+    socks_profile.add_argument("--ip", required=True)
+    socks_profile.add_argument("--cache", type=Path, default=Path("runtime/intelligence/socks5-cache.json"))
     args = parser.parse_args(argv)
     try:
-        if args.command in ("profile-openvpn", "profile-sstp"):
+        if args.command in ("profile-openvpn", "profile-sstp", "profile-socks5"):
             settings = load_settings(args.config)
             load_env(args.env_file)
             # Multiple Slots can finish their baselines concurrently. Serialize
             # cache read/query/write without locking or rewriting the node pool.
             with output_lock(args.cache.parent, wait=True):
-                image = profile_measured_exit(args.ip, settings, args.cache, "sstp" if args.command == "profile-sstp" else "openvpn")
+                image = profile_measured_exit(args.ip, settings, args.cache, args.command.removeprefix("profile-"))
             print(json.dumps(image, ensure_ascii=False))
             return 0
         with output_lock(args.output):

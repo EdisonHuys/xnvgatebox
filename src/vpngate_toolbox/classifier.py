@@ -59,7 +59,13 @@ def classify(raw: dict, settings: dict, provider: str, expected_ip: str) -> dict
         ip_type, reason, confidence = "likely_residential", "consumer_isp_no_hosting", "medium"
     elif kind == "isp" and hosting is False and country and asn and isp:
         ip_type, reason, confidence = "business_isp", "isp_residential_unproven", "low"
-    return {"ip": expected_ip, "country": country, "asn": asn, "isp": isp, "ip_type": ip_type,
+    city = raw.get("city")
+    if isinstance(city, dict):
+        names = city.get("names")
+        city = city.get("name") or (names.get("en") if isinstance(names, dict) else None)
+    if not isinstance(city, str) or not city.strip() or len(city) > 100 or any(ord(c) < 32 for c in city):
+        city = None
+    return {"ip": expected_ip, "country": country, "city": city, "asn": asn, "isp": isp, "ip_type": ip_type,
             "hosting": hosting, "mobile": mobile, "residential": residential,
             "proxy": flag(privacy.get("is_proxy")), "vpn": flag(privacy.get("is_vpn")),
             "abuse": flag(privacy.get("is_abuser")), "reason": reason, "confidence": confidence,

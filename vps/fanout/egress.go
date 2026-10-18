@@ -19,6 +19,7 @@ type EgressProfile struct {
 	IP                 string          `json:"ip"`
 	Protocol           string          `json:"protocol"`
 	Country            *string         `json:"country"`
+	City               *string         `json:"city,omitempty"`
 	ASN                *string         `json:"asn"`
 	ISP                *string         `json:"isp"`
 	IPType             string          `json:"ip_type"`

@@ -27,6 +27,15 @@ def observation(ip=IP):
 
 
 class OpenVPNIntelligenceTests(unittest.TestCase):
+    def test_socks5_city_uses_shared_evidence_and_rejects_bad_city(self):
+        for raw_city, expected in [('Los Angeles', 'Los Angeles'), ({'names': {'en': 'Tokyo'}}, 'Tokyo'), (123, None), ('bad\ncity', None)]:
+            with self.subTest(city=raw_city):
+                raw = {**observation(), 'city': raw_city}
+                image = profile_measured_exit(IP, SETTINGS, self.cache.with_name(str(len(str(raw_city))) + '.json'), 'socks5', lambda *a, **k: raw)
+                self.assertEqual(image['protocol'], 'socks5')
+                self.assertEqual(image['city'], expected)
+                self.assertEqual(image['ip'], IP)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

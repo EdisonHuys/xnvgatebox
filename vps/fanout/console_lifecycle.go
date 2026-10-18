@@ -13,6 +13,7 @@ import (
 )
 
 func (c *Console) shutdown() {
+	defer c.third.shutdown()
 	c.cancel()
 	if c.sstp != nil {
 		c.sstp.shutdown()

@@ -115,6 +115,10 @@ func subLinksSelected(m *Manager, host string, boundOnly bool, selected map[int]
 }
 
 func subLinksScoped(m *Manager, host string, boundOnly bool, selected map[int]bool, includeDirect bool) ([]string, error) {
+	return subLinksSources(m, host, boundOnly, selected, includeDirect, selected == nil, nil)
+}
+
+func subLinksSources(m *Manager, host string, boundOnly bool, selected map[int]bool, includeDirect, includeThird bool, proxies map[int]bool) ([]string, error) {
 	p, err := openPanel()
 	if err != nil {
 		return nil, err
@@ -142,6 +146,9 @@ func subLinksScoped(m *Manager, host string, boundOnly bool, selected map[int]bo
 					if len(e.Inbounds) > 1 {
 						label += fmt.Sprintf(" · %d", ib.Port)
 					}
+				}
+				if !strings.Contains(label, "VPN Gate") {
+					label += " · VPN Gate"
 				}
 				for _, link := range rows {
 					name := uniqueRemark(label, names)
@@ -176,6 +183,18 @@ func subLinksScoped(m *Manager, host string, boundOnly bool, selected map[int]bo
 					links = append(links, u.String())
 				}
 			}
+		}
+		if includeThird {
+			n := p.(*Native)
+			records := map[int]ThirdPartyRecord{}
+			if m.console != nil && m.console.third != nil {
+				records = m.console.third.snapshot()
+			}
+			rows, err := n.thirdPartyLinks(host, proxies, records, names)
+			if err != nil {
+				return nil, err
+			}
+			links = append(links, rows...)
 		}
 		return links, nil
 	}
@@ -265,7 +284,23 @@ func handleSub(m *Manager) http.HandlerFunc {
 			http.Error(w, "出口选择无效", 400)
 			return
 		}
-		links, err := subLinksScoped(m, host, q.Get("bound") != "0", selected, includeDirect)
+		proxies, proxyErr := subscriptionProxyIDs(q.Get("proxies"))
+		includeThird := q.Get("slots") == "" && q.Get("vpn") != "0"
+		if v := q.Get("third"); v != "" {
+			if v != "0" && v != "1" {
+				http.Error(w, "第三方选择无效", 400)
+				return
+			}
+			includeThird = v == "1"
+		}
+		if proxies != nil {
+			includeThird = true
+		}
+		if proxyErr != nil || (proxies != nil && q.Get("third") == "0") {
+			http.Error(w, "第三方选择无效", 400)
+			return
+		}
+		links, err := subLinksSources(m, host, q.Get("bound") != "0", selected, includeDirect, includeThird, proxies)
 		if err != nil {
 			// 节点后端不给链接（xray-cf-lite 模式下链接由它自己的订阅负责）
 			http.Error(w, "生成订阅失败: "+firstLine(err.Error()), http.StatusBadGateway)
@@ -285,6 +320,24 @@ func handleSub(m *Manager) http.HandlerFunc {
 		w.Header().Set("Content-Disposition", "inline; filename=fanout")
 		_, _ = w.Write([]byte(encodeSub(links, target)))
 	}
+}
+
+func subscriptionProxyIDs(text string) (map[int]bool, error) {
+	if text == "" {
+		return nil, nil
+	}
+	if len(text) > 8192 {
+		return nil, fmt.Errorf("第三方选择过长")
+	}
+	out := map[int]bool{}
+	for _, v := range strings.Split(text, ",") {
+		id, err := strconv.Atoi(v)
+		if err != nil || id < 1 || id > 1000000000 || out[id] {
+			return nil, fmt.Errorf("第三方编号无效")
+		}
+		out[id] = true
+	}
+	return out, nil
 }
 
 // encodeSub 把链接列表转成订阅正文。

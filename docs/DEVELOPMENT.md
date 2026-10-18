@@ -1,3 +1,5 @@
+2026-10-18 当前开发：手动第三方 SOCKS5 资源、国家/城市标注与独立检测、备注命名及分类订阅；不接供应商 API，不开发 GitHub 自动节点发布。需求和验收约定先于实现见 [第三方 SOCKS5](THIRD_PARTY_SOCKS.md)。开发分支 `codex/third-party-socks-20261018`，CF 暂停、3x-ui 不动、unknown 不称家宽。
+
 2026-10-18 补丁 [v0.5.1](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.1) 已发布并通过现有在线升级部署，来源 `64efc17`。修复原始 SSTP 暂缓/取消退回“未检测”和旧轮询覆盖新任务；仅移除设置右侧重复项目链接，在线更新保留。Linux 248 个顶层用例 / 311 个通过事件、Node 竞态回归和 GitHub 检查通过；线上两个真实占用节点、后续任务保留提示、原观测不被覆盖及 9 项配置保留检查通过。一致私有备份保存在 VPS/Mac。原始 SSTP 的直接连接和参考 Actions 实际产物见 [使用说明](SSTP_USAGE.md)，本轮见 [脱敏证据](evidence/vps-sstp-status-20261018.json)。CF 暂停，3x-ui 原进程/配置不动，unknown 不称家宽。
 
 2026-10-18 发布收尾：[v0.5.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.5.0) 已发布，来源 `7a65429`，PR #3 已合入 main。Debian 12 测试 VPS 真实完整包在线更新、12 项更新检查、9 项设置保留、实际安装故障恢复、独立新目录直出及最终 10 项复核通过；78 项 Python、246 个 Linux 顶层用例 / 309 个通过事件及 GitHub 含更新 race 通过。VPS/Mac 的直出、原 Slot 2 VLESS/SOCKS 复验通过，Mac 首轮 TLS 传输失败保留并按原标准针对性复核通过。正式版完整私有备份已保存在 VPS 与 Mac。安装、登录、在线更新及全新系统验收见 [安装更新说明](INSTALL_UPDATE.md) 和 [脱敏证据](evidence/vps-release-20261018.json)；用户重装 Debian 12 后的全新 OS 验收仍待执行。CF 暂停，3x-ui 原进程/配置保留，unknown 不称家宽。
