@@ -1,0 +1,262 @@
+{
+  "scope": "unified_detection_operator_configured_parallelism_capacity_and_online_deployment",
+  "verified_at": "2026-10-18T01:55:12.038464Z",
+  "build": {
+    "git_head": "19e2840ff457eeada9957f7a95c4408ca47d6462",
+    "manager_origin": "built_from_source",
+    "source_dirty": false,
+    "source_snapshot_sha256": "92389ffda759f9838e02320eae76eda014c31693b80c0d183f97ee2047ef6cbc",
+    "version": "dev-unified-checks-20261018",
+    "xray_version": "v26.3.27",
+    "package_sha256": "f22aacdcb2903bcd452bb9bd050ff10beaa8a0d1ff7f12ce842771329a401314"
+  },
+  "backup": {
+    "archive_sha256": {
+      "initial": "9635ec43d2ea525d5500922dd2278a9da9244e726e000d3e1cef050a7a0a4656",
+      "service_fix": "1f94a7e98ab2e162b2be8b6cc2f9a31a6b5ab52d8576a4157b0835a2e52e05d9",
+      "state_fix": "f817635e04642695b53479cfa277cc1843bd0e37f4b3d4bc0e48553e46e123f5"
+    },
+    "initial_and_service_fix_archives_saved_on_mac": true,
+    "final_state_fix_archive_retained_on_vps": true
+  },
+  "tests": {
+    "go_linux": {
+      "passed": true,
+      "top_level_pass": 227,
+      "all_pass_events": 283,
+      "live_transaction_tests_enabled": true,
+      "skipped_child_helper": 1
+    },
+    "go_vet": "passed",
+    "embedded_page_js_syntax": "passed",
+    "github_checks": "passed",
+    "github_scheduler_and_shutdown_race": "passed",
+    "isolated_coverage": {
+      "concurrent_workers": 128,
+      "saved_parallelism_values": [
+        1,
+        4,
+        64,
+        128
+      ],
+      "exit_target": 128,
+      "untruncated_source_items": 321,
+      "unique_per_instance_network_links": 16384,
+      "legacy_positive_links_preserved": true,
+      "manual_priority_and_duplicate_suppression": true,
+      "cancellation_waits_for_cleanup": true,
+      "partial_shutdown_write_rejected": true,
+      "existing_commit_finishes_before_teardown": true
+    },
+    "browser_demo_checks": [
+      "numeric_parallelism_saved_and_retained_after_reload",
+      "manual_priority_for_queued_row",
+      "running_row_and_button_spinner",
+      "running_button_disabled",
+      "unified_progress_heading",
+      "narrow_viewport_button_wrapping"
+    ]
+  },
+  "operator_controls": {
+    "parallelism_is_saved_user_input": true,
+    "default_parallelism": 2,
+    "configured_parallelism_after_test_restored_to_original": 2,
+    "fixed_32_exit_cap_removed": true,
+    "fixed_200_source_truncation_removed": true,
+    "per_instance_30_link_address_capacity": 16384,
+    "diagnostics_and_production_share_free_address_links": true,
+    "production_background_connect_limit_separate": 2,
+    "configured_job_limit_not_silently_reduced": true,
+    "settings_saved_during_run_apply_to_next_job": true,
+    "manual_work_uses_job_total_limit": true
+  },
+  "real_parallel_and_recovery": {
+    "observed_on_git_head": "d0330d8a291ef0490a69fa095f0be23c604bb590",
+    "result": {
+      "verified_at": "2026-10-18T01:35:59.648517Z",
+      "available_sample_count": 6,
+      "user_64_128_settings_accepted": true,
+      "parallel_diagnostics": {
+        "four_workers": true,
+        "four_namespaces": true,
+        "phases": [
+          "connecting",
+          "precheck",
+          "setup"
+        ]
+      },
+      "manual_priority_joins_and_deduplicates": true,
+      "cancel_cleans_all": true,
+      "before_restart": {
+        "four_workers": true,
+        "four_namespaces": true,
+        "phases": [
+          "connecting",
+          "precheck",
+          "setup"
+        ]
+      },
+      "restart_cleans_all_namespaces": true,
+      "parallelism_survives_restart": true,
+      "status": "passed",
+      "original_parallelism_restored": true
+    },
+    "real_tunnel_concurrency_tested": 4,
+    "real_128_tunnels_tested": false
+  },
+  "final_normal_stop_and_restart": {
+    "verified_at": "2026-10-18T01:46:24.289339Z",
+    "slots": 32,
+    "stopped_intent_preserved": true,
+    "stopped_intent_after_restart": true,
+    "capacity_exceeds_32": true,
+    "status": "passed"
+  },
+  "deployment_checks": {
+    "all_saved_connections_and_credentials_preserved": true,
+    "management_settings_preserved": true,
+    "quantity_plan_preserved": true,
+    "slot_ports_socks_credentials_and_policies_preserved": true,
+    "xui_runtime_config_preserved": true,
+    "xui_original_process_preserved": true,
+    "clean_source_installed": true,
+    "native_backend": true,
+    "target_preserved": true,
+    "one_connection_per_slot": true,
+    "legacy_slot_01_inferred_auto": true,
+    "legacy_slot_03_inferred_auto": true,
+    "new_login_served": true,
+    "new_connection_page_served": true,
+    "internal_binary_path_removed": true,
+    "direct_api_describe_has_no_binary_path": true,
+    "real_subscription_country_names": true,
+    "numeric_parallelism_and_all_candidates_served": true,
+    "quantity_input_has_no_old_32_cap": true,
+    "instance_capacity_exceeds_32": true,
+    "current_source_not_truncated": true,
+    "historical_observation_keys_preserved": true
+  },
+  "snapshot": {
+    "observed_at": "2026-10-18T01:46:53.296202Z",
+    "target_preserved": 32,
+    "ready_at_observation": 1,
+    "waiting_at_observation": 31,
+    "actual_source_candidates": 97,
+    "historical_observations_before_upgrade": 150,
+    "availability_depends_on_upstream": true,
+    "all_target_slots_end_to_end_tested": false
+  },
+  "real_subscription": {
+    "server_local_public_and_socks": {
+      "status": "passed",
+      "verified_at": "2026-10-18T01:48:47.072055Z",
+      "slots": [
+        2,
+        3
+      ],
+      "passed_slots": [
+        2,
+        3
+      ],
+      "failures": [],
+      "passed_node_actual_ips_match_expected": true,
+      "echo_requests_per_slot": [
+        4,
+        4
+      ]
+    },
+    "mac_external_client": {
+      "status": "passed",
+      "verified_at": "2026-10-18T01:55:12.038464Z",
+      "slots": [
+        2,
+        3
+      ],
+      "passed_slots": [
+        2,
+        3
+      ],
+      "failures": [],
+      "passed_node_actual_ips_match_expected": true,
+      "echo_requests_per_slot": [
+        4,
+        4
+      ]
+    },
+    "original_slots_not_verified_this_final_round": [
+      1
+    ],
+    "ip_types": [
+      "unknown"
+    ]
+  },
+  "real_subscription_names": [
+    {
+      "slot": 2,
+      "name": "🇰🇷 韩国 · 02"
+    },
+    {
+      "slot": 3,
+      "name": "🇰🇷 韩国 · 03"
+    }
+  ],
+  "retained_failures_and_repairs": {
+    "mac_external_first_attempt": {
+      "failure_record_retained": true,
+      "failures": [
+        {
+          "slot": 2,
+          "failure_code": "curl_failed_16"
+        },
+        {
+          "slot": 3,
+          "failure_code": "curl_failed_35"
+        }
+      ]
+    },
+    "old_installed_service_max_32": {
+      "failure_record_retained": true,
+      "fixed_in_git_head": "89c36e609fcb253955aafe498d8354f2cca5660b",
+      "final_capacity_check_passed": true
+    },
+    "partial_shutdown_state_write": {
+      "failure_record_and_raw_state_retained": true,
+      "changed_field": "stopped",
+      "credentials_and_policies_unchanged": true,
+      "initial_restored_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "additional_old_version_flags_corrected_before_final_install": [
+        1,
+        2,
+        3
+      ],
+      "pre_stop_operator_intent_preserved": true,
+      "fixed_in_git_head": "19e2840ff457eeada9957f7a95c4408ca47d6462",
+      "final_original_intent_preserved": true
+    }
+  },
+  "constraints": {
+    "no_cloudflare_operations": true,
+    "native_backend_only": true,
+    "xui_runtime_config_and_original_process_preserved": true,
+    "unknown_is_not_residential": true,
+    "no_implicit_vps_direct_fallback": true
+  },
+  "not_implemented": [
+    "explicit_optional_vps_direct_exit",
+    "additional_upstream_tunnel_protocols"
+  ],
+  "previous_acceptance": "vps-parallel-checks-20261018.json"
+}
