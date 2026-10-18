@@ -1,0 +1,199 @@
+{
+  "scope": "bounded_parallel_candidate_diagnostics_access_labels_and_online_deployment",
+  "verified_at": "2026-10-18T01:07:20.565331Z",
+  "build": {
+    "git_head": "ee0e2d125b9d58867f8af1a4bc509a9b182c73e1",
+    "manager_origin": "built_from_source",
+    "source_dirty": false,
+    "source_snapshot_sha256": "0d2c891a82d8be9fa782f3f49ab211fe4410c8d9720708e4199d845e4aac12e4",
+    "version": "dev-parallel-checks-20261018",
+    "xray_version": "v26.3.27",
+    "package_sha256": "4904c9c2f333aebc592b0f5c7b179197aef77ce736604c99de810b3c64b89063"
+  },
+  "backup": {
+    "consistent_project_backup_on_vps_and_mac": true,
+    "archive_sha256": "0bc1da88e1df86cc12aac0213f6188a4eeccc53b3f5b20b1bb6a80a857432e35"
+  },
+  "tests": {
+    "go_linux": {
+      "passed": true,
+      "top_level_pass": 216,
+      "all_pass_events": 272,
+      "live_transaction_tests_enabled": true,
+      "skipped_child_helper": 1
+    },
+    "go_vet": "passed",
+    "embedded_page_js_syntax": "passed",
+    "browser_demo_checks": [
+      "two_running_items_with_distinct_phases",
+      "running_items_first",
+      "default_parallelism_2",
+      "serial_request_parallelism_1",
+      "parallel_request_parallelism_2",
+      "access_management_navigation_and_creation_explanation"
+    ],
+    "github_checks": "passed",
+    "github_diagnostic_concurrency_race": "passed"
+  },
+  "diagnostic_limits": {
+    "default_workers": 2,
+    "allowed_workers": [
+      1,
+      2
+    ],
+    "reserved_slots": [
+      240,
+      241
+    ],
+    "production_connect_limit": 2,
+    "diagnostic_connect_limit": 2,
+    "combined_connect_limit": 4,
+    "same_host_or_server_ip_excluded": true,
+    "production_recovery_preempts_diagnostic_and_waits_for_cleanup": true,
+    "preflight_alone_cannot_pass": true,
+    "simple_literal_ipv4_tcp_preflight_total_seconds": 6,
+    "preflight_per_endpoint_seconds": 2
+  },
+  "real_parallel_and_recovery": {
+    "verified_at": "2026-10-17T16:37:26.247319Z",
+    "parallel_diagnostics": {
+      "two_workers": true,
+      "both_namespaces": true,
+      "phases": [
+        "precheck",
+        "setup"
+      ]
+    },
+    "cancel_cleans_both": true,
+    "before_restart": {
+      "two_workers": true,
+      "both_namespaces": true,
+      "phases": [
+        "connecting",
+        "precheck",
+        "setup"
+      ]
+    },
+    "restart_recovers_both_namespaces": true,
+    "status": "passed"
+  },
+  "deployment_checks": {
+    "all_saved_connections_and_credentials_preserved": true,
+    "management_settings_preserved": true,
+    "quantity_plan_preserved": true,
+    "slot_ports_socks_credentials_and_policies_preserved": true,
+    "xui_runtime_config_preserved": true,
+    "xui_original_process_preserved": true,
+    "clean_source_installed": true,
+    "native_backend": true,
+    "target_preserved": true,
+    "one_connection_per_slot": true,
+    "legacy_slot_01_inferred_auto": true,
+    "legacy_slot_03_inferred_auto": true,
+    "new_login_served": true,
+    "new_connection_page_served": true,
+    "internal_binary_path_removed": true,
+    "direct_api_describe_has_no_binary_path": true,
+    "real_subscription_country_names": true
+  },
+  "settings_comparison": {
+    "status": "passed",
+    "effective_listen_address_compared": true,
+    "default_listen_normalized": true,
+    "equivalent_values": [
+      "0.0.0.0",
+      ""
+    ],
+    "initial_raw_comparison_failure_retained": true,
+    "all_other_settings_equal": true
+  },
+  "snapshot": {
+    "observed_at": "2026-10-18T01:04:32.673538Z",
+    "target_preserved": 32,
+    "ready_at_observation": 32,
+    "waiting_at_observation": 0,
+    "availability_depends_on_upstream": true,
+    "all_target_slots_end_to_end_tested": false
+  },
+  "real_subscription_names": [
+    {
+      "slot": 1,
+      "name": "🇯🇵 日本 · 01"
+    },
+    {
+      "slot": 2,
+      "name": "🇰🇷 韩国 · 02"
+    },
+    {
+      "slot": 3,
+      "name": "🇰🇷 韩国 · 03"
+    }
+  ],
+  "real_subscription": {
+    "server_local_public_and_socks": {
+      "status": "passed",
+      "verified_at": "2026-10-18T01:02:35.644645Z",
+      "slots": [
+        1,
+        2,
+        3
+      ],
+      "each_actual_ip_matches_expected": true,
+      "echo_requests_per_slot": [
+        4,
+        4,
+        4
+      ]
+    },
+    "mac_external_client": {
+      "status": "passed",
+      "verified_at": "2026-10-18T01:07:20.565331Z",
+      "slots": [
+        1,
+        2,
+        3
+      ],
+      "each_actual_ip_matches_expected": true,
+      "echo_requests_per_slot": [
+        4,
+        4,
+        4
+      ]
+    },
+    "ip_types": [
+      "unknown"
+    ]
+  },
+  "candidate_job_continuity": {
+    "old_total": 97,
+    "old_completed_observations_preserved": 27,
+    "verified_at": "2026-10-18T01:04:00.644864Z",
+    "current_user_job_preserved": true,
+    "current_job_status": "running",
+    "current_job_parallelism": 2,
+    "current_job_total": 93,
+    "current_job_done": 58,
+    "current_active": 2,
+    "old_pending": 70,
+    "old_pending_departed_source": 53,
+    "old_pending_covered_by_current_job": 17,
+    "old_pending_not_covered": 0,
+    "old_completed_observations_present": true,
+    "note": "Keep the existing newer job; source-departed hosts are not forced back into the pool. Counts are observations at the recorded time."
+  },
+  "constraints": {
+    "no_cloudflare_operations": true,
+    "native_backend_only": true,
+    "xui_runtime_config_and_original_process_preserved": true,
+    "unknown_is_not_residential": true,
+    "no_implicit_vps_direct_fallback": true
+  },
+  "not_implemented": [
+    "explicit_optional_vps_direct_exit",
+    "additional_upstream_tunnel_protocols"
+  ],
+  "previous_acceptance": [
+    "vps-console-20261017.json",
+    "vps-console-polish-20261017.json"
+  ]
+}
