@@ -7,15 +7,17 @@ import (
 
 // ExitInbound 是挂在某个出口上的一个受管入站。
 type ExitInbound struct {
-	HostDirect bool   `json:"host_direct,omitempty"`
-	BoundSlot  int    `json:"bound_slot,omitempty"`
-	NameMode   string `json:"name_mode,omitempty"`
-	ID         int    `json:"id"`
-	Port       int    `json:"port"`
-	Remark     string `json:"remark"`
-	Protocol   string `json:"protocol"`
-	Enable     bool   `json:"enable"`
-	Tag        string `json:"tag"`
+	ManagedSlot bool   `json:"managed_slot,omitempty"`
+	Manual      bool   `json:"manual,omitempty"`
+	HostDirect  bool   `json:"host_direct,omitempty"`
+	BoundSlot   int    `json:"bound_slot,omitempty"`
+	NameMode    string `json:"name_mode,omitempty"`
+	ID          int    `json:"id"`
+	Port        int    `json:"port"`
+	Remark      string `json:"remark"`
+	Protocol    string `json:"protocol"`
+	Enable      bool   `json:"enable"`
+	Tag         string `json:"tag"`
 }
 
 // Exit 是界面上的一行：一条隧道加上挂在它出口的所有入站。
@@ -27,6 +29,7 @@ type Exit struct {
 	Region            string         `json:"region"`
 	Country           string         `json:"country"`
 	ExitIP            string         `json:"exit_ip"`
+	Phase             string         `json:"phase,omitempty"`
 	Status            string         `json:"status"`
 	Err               string         `json:"err,omitempty"`
 	Since             time.Time      `json:"since"`
@@ -125,7 +128,7 @@ func (m *Manager) ExitsOf() ExitsView {
 		view.Exits = append(view.Exits, Exit{
 			Slot: snapshot.Slot, Port: snapshot.Port, Host: snapshot.Node.HostName,
 			Region: snapshot.Node.CountryCode, Country: nodeLabel(snapshot.Node),
-			ExitIP: snapshot.ExitIP, Status: snapshot.Status, Err: snapshot.Err, Since: snapshot.Since,
+			ExitIP: snapshot.ExitIP, Status: snapshot.Status, Phase: snapshot.Phase, Err: snapshot.Err, Since: snapshot.Since,
 			Egress: snapshot.Egress,
 			Policy: t.policySnapshot(), LatencyMS: snapshot.LatencyMS,
 			CanRollbackPolicy: snapshot.CanRollbackPolicy,
@@ -150,7 +153,7 @@ func (m *Manager) ExitsOf() ExitsView {
 	for _, ib := range list {
 		row := ExitInbound{
 			ID: ib.ID, Port: ib.Port, Remark: ib.Remark,
-			Protocol: ib.Protocol, Enable: ib.Enable, Tag: ib.Tag, BoundSlot: ib.BoundSlot, NameMode: ib.NameMode, HostDirect: ib.HostDirect,
+			Protocol: ib.Protocol, Enable: ib.Enable, Tag: ib.Tag, BoundSlot: ib.BoundSlot, NameMode: ib.NameMode, HostDirect: ib.HostDirect, ManagedSlot: ib.ManagedSlot, Manual: ib.Manual,
 		}
 		if ib.HostDirect {
 			view.HostDirect = append(view.HostDirect, row)

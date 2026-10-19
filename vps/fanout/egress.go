@@ -16,30 +16,32 @@ import (
 )
 
 type EgressProfile struct {
-	IP                 string          `json:"ip"`
-	Protocol           string          `json:"protocol"`
-	Country            *string         `json:"country"`
-	City               *string         `json:"city,omitempty"`
-	ASN                *string         `json:"asn"`
-	ISP                *string         `json:"isp"`
-	IPType             string          `json:"ip_type"`
-	Hosting            *bool           `json:"hosting"`
-	Mobile             *bool           `json:"mobile"`
-	Residential        *bool           `json:"residential"`
-	Proxy              *bool           `json:"proxy"`
-	VPN                *bool           `json:"vpn"`
-	Abuse              *bool           `json:"abuse"`
-	Reason             string          `json:"reason"`
-	Confidence         string          `json:"confidence"`
-	Provider           string          `json:"provider,omitempty"`
-	QueriedAt          string          `json:"queried_at,omitempty"`
-	ExpiresAt          string          `json:"expires_at,omitempty"`
-	RuleVersion        string          `json:"rule_version,omitempty"`
-	IdentityAssurance  string          `json:"identity_assurance,omitempty"`
-	CacheUsed          bool            `json:"cache_used"`
-	IntelligenceStatus string          `json:"intelligence_status"`
-	IntelligenceError  string          `json:"intelligence_error,omitempty"`
-	Raw                json.RawMessage `json:"raw,omitempty"`
+	IP                 string           `json:"ip"`
+	Protocol           string           `json:"protocol"`
+	CountryEvidence    *CountryEvidence `json:"country_evidence,omitempty"`
+	CountryStatus      string           `json:"country_status,omitempty"`
+	Country            *string          `json:"country"`
+	City               *string          `json:"city,omitempty"`
+	ASN                *string          `json:"asn"`
+	ISP                *string          `json:"isp"`
+	IPType             string           `json:"ip_type"`
+	Hosting            *bool            `json:"hosting"`
+	Mobile             *bool            `json:"mobile"`
+	Residential        *bool            `json:"residential"`
+	Proxy              *bool            `json:"proxy"`
+	VPN                *bool            `json:"vpn"`
+	Abuse              *bool            `json:"abuse"`
+	Reason             string           `json:"reason"`
+	Confidence         string           `json:"confidence"`
+	Provider           string           `json:"provider,omitempty"`
+	QueriedAt          string           `json:"queried_at,omitempty"`
+	ExpiresAt          string           `json:"expires_at,omitempty"`
+	RuleVersion        string           `json:"rule_version,omitempty"`
+	IdentityAssurance  string           `json:"identity_assurance,omitempty"`
+	CacheUsed          bool             `json:"cache_used"`
+	IntelligenceStatus string           `json:"intelligence_status"`
+	IntelligenceError  string           `json:"intelligence_error,omitempty"`
+	Raw                json.RawMessage  `json:"raw,omitempty"`
 }
 
 func unknownOpenVPNEgress(ip, reason string) EgressProfile {
@@ -73,7 +75,7 @@ func lookupOpenVPNEgressContextWith(parent context.Context, workDir, ip string, 
 		envOr("FANOUT_TOOLBOX_SCRIPT", "/usr/local/lib/xnvgatebox/scripts/toolbox.py"),
 		"--config", envOr("FANOUT_POOL_CONFIG", "/etc/xnvgatebox/pool.json"),
 		"--env-file", envOr("FANOUT_INTELLIGENCE_ENV_FILE", "/etc/xnvgatebox/intelligence.env"),
-		"profile-openvpn", "--ip", ip, "--cache", filepath.Join(workDir, "intelligence", "cache.json"))
+		"profile-openvpn", "--ip", ip, "--country", "--cache", filepath.Join(workDir, "intelligence", "cache.json"))
 	out, err := run(cmd)
 	if err != nil {
 		// Never expose subprocess output, URLs or token-bearing provider errors.
@@ -83,22 +85,34 @@ func lookupOpenVPNEgressContextWith(parent context.Context, workDir, ip string, 
 }
 
 func decodeOpenVPNEgress(blob []byte, ip string) EgressProfile {
+	return decodeMeasuredEgress(blob, ip, "openvpn")
+}
+
+func decodeMeasuredEgress(blob []byte, ip, protocol string) EgressProfile {
+	unknown := func(reason string) EgressProfile {
+		p := unknownOpenVPNEgress(ip, reason)
+		p.Protocol = protocol
+		return p
+	}
 	var image EgressProfile
-	if err := json.Unmarshal(blob, &image); err != nil || image.IP != ip || image.Protocol != "openvpn" {
-		return unknownOpenVPNEgress(ip, "intelligence_response_mismatch")
+	if err := json.Unmarshal(blob, &image); err != nil || image.IP != ip || image.Protocol != protocol {
+		return unknown("intelligence_response_mismatch")
 	}
 	switch image.IPType {
 	case "strict_residential", "likely_residential", "mobile", "datacenter", "business_isp", "unknown":
 	default:
-		return unknownOpenVPNEgress(ip, "intelligence_invalid_type")
+		return unknown("intelligence_invalid_type")
 	}
 	if image.IntelligenceStatus == "passed" {
 		expiry, err := time.Parse(time.RFC3339Nano, image.ExpiresAt)
 		if err != nil || !expiry.After(time.Now()) || image.Provider == "" || image.QueriedAt == "" || image.RuleVersion == "" {
-			return unknownOpenVPNEgress(ip, "intelligence_stale_or_incomplete")
+			return unknown("intelligence_stale_or_incomplete")
 		}
 	} else if image.IPType != "unknown" || (image.IntelligenceStatus != "failed" && image.IntelligenceStatus != "not_configured") {
-		return unknownOpenVPNEgress(ip, "intelligence_unverified_type")
+		return unknown("intelligence_unverified_type")
+	}
+	if verifiedProfileCountry(image) == "" {
+		image.Country = nil
 	}
 	return image
 }
@@ -147,6 +161,18 @@ func (t *Tunnel) egressSnapshotLocked(private bool) *EgressProfile {
 			image.IPType, image.IntelligenceStatus = "unknown", "stale"
 			image.Reason, image.IntelligenceError, image.Confidence = "intelligence_stale", "intelligence_stale", "unknown"
 			image.Residential = nil
+		}
+	}
+	image.CountryStatus = "unknown"
+	if verifiedProfileCountry(image) != "" {
+		image.CountryStatus = "passed"
+	} else {
+		image.Country = nil
+		if image.CountryEvidence != nil {
+			image.CountryStatus = image.CountryEvidence.Status
+			if image.CountryStatus == "passed" {
+				image.CountryStatus = "stale"
+			}
 		}
 	}
 	if !private {

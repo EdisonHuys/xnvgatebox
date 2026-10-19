@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const read = name => fs.readFileSync(new URL('../vps/fanout/' + name, import.meta.url), 'utf8');
+const section = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b, text.indexOf(a)));
+const html = read('console.html');
+const elements = Object.fromEntries(['targetCount','targetCountry','targetServer','targetHelp','targetDialog'].map(id => [id, {showModal() {this.open = true;}}]));
+const c = vm.createContext({elements, summary:{capacity:8000,target:0,target_configured:false,suggested_target:4}, toast() {throw Error('unexpected toast');}});
+vm.runInContext('const $ = id => elements[id];\n' + section(html, '      function openTarget()', '      function openExit('), c);
+c.openTarget(); assert.equal(elements.targetCount.value, 4);
+c.summary.target_configured = true;
+c.openTarget(); assert.equal(elements.targetCount.value, 0, 'saved zero was overwritten');
+c.summary.target = 24;
+c.openTarget(); assert.equal(elements.targetCount.value, 24, 'existing target was overwritten');
+
+const advanced = read('advanced.html');
+const nodes = {'#list':{}, '#orphans':{}, '#hostConnections':{}, '#nativeConnections':{}, '#ecount':{}, '#exportAll':{}};
+const s = vm.createContext({nodes, isNative:()=>true, view:{host_direct:[{id:1,port:30100,protocol:'vless',remark:'VPS',enable:true}], exits:[{slot:2,status:'waiting',inbounds:[{id:2,port:30002,protocol:'vless',enable:true,managed_slot:true},{id:3,port:32145,protocol:'vless',enable:false,manual:true}]}],direct:[{id:4,port:32146,protocol:'vless',enable:true}]},STATUS:{waiting:'等待候选'},esc:x=>String(x??''),exitName:e=>'出口 '+e.slot,connectionName:(i,e)=>'出口 '+e.slot});
+vm.runInContext('const $ = id => nodes[id];\n' + section(advanced,'      function renderNativeConnections()',"      document.addEventListener('click', async e => {") + section(advanced,'      function exitOptions(', '      function renderDetail('), s);
+s.renderNativeConnections();
+assert.equal(nodes['#ecount'].textContent,'4 个入口');
+assert.equal(nodes['#list'].hidden,true);
+const output = nodes['#nativeConnections'].innerHTML;
+assert.match(output,/自动入口/); assert.match(output,/手动入口/);
+assert.match(output,/未绑定 · 阻断/);
+assert.match(output,/data-entry-toggle="3"/);
+assert.match(output,/data-delone="3"/);
+assert.doesNotMatch(output,/data-delone="2"/, 'automatic entry offers misleading delete');
+assert.match(output,/data-delone="4"/, 'unbound manual entry is hidden');
+assert.match(s.exitOptions('',2),/value="slot:2" selected>出口 2 · 等待候选/,'waiting slot cannot be bound');
+console.log('console flow regressions passed');

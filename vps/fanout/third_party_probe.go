@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -24,8 +23,14 @@ func probeThirdParty(ctx context.Context, p ThirdPartyProxy, dir string) ThirdPa
 		return r
 	}
 	image := lookupThirdPartyEgress(ctx, dir, r.ActualIP)
+	r.Country = verifiedProfileCountry(image)
+	if image.CountryEvidence != nil && r.Country != "" {
+		if exp, err := time.Parse(time.RFC3339Nano, image.CountryEvidence.ExpiresAt); err == nil && exp.Before(r.ExpiresAt) {
+			r.ExpiresAt = exp
+		}
+	}
 	if image.IntelligenceStatus == "passed" {
-		r.Country, r.City, r.IPType = stringValue(image.Country), stringValue(image.City), image.IPType
+		r.City, r.IPType = stringValue(image.City), image.IPType
 		if exp, err := time.Parse(time.RFC3339Nano, image.ExpiresAt); err == nil && exp.Before(r.ExpiresAt) {
 			r.ExpiresAt = exp
 		}
@@ -91,22 +96,14 @@ func lookupThirdPartyEgress(ctx context.Context, dir, ip string) EgressProfile {
 	unknown := EgressProfile{IP: ip, Protocol: "socks5", IPType: "unknown"}
 	bounded, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(bounded, "python3", envOr("FANOUT_TOOLBOX_SCRIPT", "/usr/local/lib/xnvgatebox/scripts/toolbox.py"), "--config", envOr("FANOUT_POOL_CONFIG", "/etc/xnvgatebox/pool.json"), "--env-file", envOr("FANOUT_INTELLIGENCE_ENV_FILE", "/etc/xnvgatebox/intelligence.env"), "profile-socks5", "--ip", ip, "--cache", filepath.Join(dir, "intelligence", "socks5-cache.json"))
+	cmd := exec.CommandContext(bounded, "python3", envOr("FANOUT_TOOLBOX_SCRIPT", "/usr/local/lib/xnvgatebox/scripts/toolbox.py"), "--config", envOr("FANOUT_POOL_CONFIG", "/etc/xnvgatebox/pool.json"), "--env-file", envOr("FANOUT_INTELLIGENCE_ENV_FILE", "/etc/xnvgatebox/intelligence.env"), "profile-socks5", "--ip", ip, "--country", "--cache", filepath.Join(dir, "intelligence", "socks5-cache.json"))
 	out, err := cmdOutput(cmd)
 	if err != nil {
 		return unknown
 	}
-	var image EgressProfile
-	if json.Unmarshal(out, &image) != nil || image.IP != ip || image.Protocol != "socks5" || image.IntelligenceStatus != "passed" || image.Provider == "" || image.QueriedAt == "" || image.RuleVersion == "" {
-		return unknown
+	image := decodeMeasuredEgress(out, ip, "socks5")
+	if !safeProxyText(stringValue(image.City), 100) {
+		image.City = nil
 	}
-	exp, err := time.Parse(time.RFC3339Nano, image.ExpiresAt)
-	if err != nil || !exp.After(time.Now()) || !safeProxyText(stringValue(image.City), 100) {
-		return unknown
-	}
-	switch image.IPType {
-	case "strict_residential", "likely_residential", "datacenter", "business_isp", "mobile", "unknown":
-		return image
-	}
-	return unknown
+	return image
 }

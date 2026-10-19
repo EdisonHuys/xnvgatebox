@@ -273,24 +273,12 @@ func lookupSstpEgress(ctx context.Context, dir, ip string) EgressProfile {
 	unknown := EgressProfile{IP: ip, Protocol: "sstp", IPType: "unknown", IntelligenceStatus: "not_configured"}
 	bounded, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(bounded, "python3", envOr("FANOUT_TOOLBOX_SCRIPT", "/usr/local/lib/xnvgatebox/scripts/toolbox.py"), "--config", envOr("FANOUT_POOL_CONFIG", "/etc/xnvgatebox/pool.json"), "--env-file", envOr("FANOUT_INTELLIGENCE_ENV_FILE", "/etc/xnvgatebox/intelligence.env"), "profile-sstp", "--ip", ip, "--cache", filepath.Join(dir, "intelligence", "sstp-cache.json"))
+	cmd := exec.CommandContext(bounded, "python3", envOr("FANOUT_TOOLBOX_SCRIPT", "/usr/local/lib/xnvgatebox/scripts/toolbox.py"), "--config", envOr("FANOUT_POOL_CONFIG", "/etc/xnvgatebox/pool.json"), "--env-file", envOr("FANOUT_INTELLIGENCE_ENV_FILE", "/etc/xnvgatebox/intelligence.env"), "profile-sstp", "--ip", ip, "--country", "--cache", filepath.Join(dir, "intelligence", "sstp-cache.json"))
 	out, err := cmdOutput(cmd)
 	if err != nil {
 		return unknown
 	}
-	var image EgressProfile
-	if json.Unmarshal(out, &image) != nil || image.IP != ip || image.Protocol != "sstp" || image.IntelligenceStatus != "passed" {
-		return unknown
-	}
-	expiry, err := time.Parse(time.RFC3339Nano, image.ExpiresAt)
-	if err != nil || !expiry.After(time.Now()) || image.Provider == "" || image.QueriedAt == "" || image.RuleVersion == "" {
-		return unknown
-	}
-	switch image.IPType {
-	case "strict_residential", "likely_residential", "datacenter", "business_isp", "mobile", "unknown":
-		return image
-	}
-	return unknown
+	return decodeMeasuredEgress(out, ip, "sstp")
 }
 
 // A veth defaults to 1500 even when the VPS uplink is smaller (for example

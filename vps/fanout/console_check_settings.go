@@ -21,6 +21,7 @@ func validateCheckParallelism(n int) error {
 
 func (c *Console) loadCheckSettings() error {
 	c.checkParallelism = defaultCheckParallelism
+	c.m.connectBudget.setLimit(defaultCheckParallelism)
 	blob, err := os.ReadFile(filepath.Join(c.m.workDir, "check-settings.json"))
 	if os.IsNotExist(err) {
 		return nil
@@ -33,6 +34,7 @@ func (c *Console) loadCheckSettings() error {
 		return fmt.Errorf("检测设置损坏，保留原文件")
 	}
 	c.checkParallelism = s.Parallelism
+	c.m.connectBudget.setLimit(s.Parallelism)
 	return nil
 }
 
@@ -46,6 +48,7 @@ func (c *Console) saveCheckSettings(n int) error {
 		return fmt.Errorf("检测设置保存失败")
 	}
 	c.checkParallelism = n
+	c.m.connectBudget.setLimit(n)
 	return nil
 }
 

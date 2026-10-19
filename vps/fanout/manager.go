@@ -18,6 +18,7 @@ type Manager struct {
 	nodes           []Node
 	fetched         time.Time
 	workDir         string
+	evidenceDir     string
 	maxSlots        int
 	jobs            JobStore
 	saveMu          sync.Mutex
@@ -26,7 +27,8 @@ type Manager struct {
 	localEvidence   map[string]Node
 	stateWriteHook  func(string) error
 	credentialApply func(*Tunnel) error
-	connectSem      chan struct{}
+	connectBudget   *connectBudget
+	observations    map[string]CheckResult
 	diagnostics     map[string]*diagnosticLease
 	console         *Console
 }
@@ -35,10 +37,12 @@ func NewManager(maxSlots int, workDir string) *Manager {
 	return &Manager{
 		tunnels:       map[int]*Tunnel{},
 		workDir:       workDir,
+		evidenceDir:   workDir,
 		maxSlots:      maxSlots,
 		deletedSlots:  map[int]bool{},
 		localEvidence: map[string]Node{},
-		connectSem:    make(chan struct{}, 2),
+		connectBudget: newConnectBudget(defaultCheckParallelism),
+		observations:  map[string]CheckResult{},
 		diagnostics:   map[string]*diagnosticLease{},
 	}
 }
@@ -332,12 +336,13 @@ func (m *Manager) tunnelActive(t *Tunnel) bool {
 
 // tryNode 尝试用当前节点把隧道拉起来。
 func (m *Manager) tryNode(t *Tunnel) error {
-	select {
-	case m.connectSem <- struct{}{}:
-		defer func() { <-m.connectSem }()
-	case <-t.workContext().Done():
-		return t.workContext().Err()
+	t.probePhase("waiting_capacity")
+	release, err := m.connectBudget.acquire(t.workContext(), t.Slot > 0)
+	if err != nil {
+		return err
 	}
+	defer release()
+
 	t.clearEgress()
 	t.probePhase("setup")
 	if err := t.setupNetns(); err != nil {
@@ -364,7 +369,7 @@ func (m *Manager) tryNode(t *Tunnel) error {
 	t.ExitIP = ip
 	t.mu.Unlock()
 	t.probePhase("profile")
-	image := lookupOpenVPNEgressContext(t.workContext(), m.workDir, ip)
+	image := lookupOpenVPNEgressContext(t.workContext(), m.evidenceDir, ip)
 	if !m.tunnelActive(t) {
 		return fmt.Errorf("画像查询期间 Slot 已停止")
 	}

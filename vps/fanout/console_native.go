@@ -59,7 +59,11 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 		v := t.snapshot()
 		found := false
 		for _, ib := range n.store.Inbounds {
-			if ib.SocksSlot == 0 && ib.BoundSlot == v.Slot {
+			if ib.SocksSlot == 0 && ib.BoundSlot == v.Slot && !ib.Manual {
+				if !ib.ManagedSlot {
+					ib.ManagedSlot = true
+					changed = true
+				}
 				found = true
 				break
 			}
@@ -86,7 +90,7 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 		if err != nil {
 			return err
 		}
-		ib.BoundSlot, ib.NameMode = v.Slot, "auto"
+		ib.BoundSlot, ib.NameMode, ib.ManagedSlot = v.Slot, "auto", true
 		if v.Node.HostName != "" {
 			ib.BoundTo = sanitizeTag(v.Node.HostName)
 		}
@@ -126,8 +130,8 @@ func isLegacySlotName(remark string) bool {
 }
 
 func subscriptionExitName(e Exit) string {
-	country := "待验证"
-	if e.Status == "up" && e.Egress != nil && e.Egress.IntelligenceStatus == "passed" && flagOf(stringValue(e.Egress.Country)) != "" {
+	country := "地区未知"
+	if e.Status == "up" && e.Egress != nil && verifiedProfileCountry(*e.Egress) != "" {
 		country = countryLabel(stringValue(e.Egress.Country), stringValue(e.Egress.Country))
 	}
 	return fmt.Sprintf("%s · %02d", country, e.Slot)

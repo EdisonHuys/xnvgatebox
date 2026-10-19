@@ -77,6 +77,9 @@ func (m *Manager) releaseDiagnostic(host string, lease *diagnosticLease) {
 }
 
 func (t *Tunnel) probePhase(phase string) {
+	t.mu.Lock()
+	t.probeStage = phase
+	t.mu.Unlock()
 	if t.onProbePhase != nil {
 		t.onProbePhase(phase)
 	}

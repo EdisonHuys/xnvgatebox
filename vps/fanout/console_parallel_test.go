@@ -242,7 +242,7 @@ func TestPreflightFallbackCancellationAndNoAvailabilityClaim(t *testing.T) {
 	}
 }
 
-func TestTCPPreflightCannotPassAFullCheckOrConsumeRecoveryPermits(t *testing.T) {
+func TestTCPPreflightCannotBypassSharedConnectionBudget(t *testing.T) {
 	c := consoleFixture(t)
 	ln, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
@@ -260,15 +260,16 @@ func TestTCPPreflightCannotPassAFullCheckOrConsumeRecoveryPermits(t *testing.T) 
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir)
-	c.m.connectSem <- struct{}{}
-	c.m.connectSem <- struct{}{}
-	defer func() { <-c.m.connectSem; <-c.m.connectSem }()
+	a, _ := c.m.connectBudget.acquire(context.Background(), true)
+	b, _ := c.m.connectBudget.acquire(context.Background(), true)
+	defer a()
+	defer b()
 	node := Node{HostName: "tcp-only", Config: "proto tcp\nremote 127.0.0.1 " + strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	result := c.probeCandidate(ctx, node, diagnosticFirstSlot, func(string) {})
-	if result.Status != "failed" || result.Code != "probe_environment_failed" || ctx.Err() != nil {
-		t.Fatal("preflight substituted for full verification or waited on production permits", result.Status, result.Code)
+	if result.Status != "failed" || result.Code != "check_timeout" || ctx.Err() == nil {
+		t.Fatal("preflight bypassed shared connection budget", result.Status, result.Code)
 	}
 	if len(c.m.diagnostics) != 0 {
 		t.Fatal("failed diagnostic leaked its host lease")

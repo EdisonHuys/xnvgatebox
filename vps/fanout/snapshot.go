@@ -11,6 +11,7 @@ type tunnelView struct {
 	Slot              int            `json:"slot"`
 	Port              int            `json:"port"`
 	Node              Node           `json:"node"`
+	Phase             string         `json:"phase,omitempty"`
 	Status            string         `json:"status"`
 	ExitIP            string         `json:"exit_ip"`
 	Err               string         `json:"err,omitempty"`
@@ -25,7 +26,7 @@ type tunnelView struct {
 func (t *Tunnel) snapshot() tunnelView {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	view := tunnelView{Slot: t.Slot, Port: t.Port, Node: t.Node, Status: t.Status, ExitIP: t.ExitIP, Err: t.Err,
+	view := tunnelView{Slot: t.Slot, Port: t.Port, Node: t.Node, Status: t.Status, Phase: t.probeStage, ExitIP: t.ExitIP, Err: t.Err,
 		Since: t.Since, Cred: t.Cred, Policy: t.Policy, LatencyMS: t.LatencyMS, Egress: t.egressSnapshotLocked(false), CanRollbackPolicy: t.previousPolicy != nil}
 	if view.Status == "up" && !t.acceptsSocksLocked() {
 		view.Status, view.Err = "blocked", "当前出口证据不满足策略，等待重新验活"
