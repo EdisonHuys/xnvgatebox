@@ -2,20 +2,20 @@
 
 当前支持 Debian / Ubuntu、Linux amd64、systemd。管理进程、内置 Xray、共享候选池都在 VPS 本地运行。已有 3x-ui 不会被卸载或修改数据库。
 
-## 安装与升级（v0.6.0）
+## 安装与升级（v0.6.1）
 
 Debian 12 amd64、systemd，以 root 执行：
 
 ```sh
 apt-get update && apt-get install -y ca-certificates curl
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.0
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.1/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.1
 ```
 
 只下载本项目 GitHub Release 的完整包和 SHA256，固定 Xray 在构建时验证官方归档摘要。安装器检查归档路径、类型、重复项、完整文件清单、成员摘要和正式版本构建信息。下载、包校验及候选清单准备在停止旧服务之前完成；来源暂时失败且已有可用候选快照时保留旧池。
 
 `xnvgatebox access` 查看管理地址和密码，`xnvgatebox version` 查看版本。管理页默认监听 8899，使用随机路径和密码；服务器防火墙需允许管理端口及实际公开接入端口。内部 SOCKS 仅监听本机，外部 SOCKS 需在界面显式启用。
 
-更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.6.0` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
+更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.6.1` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
 
 离线包：`bash vps/install.sh --mode vps --package /path/xnvgatebox-linux-amd64.tar.gz`，相邻目录须有 `checksums.txt`。完整包包含管理器、Xray、Python 源码、脚本和服务，不只替换一个二进制。
 

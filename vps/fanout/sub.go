@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -128,43 +129,10 @@ func subLinksSources(m *Manager, host string, boundOnly bool, selected map[int]b
 	if _, native := p.(*Native); native && boundOnly {
 		var links []string
 		names := map[string]bool{}
-		for _, e := range m.ExitsOf().Exits {
-			if e.Status != "up" || (selected != nil && !selected[e.Slot]) {
-				continue
-			}
-			for _, ib := range e.Inbounds {
-				if !ib.Enable {
-					continue
-				}
-				rows, err := p.InboundLinks([]int{ib.ID}, host)
-				if err != nil {
-					return nil, err
-				}
-				label := ib.Remark
-				if automaticName(ib) {
-					label = subscriptionExitName(e)
-					if len(e.Inbounds) > 1 {
-						label += fmt.Sprintf(" · %d", ib.Port)
-					}
-				}
-				if !strings.Contains(label, "VPN Gate") {
-					label += " · VPN Gate"
-				}
-				for _, link := range rows {
-					name := uniqueRemark(label, names)
-					names[name] = true
-					u, err := url.Parse(link)
-					if err != nil {
-						return nil, fmt.Errorf("节点链接无效")
-					}
-					u.Fragment = name
-					u.RawFragment = ""
-					links = append(links, u.String())
-				}
-			}
-		}
+		view := m.ExitsOf()
+		sort.Slice(view.HostDirect, func(i, j int) bool { return view.HostDirect[i].ID < view.HostDirect[j].ID })
 		if includeDirect {
-			for _, ib := range m.ExitsOf().HostDirect {
+			for _, ib := range view.HostDirect {
 				if !ib.Enable {
 					continue
 				}
@@ -195,6 +163,42 @@ func subLinksSources(m *Manager, host string, boundOnly bool, selected map[int]b
 				return nil, err
 			}
 			links = append(links, rows...)
+		}
+		for _, e := range view.Exits {
+			if e.Status != "up" || (selected != nil && !selected[e.Slot]) {
+				continue
+			}
+			sort.Slice(e.Inbounds, func(i, j int) bool { return e.Inbounds[i].ID < e.Inbounds[j].ID })
+			for _, ib := range e.Inbounds {
+				if !ib.Enable {
+					continue
+				}
+				rows, err := p.InboundLinks([]int{ib.ID}, host)
+				if err != nil {
+					return nil, err
+				}
+				label := ib.Remark
+				if automaticName(ib) {
+					label = subscriptionExitName(e)
+					if len(e.Inbounds) > 1 {
+						label += fmt.Sprintf(" · %d", ib.Port)
+					}
+				}
+				if !strings.Contains(label, "VPN Gate") {
+					label += " · VPN Gate"
+				}
+				for _, link := range rows {
+					name := uniqueRemark(label, names)
+					names[name] = true
+					u, err := url.Parse(link)
+					if err != nil {
+						return nil, fmt.Errorf("节点链接无效")
+					}
+					u.Fragment = name
+					u.RawFragment = ""
+					links = append(links, u.String())
+				}
+			}
 		}
 		return links, nil
 	}

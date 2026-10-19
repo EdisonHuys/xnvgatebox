@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -194,7 +195,9 @@ func (n *Native) thirdPartyLinks(host string, selected map[int]bool, records map
 		return nil, fmt.Errorf("配置恢复未完成，订阅服务已阻断")
 	}
 	out := []string{}
-	for _, ib := range n.store.Inbounds {
+	inbounds := append([]*nativeInbound(nil), n.store.Inbounds...)
+	sort.Slice(inbounds, func(i, j int) bool { return inbounds[i].ID < inbounds[j].ID })
+	for _, ib := range inbounds {
 		if !thirdPartyBound(ib) || !ib.Enable || !ib.ThirdParty.Subscribe || (selected != nil && !selected[ib.ID]) {
 			continue
 		}

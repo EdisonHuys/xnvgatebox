@@ -2,16 +2,87 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestThirdPartySubscriptionSourceOrderStable(t *testing.T) {
+	n, _, m, _ := thirdPartyFixture(t)
+	useSettings(t)
+	vpn, third := n.store.Inbounds[0], n.store.Inbounds[1]
+	extraThird := cloneNativeStore(n.store).Inbounds[1]
+	extraThird.ID, extraThird.Port, extraThird.ThirdParty.Remark = 4, 30004, "second supplier"
+	direct := cloneNativeStore(n.store).Inbounds[1]
+	direct.ID, direct.Port, direct.ThirdParty, direct.HostDirect = 5, 30005, nil, true
+	direct2 := cloneNativeStore(n.store).Inbounds[1]
+	direct2.ID, direct2.Port, direct2.ThirdParty, direct2.HostDirect = 6, 30006, nil, true
+	// Deliberately scramble storage order; neither results nor API order is a
+	// ranking. Reads must leave the private store and client identities intact.
+	n.store.Inbounds = []*nativeInbound{extraThird, direct2, vpn, direct, third}
+	n.store.NextID = 7
+	if err := n.store.save(n.dir); err != nil {
+		t.Fatal(err)
+	}
+	invalidateInbounds()
+	before, _ := json.Marshal(n.store)
+	token, _ := subToken()
+	for _, tc := range []struct {
+		query string
+		ports []string
+	}{
+		{"", []string{"30005", "30006", "30002", "30004", "30001"}},
+		{"&direct=0", []string{"30002", "30004", "30001"}},
+		{"&vpn=0&third=1&proxies=4,2", []string{"30005", "30006", "30002", "30004"}},
+		{"&third=0", []string{"30005", "30006", "30001"}},
+		{"&slots=1", []string{"30001"}},
+	} {
+		var plain string
+		for _, target := range []string{"links", "base64"} {
+			w := httptest.NewRecorder()
+			handleSub(m)(w, httptest.NewRequest("GET", "/sub?token="+token+"&target="+target+tc.query, nil))
+			if w.Code != 200 {
+				t.Fatal(tc.query, w.Code)
+			}
+			body := w.Body.String()
+			if target == "base64" {
+				b, err := base64.StdEncoding.DecodeString(body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				body = string(b)
+				if body != plain {
+					t.Fatal("format changed ordering")
+				}
+			} else {
+				plain = body
+			}
+			var ports []string
+			for _, link := range strings.Split(body, "\n") {
+				u, err := url.Parse(link)
+				if err != nil {
+					t.Fatal(err)
+				}
+				ports = append(ports, u.Port())
+			}
+			if !reflect.DeepEqual(ports, tc.ports) {
+				t.Fatalf("scope %s: got %v want %v", tc.query, ports, tc.ports)
+			}
+		}
+	}
+	after, _ := json.Marshal(n.store)
+	if string(before) != string(after) {
+		t.Fatal("subscription sorting mutated private configuration")
+	}
+}
 
 func thirdPartyFixture(t *testing.T) (*Native, *faultNativeRuntime, *Manager, *Console) {
 	t.Helper()
