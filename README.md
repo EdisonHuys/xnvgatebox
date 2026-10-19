@@ -12,16 +12,20 @@
 
 ```sh
 apt-get update && apt-get install -y ca-certificates curl
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.1/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.1
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.1/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.1 && xnvgatebox access
 ```
 
-安装包含管理程序、Pool Builder、固定版本 Xray 和系统协议依赖。VPS 自行解析 VPN Gate 官方当次公开清单，每十分钟刷新，不需要 GitHub 或 Cloudflare 账号，也不需要 3x-ui。安装完成后执行：
+安装包含管理程序、Pool Builder、固定版本 Xray 和系统协议依赖。VPS 自行解析 VPN Gate 官方当次公开清单，每十分钟刷新，不需要 GitHub 或 Cloudflare 账号，也不需要 3x-ui。
+
+首次安装自动生成独立随机管理路径、初始密码和订阅凭据。上面的一键命令最后会直接显示管理地址和密码；以后也可重新查看：
 
 ```sh
 xnvgatebox access
 ```
 
 在浏览器打开它打印的私有管理地址并输入密码。默认管理端口为 8899，服务器防火墙需允许访问此端口。首次安装会生成新的路径、密码和订阅凭据；重装系统后旧地址不会自动恢复。
+
+重复安装或在线更新保留已有路径和密码，`xnvgatebox access` 只查看，不重置凭据。管理地址和密码请保存在私有位置。
 
 1. 在“总览”启用 **VPS 本机直出**，复制默认订阅到 v2rayN，刷新订阅并验证。该入口明确使用 VPS 公网 IP，可独立启停。
 2. 设置目标出口数，程序自动建立接入入口并绑定出口；数量和检测并发由用户决定，实际受主机资源、地址/端口及上游节点限制。也可在“接入管理”自建入口并选择已有出口。
@@ -45,6 +49,8 @@ xnvgatebox update-status
 安装、命令行更新和网页更新共用部署锁。更新前停止本项目服务并在 `/var/backups/xnvgatebox/` 保存一致的完整项目备份，保留端口、凭据、订阅和用户设置；校验、状态检查或运行验证失败会恢复原部署。恢复未完成会保留记录，下次安装先恢复。备份含私密信息，不应上传公开仓库；它不是整机系统备份。已有 v0.4.0 安装先执行上面新版安装命令完成一次迁移，之后即可使用网页更新。
 
 重装系统前请将备份另存到本机。重装后的第一轮全新测试先不导入旧状态，按 [Debian 12 全新验收清单](docs/INSTALL_UPDATE.md#全新系统验收清单) 验证；操作系统重装由使用者自行进行。
+
+2026-10-19 使用者已亲自在后台完成 v0.6.0 → v0.6.1 更新，随后核对实际版本与更新记录通过。重装前的当前部署、源码及 Git 历史已在本机私有保存并校验；范围和恢复说明见 [备份与重装](docs/BACKUP_REINSTALL.md)。
 
 ## 本机使用
 

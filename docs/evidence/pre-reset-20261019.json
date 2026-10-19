@@ -1,0 +1,60 @@
+{
+  "before_backup": {
+    "version": "v0.6.1",
+    "build": {
+      "git_head": "cdc5d7e1a74a62f16754553391c7efd535075262",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "af15f0a46bcc1f345b7aac9177d405ecf4a8c6b3a49f7a9357ac96a0616e7ad0",
+      "version": "v0.6.1",
+      "xray_version": "v26.3.27"
+    },
+    "checks": {
+      "running_v0_6_1": true,
+      "clean_formal_source": true,
+      "user_online_update_completed": true,
+      "no_pending_deploy_recovery": true,
+      "new_exit_source_groups_served": true
+    },
+    "user_reported_online_update_success": true,
+    "update_status": "completed",
+    "update_phase": "complete",
+    "third_party_resource_count": 1
+  },
+  "backup": {
+    "status": "passed",
+    "version": "v0.6.1",
+    "checks": {
+      "consistent_backup_all_file_contents_verified": true,
+      "restored_service_v0_6_1_healthy": true,
+      "management_subscription_and_native_config_preserved": true,
+      "all_slot_ports_credentials_policies_and_stop_intent_preserved": true,
+      "xui_process_and_running_config_unchanged": true,
+      "no_pending_deploy_recovery": true,
+      "actual_subscription_source_order_verified": true
+    },
+    "backup_sha256": "229a16a6913b78bf258c3002cd44b6533b189756b5f49024c82d1d72b22f300e",
+    "regular_files_verified": 2215,
+    "subscription_groups_observed": [
+      "VPS host direct",
+      "custom SOCKS5"
+    ],
+    "contains_private_credentials": true,
+    "full_restore_drill_performed_this_round": false,
+    "operating_system_image": false
+  },
+  "recorded_at": "2026-10-19T03:41:23.811756+00:00",
+  "user_update_actor": "user clicked management GUI",
+  "backup_downloaded_to_mac_and_sha256_verified": true,
+  "local_code_backup": {
+    "source_archive": true,
+    "all_current_git_refs_bundle": true,
+    "bundle_clone_and_fsck_verified": true,
+    "private_inputs_separate": true,
+    "official_release_package_copy_verified": true,
+    "public_upload_of_private_archives": false,
+    "private_manifest_location": "local backup directory only"
+  },
+  "fresh_debian_12_acceptance": "pending user operating system reinstall",
+  "new_proxy_client_end_to_end_tested_this_round": false
+}
