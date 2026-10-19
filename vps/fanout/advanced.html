@@ -1636,7 +1636,7 @@
 
       // 内置入口按稳定编号绑定，等待中的出口也能预先选择。
       function exitOptions(currentHost, currentSlot = 0) {
-        if (isNative()) return '<option value="slot:0"' + (currentSlot ? '' : ' selected') + '>未绑定（阻断流量）</option>' + view.exits.map(e => '<option value="slot:' + e.slot + '"' + (currentSlot === e.slot ? ' selected' : '') + '>' + esc(exitName(e) + ' · ' + (STATUS[e.status] || e.status)) + '</option>').join('');
+        if (isNative()) return '<option value="slot:0"' + (currentSlot ? '' : ' selected') + '>未绑定（阻断流量）</option>' + view.exits.map(e => '<option value="slot:' + e.slot + '"' + (currentSlot === e.slot ? ' selected' : '') + '>' + esc(exitName(e) + ' · ' + (e.status === 'starting' && e.phase === 'waiting_capacity' ? '等待建连' : STATUS[e.status] || e.status)) + '</option>').join('');
         const up = view.exits.filter((e) => e.status === "up");
         return (
           '<option value=""' +

@@ -446,6 +446,7 @@
       }
       .start-steps { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 22px; }
       .start-steps > span { color: var(--muted); }
+      .country-evidence { display: block; margin-top: 4px; }
       .callout {
         background: var(--soft);
         border-color: transparent;
@@ -1991,7 +1992,7 @@
                   esc(e.status === "up" ? e.exit_ip || "核验中" : "等待连接") +
                   "</div><small>" +
                   esc(types[e.egress?.ip_type] || "未知 / unknown") +
-                  '</small><small>' + esc(countryEvidenceLabel(e)) + '</small><div class="details"><span>HTTPS <b>' +
+                  '</small><small class="country-evidence">' + esc(countryEvidenceLabel(e)) + '</small><div class="details"><span>HTTPS <b>' +
                   lat +
                   "</b></span><span>目标 <b>" +
                   esc(
