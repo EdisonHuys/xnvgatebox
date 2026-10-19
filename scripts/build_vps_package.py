@@ -72,7 +72,7 @@ def main():
         (stage / "scripts").mkdir()
         shutil.copy2(ROOT / "scripts/toolbox.py", stage / "scripts/toolbox.py")
         shutil.copy2(ROOT / "scripts/vps_acceptance.py", stage / "scripts/vps_acceptance.py")
-        shutil.copytree(ROOT / "vps/deploy", stage / "deploy")
+        shutil.copytree(ROOT / "vps/deploy", stage / "deploy", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         shutil.copytree(ROOT / "vps/licenses", stage / "licenses")
         shutil.copy2(ROOT / "vps/fanout/UPSTREAM.md", stage / "UPSTREAM.md")
         shutil.copy2(ROOT / "vps/install.sh", stage / "install.sh")
