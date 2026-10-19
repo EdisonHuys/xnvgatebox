@@ -384,6 +384,19 @@
         width: 100%;
         border-collapse: collapse;
       }
+      #nativeConnections {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      #nativeConnections table { min-width: 850px; }
+      #nativeConnections th, #nativeConnections td { padding: 18px 20px; text-align: left; }
+      #nativeConnections th { background: var(--bg); color: var(--dim); font-size: 12px; font-weight: 600; }
+      #nativeConnections td { border-top: 1px solid var(--line); vertical-align: middle; }
+      #nativeConnections td:first-child { min-width: 180px; }
+      #nativeConnections td:last-child { min-width: 240px; }
+      #nativeConnections td small { margin-top: 5px; color: var(--dim); }
       .notice {
         color: var(--bad);
         margin-bottom: 18px;

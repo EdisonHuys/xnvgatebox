@@ -50,6 +50,8 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.7.0/vps/ins
 
 画像服务可选，默认没有配置。查询失败、字段不足或证据过期时，类型显示 `unknown`，不继承 SSTP 画像或来源主机的住宅标签。API 返回部分字段时，缺失布尔值仍为 null；国家、ASN、ISP 和类型以实际 OpenVPN 出口为对象。管理页在 Slot 下展示实际画像，候选表中的国家和延迟明确标为来源信息。
 
+国家另有独立查询：默认按实测出口 IP 请求 `https://api.country.is/{ip}`，正常验证 HTTPS 并精确匹配返回 IP，国家证据有效一天。国家可知不等于住宅类型可知，缺少可信分类画像时仍为 unknown。私有环境文件中的 `COUNTRY_URL_TEMPLATE` 可替换兼容服务（返回 `ip` 与两位 `country`）或设空关闭；失败短暂退避，显示地区未知，不使用来源国家补证。国家查询不发送 `INTELLIGENCE_TOKEN`，也不启用本项目暂停中的 CF 部署。
+
 部署时可在 `/etc/xnvgatebox/intelligence.env` 写入简单的 `KEY=VALUE` 配置，文件只供管理员读取（0600）：
 
 ```ini
