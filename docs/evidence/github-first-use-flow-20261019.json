@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "version": "v0.7.0",
-  "status": "candidate_checks_passed_pending_release",
+  "status": "published_and_public_download_verified",
   "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/8",
   "local_validation": {
     "python_passed": 85,
@@ -37,5 +37,33 @@
     "cloudflare_paused": true,
     "xui_unchanged": true,
     "unknown_not_residential": true
+  },
+  "source_commit": "0e3aebe1735f76e547c2298df9187e963ea4877e",
+  "release": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.7.0",
+  "workflows": {
+    "test": 39240669426,
+    "formal_linux_package": 39240673814,
+    "publish": 39240911309
+  },
+  "package": {
+    "status": "passed",
+    "package_sha256": "03790fe73e41405726e64fb78094aaf039fa2282f5ad62170b17c87dfcadd781",
+    "members": 37,
+    "all_member_checksums_verified": true,
+    "source_snapshot_verified_against_git_tree": true,
+    "private_secret_scan_passed": true,
+    "build": {
+      "git_head": "0e3aebe1735f76e547c2298df9187e963ea4877e",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "56da4553d3401a861e56a4db88a2eeab9656dc218d3157fc7044cf4dcd62dbf2",
+      "version": "v0.7.0",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "public_validation": {
+    "latest_version": "v0.7.0",
+    "anonymous_asset_matches_tested_artifact": true,
+    "tagged_installer_matches_source": true
   }
 }
