@@ -222,7 +222,13 @@ func (m *Manager) policyCandidates(p SlotPolicy, avoid map[string]bool, exceptSl
 		if ra != rb {
 			return ra < rb
 		}
-		if ra == 0 && la > 0 && lb > 0 && la != lb {
+		if ra == 0 && la != lb {
+			if la <= 0 {
+				return false
+			}
+			if lb <= 0 {
+				return true
+			}
 			return la < lb
 		}
 		a, b := freshCandidateImage(out[i]), freshCandidateImage(out[j])
