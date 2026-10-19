@@ -26,7 +26,7 @@ python3 /tmp/xnvgatebox-uninstall.py --dry-run --purge --legacy
 python3 /tmp/xnvgatebox-uninstall.py --purge --legacy
 ```
 
-临时下载文件可以在完成后自行删除。重新安装使用 [安装命令](../README.md#vps-独立安装debian-12)，会生成新的管理身份和订阅；旧客户端订阅需替换。使用旧备份恢复属于迁移，不能算全新安装验收。
+临时下载文件可以在完成后自行删除。重新安装使用 [安装命令](../README.md#debian-12-安装)，会生成新的管理身份和订阅；旧客户端订阅需替换。使用旧备份恢复属于迁移，不能算全新安装验收。
 
 ## 清理和保留的边界
 

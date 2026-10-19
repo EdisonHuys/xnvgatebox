@@ -33,7 +33,10 @@ class Refuse(RuntimeError):
 class System:
     def run(self, args):
         # Never echo commands/output: old units and process arguments may contain credentials.
-        r = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            r = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=45)
+        except subprocess.TimeoutExpired:
+            raise Refuse('系统操作超时：' + args[0] + ' ' + args[1]) from None
         if r.returncode:
             raise Refuse('系统操作失败：' + args[0] + ' ' + args[1])
         return r.stdout
@@ -219,7 +222,7 @@ class Uninstaller:
     def legacy_owned(self):
         unit = self.path('etc/systemd/system/fanout.service')
         menu = self.path('usr/local/bin/f')
-        service_ok = unit.is_file() and bool(re.search(r'^ExecStart=/usr/local/bin/fanout -dir /var/lib/fanout\s*$', unit.read_text(), re.M))
+        service_ok = unit.is_file() and re.findall(r'^ExecStart=(.*)$', unit.read_text(), re.M) == ['/usr/local/bin/fanout -dir /var/lib/fanout'] and not re.search(r'^Exec(StartPre|StartPost|Stop|StopPost|Reload)=', unit.read_text(), re.M)
         menu_ok = menu.is_file() and all(re.search('^' + re.escape(v) + r'\s*$', menu.read_text(), re.M) for v in ('WORK_DIR=/var/lib/fanout', 'SERVICE=fanout', 'BIN=/usr/local/bin/fanout'))
         if self.path('etc/init.d/fanout').exists(): raise Refuse('检测到旧 OpenRC/SysV 服务，请先核对其管理方式')
         exists = menu_ok or any(self.path(n).exists() for n in LEGACY_PATHS)
@@ -238,13 +241,13 @@ class Uninstaller:
             fields = line.split()
             if len(fields) >= 4 and re.fullmatch(r'xnvgatebox-update-[A-Za-z0-9-]{8,64}\.service', fields[0]):
                 if fields[2] not in ('inactive', 'failed'): raise Refuse('在线更新任务尚未结束，请稍后重试')
-        for unit, marker in zip(UNITS, ('Description=Refresh xnvgatebox candidate pool every ten minutes', '/usr/local/lib/xnvgatebox/scripts/toolbox.py', 'ExecStart=/usr/local/bin/xnvgatebox-fanout -dir /var/lib/xnvgatebox/fanout -panel native')):
+        for unit, marker in zip(UNITS, ('Description=Refresh xnvgatebox candidate pool every ten minutes', 'ExecStart=/usr/bin/python3 /usr/local/lib/xnvgatebox/scripts/toolbox.py --config /etc/xnvgatebox/pool.json pool --output /var/lib/xnvgatebox/pool', 'ExecStart=/usr/local/bin/xnvgatebox-fanout -dir /var/lib/xnvgatebox/fanout -panel native')):
             p = self.path('etc/systemd/system/' + unit)
             if p.exists() and marker not in p.read_text(): raise Refuse('项目服务已自定义，保留现场：' + unit)
             if p.exists():
                 text = p.read_text()
                 if re.search(r'^Exec(StartPre|StartPost|Stop|StopPost|Reload)=', text, re.M): raise Refuse('服务含自定义生命周期操作，保留现场')
-                if unit == UNITS[2] and re.findall(r'^ExecStart=(.*)$', text, re.M) != [marker.removeprefix('ExecStart=')]: raise Refuse('服务启动参数已自定义，保留现场')
+                if unit != UNITS[0] and re.findall(r'^ExecStart=(.*)$', text, re.M) != [marker.removeprefix('ExecStart=')]: raise Refuse('服务启动参数已自定义，保留现场')
                 if unit == UNITS[0] and any(v.strip() != 'xnvgatebox-pool.service' for v in re.findall(r'^Unit=(.*)$', text, re.M)): raise Refuse('定时器指向其他服务，保留现场')
         if self.path(WORK).exists(): instances.append(Instance(self, WORK))
         if self.purge: paths.append('var/backups/xnvgatebox')
