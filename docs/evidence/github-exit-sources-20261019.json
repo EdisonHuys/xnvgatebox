@@ -1,0 +1,113 @@
+{
+  "recorded_at": "2026-10-19T03:22:49.132320+00:00",
+  "release": {
+    "tag": "v0.6.1",
+    "source_commit": "cdc5d7e1a74a62f16754553391c7efd535075262",
+    "pull_request": 6,
+    "merged": true,
+    "build_run": 39193952571,
+    "publish_run": 39194110582,
+    "published_at": "2026-10-19T03:19:14Z",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.6.1"
+  },
+  "package": {
+    "status": "passed",
+    "package_sha256": "887a29bcecf81ee64cb21e49b9fad619bdcefe7d66a1b85e361bc53693378181",
+    "members": 36,
+    "all_member_checksums_verified": true,
+    "source_snapshot_verified_against_git_tree": true,
+    "private_secret_scan_passed": true,
+    "build": {
+      "git_head": "cdc5d7e1a74a62f16754553391c7efd535075262",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "af15f0a46bcc1f345b7aac9177d405ecf4a8c6b3a49f7a9357ac96a0616e7ad0",
+      "version": "v0.6.1",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "linux_ci": {
+    "pass_events": 313,
+    "top_level_pass": 254,
+    "skips": 7,
+    "failed_test_lines": 0,
+    "new_source_order_test_passed": true,
+    "race_step_completed": true,
+    "skipped_tests": [
+      "TestLiveNativeTransactions",
+      "TestLiveNativeInterruptedChild",
+      "TestLiveNativeSIGKILLRecovery",
+      "TestLiveManagementFailures",
+      "TestLiveSstpIsolationAndRecovery",
+      "TestLiveSstpEndToEnd",
+      "TestThirdPartyLiveSupplierProbe"
+    ]
+  },
+  "javascript": {
+    "status": "passed",
+    "files": [
+      "tests/test_console_sstp.mjs",
+      "tests/test_console_third_party.mjs"
+    ],
+    "complete_embedded_script_syntax_checked": true,
+    "covers": [
+      "legacy subscription scope",
+      "late poll cannot erase a check",
+      "source selection order",
+      "stable custom ordering",
+      "disabled state distinct from prior passed observation",
+      "resource updates and deletion reflected in exit cards",
+      "immediate checking feedback",
+      "remark HTML escaping"
+    ]
+  },
+  "github_checks": {
+    "python_3_9": "passed",
+    "python_3_12": "passed",
+    "linux_go": "passed",
+    "race": "passed",
+    "package_build": "passed"
+  },
+  "browser_demo": {
+    "synthetic_data_only": true,
+    "default_source_groups_order": [
+      "VPS host direct",
+      "custom SOCKS5",
+      "VPN Gate"
+    ],
+    "exit_toggle_reflected_in_resource_list": true,
+    "resource_edit_and_check_reflected_in_exit_card": true,
+    "remark_and_source_label_both_visible": true,
+    "disabled_state_and_previous_observation_both_visible": true,
+    "subscription_groups_in_requested_order": true,
+    "temporary_tab_and_local_listener_closed": true
+  },
+  "latest_release_api": {
+    "status": "passed",
+    "checks": {
+      "latest_is_v0_6_1": true,
+      "formal_public_release": true,
+      "both_update_assets_available": true,
+      "source_is_tested_commit": true,
+      "notes_explain_manual_update": true
+    },
+    "published_at": "2026-10-19T03:19:14Z"
+  },
+  "online_update": {
+    "vps_upgrade_executed_this_round": false,
+    "vps_accessed_this_round": false,
+    "actual_v0_6_0_to_v0_6_1_acceptance": "pending user click in management settings",
+    "previous_v0_6_0_acceptance": "historical evidence only; not counted as this release runtime verification"
+  },
+  "boundaries": {
+    "cf_paused_no_deployment_or_write": true,
+    "three_x_ui_not_accessed_or_modified": true,
+    "unknown_not_residential": true,
+    "supplier_credentials_and_backups_not_uploaded": true,
+    "routing_and_failure_fallback_policy_unchanged": true,
+    "source_order_does_not_enable_automatic_switching": true,
+    "new_release_live_supplier_chain_tested": false,
+    "windows_client_gui_tested_this_round": false,
+    "fresh_operating_system_tested_this_round": false
+  }
+}
