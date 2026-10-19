@@ -4,9 +4,9 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
-最新版本：[v0.7.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.7.0)。修复首次安装的服务缺失误报，补齐首页与控制台首次使用引导。提供 VPN Gate 多出口、VPS 本机直出、手动第三方 SOCKS5、原始 SSTP 和完整包在线更新；无需额外面板。安装后请按下方 [首次使用步骤](#首次使用从登录到客户端上网) 操作。
+最新版本：[v0.7.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.7.0)。候选检测参与选点，建连并发可配置，国家证据与住宅类型分开，接入入口集中管理。提供 VPN Gate 多出口、VPS 本机直出、手动第三方 SOCKS5、原始 SSTP 和完整包在线更新；无需额外面板。
 
-使用者已重装 Debian 12 并报告安装成功，管理页已观察到候选通过和运行出口就绪；完整客户端验收仍需另行完成。本轮发布与验证范围见 [v0.7.0 记录](docs/evidence/github-install-guide-20261019.json)。
+使用者已重装 Debian 12 并报告安装成功，管理页已观察到候选通过和运行出口就绪；本轮版本更新与完整客户端验收仍需另行完成。本轮发布与验证范围见 [v0.7.0 记录](docs/evidence/github-first-use-flow-20261019.json)。
 
 ## Debian 12 安装
 

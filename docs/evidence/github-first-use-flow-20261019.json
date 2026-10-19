@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-19",
+  "version": "v0.7.0",
+  "status": "candidate_checks_passed_pending_release",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/8",
+  "local_validation": {
+    "python_passed": 85,
+    "node_flow_sstp_third_party_worker_suites_passed": true,
+    "embedded_js_and_shell_syntax_passed": true,
+    "browser_demo": [
+      "four short home steps",
+      "first target prefilled with 4",
+      "visible auto/manual/direct entry list",
+      "new entry can select waiting stable slot",
+      "manual entry disable and re-enable"
+    ],
+    "public_country_query": "8.8.8.8 returned US through normal HTTPS; residential=null and ip_type=unknown"
+  },
+  "linux_validation": {
+    "top_level_passed": 258,
+    "pass_events": 317,
+    "race_passed": true,
+    "skipped_live_or_helper_entries": [
+      "TestLiveNativeTransactions",
+      "TestLiveNativeInterruptedChild",
+      "TestLiveNativeSIGKILLRecovery",
+      "TestLiveManagementFailures",
+      "TestLiveSstpIsolationAndRecovery",
+      "TestLiveSstpEndToEnd",
+      "TestThirdPartyLiveSupplierProbe"
+    ]
+  },
+  "boundaries": {
+    "github_only": true,
+    "vps_changed": false,
+    "new_vps_client_chain_verified": false,
+    "cloudflare_paused": true,
+    "xui_unchanged": true,
+    "unknown_not_residential": true
+  }
+}
