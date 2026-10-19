@@ -37,6 +37,8 @@ jobs:
         working-directory: vps/fanout
       - name: Verify uninstall with real isolated network resources
         run: sudo python3 tests/uninstall_linux.py
+      - name: Verify uninstall stop and reset with real systemd
+        run: sudo --preserve-env=GITHUB_ACTIONS python3 tests/uninstall_systemd.py
       - run: bash -n vps/install.sh vps/deploy/xnvgatebox
       - name: Build the package from this tested commit
         env:

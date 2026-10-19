@@ -4,7 +4,7 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
-最新版本：[v0.8.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.8.0)。增加正式卸载与可选旧版清理，移除过时 fanout 安装入口。提供 VPN Gate 多出口、VPS 本机直出、手动第三方 SOCKS5、原始 SSTP 和完整包在线更新；无需额外面板。
+最新版本：[v0.8.1](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.8.1)。修复卸载时正常停止的服务被重复重置而中断的问题；支持正式卸载与可选旧版清理。提供 VPN Gate 多出口、VPS 本机直出、手动第三方 SOCKS5、原始 SSTP 和完整包在线更新；无需额外面板。
 
 使用者已重装 Debian 12 并报告安装成功，管理页已观察到候选通过和运行出口就绪；本轮版本更新与完整客户端验收仍需另行完成。卸载范围见 [卸载说明](docs/UNINSTALL.md)。
 
@@ -14,7 +14,7 @@
 
 ```sh
 apt-get update && apt-get install -y ca-certificates curl
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.8.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.8.0 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.8.1/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.8.1 && xnvgatebox access
 ```
 
 安装包含管理程序、Pool Builder、固定版本 Xray 和系统协议依赖。VPS 自行解析 VPN Gate 官方当次公开清单，每十分钟刷新，不需要 GitHub 或 Cloudflare 账号，也不需要 3x-ui。

@@ -291,11 +291,7 @@ class Uninstaller:
         with self.lock('run/lock/xnvgatebox-deploy.lock'), ExitStack() as locks:
             paths, units, instances = self.plan()
             for unit in units:
-                if not self.r.loaded(unit): continue
-                self.r.run(['systemctl', 'disable', '--now', unit])
-                state = self.r.run(['systemctl', 'show', '--property=ActiveState', '--value', unit]).strip()
-                if state not in ('inactive', 'failed'): raise Refuse('服务尚未停止，保留文件')
-                self.r.run(['systemctl', 'reset-failed', unit])
+                self.stop_unit(unit)
             for i in instances:
                 locks.enter_context(self.lock(i.relative + '/lock'))
                 # Retain pre-stop indices: graceful shutdown may remove manifests.
@@ -307,6 +303,24 @@ class Uninstaller:
             for unit in units:
                 if self.r.loaded(unit): raise Refuse('仍存在其他位置的同名服务，请核对卸载结果')
             if any(self.path(p).exists() for p in paths): raise Refuse('文件清理未完成')
+
+    def stop_unit(self, unit):
+        if not self.r.loaded(unit): return
+        self.r.run(['systemctl', 'disable', '--now', unit])
+        state = self.r.run(['systemctl', 'show', '--property=ActiveState', '--value', unit]).strip()
+        if state == 'inactive': return
+        if state != 'failed': raise Refuse('服务尚未停止，保留文件：' + unit)
+        # An inactive timer can be garbage-collected after disable --now.
+        # Only failed units need reset; recheck even if reset reports an error.
+        try:
+            self.r.run(['systemctl', 'reset-failed', unit])
+        except Refuse:
+            if not self.r.loaded(unit): return
+            if self.r.run(['systemctl', 'show', '--property=ActiveState', '--value', unit]).strip() == 'inactive': return
+            raise Refuse('无法清除服务失败状态，保留文件：' + unit) from None
+        if self.r.loaded(unit):
+            state = self.r.run(['systemctl', 'show', '--property=ActiveState', '--value', unit]).strip()
+            if state != 'inactive': raise Refuse('服务失败状态尚未清除，保留文件：' + unit)
 
 
 def main(argv=None):

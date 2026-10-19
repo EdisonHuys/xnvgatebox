@@ -18,10 +18,12 @@ xnvgatebox uninstall --purge --legacy
 
 ## 旧版本或卸载中断后
 
+v0.8.0 可能在正常停止服务后执行多余的 `systemctl reset-failed`，导致卸载中止。该错误发生在文件和备份删除之前，但可能已停用部分服务；无需重新安装或重装系统，重新下载 v0.8.1 或更新的独立工具重试即可。新版仅对失败状态进行重置，并复核结果，真正的系统操作失败仍中止。
+
 v0.7.0 及更早版本没有该命令。可以直接下载固定版本、独立运行的卸载工具，无需先升级或启动代理：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.8.0/vps/deploy/uninstall.py -o /tmp/xnvgatebox-uninstall.py
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.8.1/vps/deploy/uninstall.py -o /tmp/xnvgatebox-uninstall.py
 python3 /tmp/xnvgatebox-uninstall.py --dry-run --purge --legacy
 python3 /tmp/xnvgatebox-uninstall.py --purge --legacy
 ```

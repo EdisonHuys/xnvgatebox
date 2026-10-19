@@ -27,6 +27,8 @@ class Model:
         self.rules = {'filter': [], 'nat': []}
         self.updates = ''; self.busy = ''; self.fail_stop = False
         self.fragment = {}
+        self.states = {}
+        self.fail_reset = False
 
     def loaded(self, unit): return (self.root / 'etc/systemd/system' / unit).exists()
 
@@ -37,8 +39,12 @@ class Model:
             if a[1] == 'show':
                 if 'FragmentPath' in a[2]: return self.fragment.get(a[-1], '/etc/systemd/system/' + a[-1])
                 if 'DropInPaths' in a[2]: return ''
-                return 'inactive'
+                return self.states.get(a[-1], 'inactive')
             if a[1] == 'disable' and self.fail_stop: raise u.Refuse('synthetic stop failure')
+            if a[1] == 'reset-failed':
+                if self.fail_reset or self.states.get(a[-1], 'inactive') != 'failed':
+                    raise u.Refuse('synthetic reset failure')
+                self.states[a[-1]] = 'inactive'
             return ''
         if a[:4] == ['ip', '-j', '-4', 'addr']: return json.dumps(list(self.links.values()))
         if a[:4] == ['ip', '-j', 'netns', 'list']: return json.dumps([{'name':n} for n in self.ns])
@@ -133,6 +139,61 @@ class UninstallTests(unittest.TestCase):
         self.r.fail_stop=False; self.r.busy='1234'
         with self.assertRaises(u.Refuse): self.i.execute()
         self.assertTrue((self.root/u.WORK/'state.json').exists()); self.protected()
+
+    def test_inactive_units_skip_reset_even_when_reset_would_fail(self):
+        self.r.fail_reset = True
+        self.i.execute()
+        self.assertFalse(any(a[:2] == ['systemctl','reset-failed'] for a in self.r.events))
+        self.assertFalse((self.root/u.WORK).exists()); self.protected()
+
+    def test_failed_unit_is_reset_and_verified_before_deletion(self):
+        self.r.states[u.UNITS[0]] = 'failed'
+        self.i.execute()
+        resets = [a[-1] for a in self.r.events if a[:2] == ['systemctl','reset-failed']]
+        self.assertEqual(resets, [u.UNITS[0]])
+        self.assertEqual(self.r.states[u.UNITS[0]], 'inactive'); self.protected()
+
+    def test_real_reset_failure_keeps_state_and_purge_backup(self):
+        self.r.states[u.UNITS[0]] = 'failed'; self.r.fail_reset = True; self.i.purge = True
+        with self.assertRaisesRegex(u.Refuse, u.UNITS[0]): self.i.execute()
+        self.assertTrue((self.root/u.WORK/'state.json').exists())
+        self.assertTrue((self.root/'var/backups/xnvgatebox/install-old/project.tar.gz').exists())
+        self.protected()
+
+    def test_reset_error_requires_proven_inactive_or_unloaded_state(self):
+        for loaded, states in (([True, True], ['failed', 'inactive']), ([True, False], ['failed'])):
+            r = mock.Mock()
+            r.loaded.side_effect = loaded
+            values = iter(states)
+            def run(a):
+                if a[1] == 'show': return next(values)
+                if a[1] == 'reset-failed': raise u.Refuse('synthetic reset failure')
+                return ''
+            r.run.side_effect = run
+            u.Uninstaller(self.root, r).stop_unit(u.UNITS[0])
+        for state in ('failed', 'active', 'activating', ''):
+            r.loaded.side_effect = None; r.loaded.return_value = True
+            values = iter(['failed', state])
+            with self.assertRaises(u.Refuse): u.Uninstaller(self.root, r).stop_unit(u.UNITS[0])
+
+    def test_reset_success_does_not_hide_failed_or_unknown_final_state(self):
+        for state in ('failed','active',''):
+            r = mock.Mock(); r.loaded.return_value = True
+            values = iter(['failed',state])
+            r.run.side_effect = lambda a: next(values) if a[1] == 'show' else ''
+            with self.assertRaises(u.Refuse): u.Uninstaller(self.root,r).stop_unit(u.UNITS[0])
+
+    def test_system_subprocess_failure_and_recheck_query_error_are_not_ignored(self):
+        r = u.System()
+        with mock.patch.object(u.subprocess, 'run', return_value=subprocess.CompletedProcess([],1,'','synthetic-private')):
+            with self.assertRaisesRegex(u.Refuse, 'reset-failed') as error:
+                r.run(['systemctl','reset-failed',u.UNITS[0]])
+            self.assertNotIn('synthetic-private',str(error.exception))
+        # Use the actual System adapter, with deterministic systemctl responses.
+        sequence = [(0,'loaded'), (0,''), (0,'failed'), (1,''), (1,'')]
+        with mock.patch.object(u.subprocess, 'run', side_effect=[subprocess.CompletedProcess([],code,value,'') for code,value in sequence]):
+            with self.assertRaisesRegex(u.Refuse,'systemctl show'):
+                u.Uninstaller(self.root,r).stop_unit(u.UNITS[0])
 
     def test_update_transaction_and_deployment_lock_block_before_deletion(self):
         put(self.root/'var/lib/xnvgatebox-deploy/transaction.json','{"phase":"installing"}')
