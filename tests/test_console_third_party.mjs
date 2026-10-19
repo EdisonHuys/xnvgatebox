@@ -24,6 +24,7 @@ const c = vm.createContext({
 });
 vm.runInContext(
   "const $ = id => elements[id];\n" +
+    between("      function orderedThirdParties()", "      function thirdCheckReason(") +
     between(
       "      function selectedSubURL()",
       "      function renderSubscription()",
@@ -105,3 +106,45 @@ await oldGet;
 assert.equal(s.thirdProxies[0].check.status, "running");
 assert.equal(s.thirdSubmitting.size, 0);
 console.log("Third-party subscription scope and stale-poll regressions passed");
+
+// Group order is visible in the selection page. Returned proxy order and
+// changing check results must not move a custom entry between positions.
+const scope = between('<h2>选择订阅范围</h2>', '<div class="card pad qr">');
+assert(scope.indexOf('id="subDirect"') < scope.indexOf('id="subThirdAll"'));
+assert(scope.indexOf('id="subThirdRows"') < scope.indexOf('id="subAll"'));
+const elements = Object.fromEntries([
+  "managedDirectSection", "managedThirdSection", "managedDirectExit", "managedThirdExits", "thirdRows",
+].map(id => [id, {innerHTML: "", hidden: false}]));
+const ui = vm.createContext({
+  elements, summary: {backend: "native"}, resourcePublicIP: "192.0.2.100",
+  hostDirect: [{id: 99, enable: true, port: 30999}],
+  thirdProxies: [
+    {id: 11, name: 'second <custom>', enabled: false, entry_port: 30111, check: {status: "passed", actual_ip: "198.51.100.11", ip_type: "unknown"}},
+    {id: 10, name: 'nov proxy-los', enabled: true, entry_port: 30110, subscribe: true, check: {status: "not_tested"}},
+  ],
+  thirdSubmitting: new Set(), types: {unknown: "未知 / unknown"}, labels: {},
+  esc: s => String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;"),
+  country: code => code, date: () => "demo-time", badge: status => `[${status}]`, checkButtonLabel: r => r.status,
+});
+vm.runInContext("const $ = id => elements[id];\n" +
+  between("      function orderedThirdParties()", "      function render()") +
+  between("      function renderThirdParties()", "      async function refreshThirdParties()"), ui);
+ui.renderThirdParties();
+const cards = () => elements.managedThirdExits.innerHTML;
+assert(cards().indexOf("nov proxy-los") < cards().indexOf("second &lt;custom>"));
+assert(cards().includes("自定义 · SOCKS5"));
+assert(cards().includes('data-third-edit="10"'));
+assert(cards().includes('data-third-toggle="11"'));
+assert(cards().includes("未知 / unknown"));
+const second = cards().slice(cards().indexOf("second &lt;custom>"));
+assert(second.includes("已停用"), "old passed observation hid the disabled state");
+ui.thirdProxies[1].name = "updated from resource editor";
+ui.thirdSubmitting.add(10);
+ui.renderThirdParties();
+assert(cards().includes("updated from resource editor"), "resource refresh did not reach exit management");
+assert(cards().includes('disabled aria-busy="true"'), "exit card lost immediate check feedback");
+ui.thirdProxies = [];
+ui.renderThirdParties();
+assert(!cards().includes('data-third-edit="10"'), "deleted resource stayed in exit management");
+assert(elements.managedDirectExit.innerHTML.includes("192.0.2.100"));
+console.log("Unified exit sources, shared state and stable source order passed");

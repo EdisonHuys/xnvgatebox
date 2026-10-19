@@ -346,7 +346,8 @@
       .badge.running,
       .badge.queued,
       .badge.deferred,
-      .badge.stale {
+      .badge.stale,
+      .badge.expired {
         color: var(--amber);
       }
       .check-spinner {
@@ -959,7 +960,7 @@
             <div class="stat loading">正在读取运行状态…</div>
           </div>
           <div class="sectionhead">
-            <h2>我的出口</h2>
+            <h2>VPN Gate 出口</h2>
             <button data-page="exits" aria-label="出口管理" title="出口管理">
               查看全部 →
             </button>
@@ -1014,13 +1015,25 @@
             <div>
               <div class="eyebrow">EXIT MANAGEMENT</div>
               <h1>出口管理</h1>
-              <p>调整数量、选择地区，或检查正在使用的连接。</p>
+              <p>统一查看本机直出、自定义代理和 VPN Gate，明确每条连接的去向。</p>
             </div>
             <div class="actions">
-              <button data-action="checkAll">检测当前出口</button
-              ><button class="primary" data-action="target">调整数量</button>
+              <button data-action="checkAll">检测 VPN Gate</button
+              ><button class="primary" data-action="target">调整 VPN Gate 数量</button>
             </div>
           </div>
+          <div id="managedDirectSection" hidden>
+            <div class="sectionhead"><h2>VPS 本机直出</h2></div>
+            <div class="grid" id="managedDirectExit"></div>
+          </div>
+          <div id="managedThirdSection" hidden>
+            <div class="sectionhead">
+              <h2>自定义代理</h2>
+              <button data-page="resources" data-third-resources>代理资源 →</button>
+            </div>
+            <div class="grid" id="managedThirdExits"></div>
+          </div>
+          <div class="sectionhead"><h2>VPN Gate</h2></div>
           <div class="notice" id="targetInfo"></div>
           <div class="progressMount"></div>
           <div class="grid" id="allExits"></div>
@@ -1055,19 +1068,19 @@
               <div class="card pad" style="margin-top: 20px">
                 <h2>选择订阅范围</h2>
                 <label class="choice"
+                  ><input id="subDirect" type="checkbox" checked />VPS
+                  本机直出（启用后生效）</label
+                >
+                <label class="choice"
+                  ><input id="subThirdAll" type="checkbox" checked />自定义代理
+                  全选（包括今后新增）</label
+                >
+                <div id="subThirdRows"></div>
+                <label class="choice"
                   ><input type="checkbox" id="subAll" checked />VPN Gate
                   全选（包括今后新增）</label
                 >
                 <div id="subSlots"></div>
-                <label class="choice"
-                  ><input id="subThirdAll" type="checkbox" checked />第三方
-                  SOCKS5 全选（包括今后新增）</label
-                >
-                <div id="subThirdRows"></div>
-                <label class="choice"
-                  ><input id="subDirect" type="checkbox" checked />包含 VPS
-                  本机直出（启用后生效）</label
-                >
               </div>
             </div>
             <div class="card pad qr">
@@ -1748,6 +1761,7 @@
         failed: "未通过",
         not_tested: "未检测",
         stale: "结果已过期",
+        expired: "结果已过期",
         queued: "排队中",
         priority_queued: "优先等待",
         running: "检测中",
@@ -1940,7 +1954,7 @@
                       ? country(code).split(" ").slice(1).join(" ")
                       : "待验证",
                   ) +
-                  "</h2><small>出口 " +
+                  "</h2><small>VPN Gate · 出口 " +
                   String(e.slot).padStart(2, "0") +
                   "</small></div></div>" +
                   badge(e.status) +
@@ -1995,6 +2009,52 @@
               .join("")
           : '<div class="card empty">还没有出口。点击“管理出口数量”开始创建。</div>';
       }
+      function orderedThirdParties() {
+        return thirdProxies.slice().sort((a, b) => a.id - b.id);
+      }
+      function thirdCheckReason(code) {
+        return ({
+          proxy_https_failed: "认证、连接或 HTTPS 请求失败",
+          invalid_exit_ip: "未取得合法公网出口",
+          exit_changed: "两次出口不同，请使用固定或粘性会话",
+          proxy_content_failed: "HTTPS 内容验证失败",
+          check_cancelled: "检测已取消",
+          result_save_failed: "检测结果保存失败",
+        })[code] || "";
+      }
+      function renderManagedExits() {
+        const native = summary.backend === "native";
+        $("managedDirectSection").hidden = !native;
+        $("managedThirdSection").hidden = !native;
+        const directOn = hostDirect.some((i) => i.enable);
+        $("managedDirectExit").innerHTML =
+          '<article class="card exit"><div class="exithead"><div><h2>VPS 本机直出</h2><small>来源 · 本机网络</small></div><span class="badge">' +
+          (directOn ? "已启用" : "已停用") +
+          '</span></div><div class="ip">' + esc(resourcePublicIP || "待确认") +
+          '</div><small>服务器公网地址 · 独立加入订阅</small><div class="details"><span>接入端口 <b>' +
+          esc(hostDirect.filter((i) => i.enable).map((i) => i.port).join(" / ") || "未启用") +
+          '</b></span></div><div class="exitfoot"><small>故障时不会自动切换到此出口</small><div class="actions"><a href="advanced">接入配置 →</a><button data-direct-toggle>' +
+          (directOn ? "停用" : "启用") + '</button></div></div></article>';
+        $("managedThirdExits").innerHTML = thirdProxies.length
+          ? orderedThirdParties().map((p) => {
+              const r = thirdSubmitting.has(p.id) ? { status: "running" } : p.check || { status: "not_tested" };
+              const place = r.country ? country(r.country) + (r.city ? " · " + r.city : "") : "实际地区待验证";
+              return '<article class="card exit"><div class="exithead"><div><h2>' + esc(p.name) +
+                '</h2><small>自定义 · SOCKS5</small></div><span class="badge">' + (p.enabled ? "已启用" : "已停用") +
+                '</span></div><small>最近实测出口</small><div class="ip">' + esc(r.actual_ip || "待检测") +
+                '</div><small>' + esc(place) + ' · ' + esc(types[r.ip_type] || types.unknown) +
+                '</small>' + (p.country_mismatch || p.city_mismatch ? '<small class="warn">实测地区与手动标注不同</small>' : '') +
+                '<div class="details"><span>HTTPS <b>' + (r.latency_ms > 0 ? Math.round(r.latency_ms) + " ms" : "—") +
+                '</b></span><span>接入端口 <b>' + esc(p.entry_port) + '</b></span><span>订阅 <b>' +
+                (p.subscribe ? "已允许" : "未允许") + '</b></span></div><small>最近检测 ' + badge(r.status) + ' ' +
+                date(r.checked_at) + '</small><small>' + esc(thirdCheckReason(r.code)) +
+                '</small><div class="exitfoot"><small>与代理资源同步 · 故障不切换</small><div class="actions"><button data-third-check="' + p.id + '" ' +
+                (r.status === "running" ? 'disabled aria-busy="true"' : '') + '>' + checkButtonLabel(r) +
+                '</button><button data-third-edit="' + p.id + '">编辑</button><button data-third-toggle="' + p.id + '">' +
+                (p.enabled ? "停用" : "启用") + '</button></div></div></article>';
+            }).join("")
+          : '<div class="card empty">尚未添加自定义代理，可在“代理资源 → 第三方 SOCKS5”中添加。</div>';
+      }
       function render() {
         const s = summary;
         if (currentPage === "resources") {
@@ -2023,9 +2083,9 @@
         $("testAllNodes").disabled =
           !nodes.length || s.check?.status === "running";
         $("stats").innerHTML = [
-          ["已就绪", s.ready || 0, "可加入订阅"],
-          ["目标出口", s.target || 0, "独立出口数量"],
-          ["等待连接", s.waiting || 0, (s.stopped || 0) + " 个已停止"],
+          ["VPN Gate 就绪", s.ready || 0, "可加入订阅"],
+          ["VPN Gate 目标", s.target || 0, "自定义代理与直出单独管理"],
+          ["VPN Gate 等待", s.waiting || 0, (s.stopped || 0) + " 个已停止"],
           ["来源候选", s.candidates || 0, "候选数量 ≠ 可用数量"],
         ]
           .map(
@@ -2041,8 +2101,9 @@
           .join("");
         $("overviewExits").innerHTML = exitCards(exits.slice(0, 6));
         $("allExits").innerHTML = exitCards(exits);
+        renderManagedExits();
         $("targetInfo").textContent =
-          "目标 " +
+          "VPN Gate 目标 " +
           (s.target || 0) +
           " 个 · 就绪 " +
           (s.ready || 0) +
@@ -2277,7 +2338,7 @@
           .map((e) => e.slot);
         const direct = $("subDirect").checked;
         const thirdAll = $("subThirdAll").checked;
-        const thirdIDs = thirdProxies
+        const thirdIDs = orderedThirdParties()
           .filter((p) => subThirdSelected.has(p.id))
           .map((p) => p.id);
         if (!all && !ids.length && !direct && !thirdAll && !thirdIDs.length)
@@ -2345,7 +2406,7 @@
           .join("");
         const thirdAll = $("subThirdAll").checked;
         $("subThirdRows").innerHTML = thirdProxies.length
-          ? thirdProxies
+          ? orderedThirdParties()
               .map(
                 (p) =>
                   '<label class="choice"><input type="checkbox" data-sub-third="' +
@@ -2355,7 +2416,7 @@
                   (thirdAll ? "disabled " : "") +
                   ">" +
                   esc(p.name) +
-                  " " +
+                  ' <small>自定义 · SOCKS5</small> ' +
                   (!p.enabled
                     ? " <small>已停用</small>"
                     : !p.subscribe
@@ -2375,16 +2436,8 @@
         }
       }
       function renderThirdParties() {
-        const reasons = {
-          proxy_https_failed: "认证、连接或 HTTPS 请求失败",
-          invalid_exit_ip: "未取得合法公网出口",
-          exit_changed: "两次出口不同，请使用固定或粘性会话",
-          proxy_content_failed: "HTTPS 内容验证失败",
-          check_cancelled: "检测已取消",
-          result_save_failed: "检测结果保存失败",
-        };
         $("thirdRows").innerHTML = thirdProxies.length
-          ? thirdProxies
+          ? orderedThirdParties()
               .map((p) => {
                 const r = thirdSubmitting.has(p.id)
                   ? { status: "running" }
@@ -2422,7 +2475,7 @@
                     ? "<small>" + Math.round(r.latency_ms) + " ms</small>"
                     : "") +
                   "<small>" +
-                  esc(reasons[r.code] || "") +
+                  esc(thirdCheckReason(r.code)) +
                   "</small><small>" +
                   date(r.checked_at) +
                   '</small></td><td><label><input type="checkbox" data-third-subscribe="' +
@@ -2448,6 +2501,7 @@
               })
               .join("")
           : '<tr><td colspan="6" class="empty">添加自己的固定 SOCKS5，即可独立加入订阅。</td></tr>';
+        renderManagedExits();
       }
       async function refreshThirdParties() {
         const epoch = thirdEpoch;
@@ -3193,6 +3247,7 @@
         const b = e.target.closest("button");
         if (!b) return;
         if (b.dataset.page) {
+          if (b.hasAttribute("data-third-resources")) resourceTab = "third";
           showPage(b.dataset.page);
           return;
         }
@@ -3200,6 +3255,7 @@
           $(b.dataset.close).close();
           return;
         }
+        if (b.hasAttribute("data-direct-toggle")) return toggleHostDirect(b);
         if (!b.dataset.action) return;
         action(async () => {
           const a = b.dataset.action,
@@ -3382,14 +3438,16 @@
         }
       });
       $("subDirect").onchange = renderSubscription;
-      $("hostDirectToggle").onclick = () =>
-        action(async () => {
+      function toggleHostDirect(button) {
+        return action(async () => {
           await api("api/console/direct", {
             enabled: !hostDirect.some((i) => i.enable),
           });
           await poll();
           toast("本机直出设置已保存，请刷新客户端订阅");
-        }, $("hostDirectToggle"));
+        }, button);
+      }
+      $("hostDirectToggle").onclick = () => toggleHostDirect($("hostDirectToggle"));
       $("subAll").onchange = () => {
         if (!$("subAll").checked) subSelected.clear();
         renderSubscription();

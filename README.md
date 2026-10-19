@@ -4,7 +4,7 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
-最新版本：[v0.6.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.6.0)。新增手动第三方 SOCKS5 管理，支持国家/城市标注与检测、用户备注命名、独立启停和分类订阅。客户端仍通过 VLESS/REALITY 接入，供应商凭据不进入订阅；故障不切换出口。使用和验证范围见 [第三方代理说明](docs/THIRD_PARTY_SOCKS.md)。保留独立控制台、VPN Gate 多出口、VPS 本机直出、外部 SOCKS5、原始 SSTP 与完整包在线更新；安装和升级见 [说明](docs/INSTALL_UPDATE.md)。全新操作系统验收仍待使用者重装后执行。
+最新版本：[v0.6.1](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.6.1)。出口管理统一展示本机直出、自定义代理和 VPN Gate；订阅按此顺序输出，自定义备注旁保留来源标识。新增手动第三方 SOCKS5 管理，支持国家/城市标注与检测、用户备注命名、独立启停和分类订阅。客户端仍通过 VLESS/REALITY 接入，供应商凭据不进入订阅；故障不切换出口。使用和验证范围见 [第三方代理说明](docs/THIRD_PARTY_SOCKS.md)。保留独立控制台、VPN Gate 多出口、VPS 本机直出、外部 SOCKS5、原始 SSTP 与完整包在线更新；安装和升级见 [说明](docs/INSTALL_UPDATE.md)。全新操作系统验收仍待使用者重装后执行。
 
 ## Debian 12 安装
 
@@ -12,7 +12,7 @@
 
 ```sh
 apt-get update && apt-get install -y ca-certificates curl
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.0
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.1/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.1
 ```
 
 安装包含管理程序、Pool Builder、固定版本 Xray 和系统协议依赖。VPS 自行解析 VPN Gate 官方当次公开清单，每十分钟刷新，不需要 GitHub 或 Cloudflare 账号，也不需要 3x-ui。安装完成后执行：
