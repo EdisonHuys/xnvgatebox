@@ -204,3 +204,13 @@ class UninstallTests(unittest.TestCase):
         p=self.root/'etc/systemd/system'/u.UNITS[2];put(p,p.read_text()+'\nExecStop=/usr/bin/custom-action\n')
         with self.assertRaises(u.Refuse):self.i.plan()
         self.assertFalse(any(a[0]=='systemctl' and a[1]=='disable' for a in self.r.events))
+
+    def test_cli_refuses_unconfirmed_pipe_honors_cancel_and_allows_explicit_yes(self):
+        with mock.patch.object(u,'Uninstaller',return_value=self.i), mock.patch.object(u.sys,'platform','linux'), mock.patch.object(u.os,'geteuid',return_value=0), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            with mock.patch.object(u.sys.stdin,'isatty',return_value=False):
+                self.assertEqual(u.main([]),1)
+            with mock.patch.object(u.sys.stdin,'isatty',return_value=True), mock.patch('builtins.input',return_value='no'):
+                self.assertEqual(u.main([]),0)
+            self.assertTrue((self.root/u.WORK/'state.json').exists())
+            self.assertEqual(u.main(['--yes']),0)
+            self.assertFalse((self.root/u.WORK).exists())
