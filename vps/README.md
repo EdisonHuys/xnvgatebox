@@ -2,13 +2,13 @@
 
 当前支持 Debian / Ubuntu、Linux amd64、systemd。管理进程、内置 Xray、共享候选池都在 VPS 本地运行。已有 3x-ui 不会被卸载或修改数据库。
 
-## 安装与升级（v0.7.0）
+## 安装与升级（v0.8.0）
 
 Debian 12 amd64、systemd，以 root 执行：
 
 ```sh
 apt-get update && apt-get install -y ca-certificates curl
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.7.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.7.0 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.8.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.8.0 && xnvgatebox access
 ```
 
 只下载本项目 GitHub Release 的完整包和 SHA256，固定 Xray 在构建时验证官方归档摘要。安装器检查归档路径、类型、重复项、完整文件清单、成员摘要和正式版本构建信息。下载、包校验及候选清单准备在停止旧服务之前完成；来源暂时失败且已有可用候选快照时保留旧池。
@@ -17,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.7.0/vps/ins
 
 上面的一键安装命令已接上 `xnvgatebox access`，安装成功后直接显示登录信息。首次安装生成独立随机路径、密码和订阅凭据；已有安装更新时继续保留原值。查看命令不会重置密码。重装系统后的全新测试会生成新身份，旧链接需更新或在之后有意恢复备份。
 
-更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.7.0` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
+更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.8.0` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
 
 使用者已在 2026-10-19 通过后台完成 v0.6.0 → v0.6.1，随后实际版本与持久更新任务复核通过。重装前的完整私有项目归档、源码和 Git 历史已保存本机并校验；它不是整机或 3x-ui 备份。见 [重装准备](../docs/BACKUP_REINSTALL.md)。
 
@@ -137,3 +137,7 @@ python3 scripts/toolbox.py --config config/settings.json --env-file /path/intell
 可执行 `xnvgatebox-fanout -check-state -dir /path/to/private-state-copy`，检查停止服务后取得的内置模式状态副本。该入口不要求 root，不创建目录、修改文件、恢复事务或启动网络服务，输出脱敏 JSON；退出码 0 仅表示持久化结构检查通过。未完成事务、半套凭据及损坏配置会报错，不能靠删除记录或重新生成凭据来掩盖。完整范围、三 Slot 合成样例及真实环境验收记录见 [开发版本迁移验证](../docs/VPS_UPGRADE_VALIDATION.md)。
 
 开发测试包另含 `scripts/vps_acceptance.py`：采集私有计划、从实际订阅验证三个入站、检查本地固定 SOCKS、对唯一确认归属的 Slot OpenVPN 注入故障并观察自动恢复，以及比较升级前后凭据/身份是否保留。外部客户端和 VPS 本机测试分别标记；执行方法及真实验收范围见上述迁移文档。`BUILD.json` 如实记录提交和 dirty 状态；正式发布要求从干净提交构建并与版本标签一致。
+
+## 卸载
+
+`xnvgatebox uninstall --dry-run --purge --legacy` 只读预览；`xnvgatebox uninstall --purge --legacy` 确认后删除本项目、备份及已确认的默认旧版安装。省略 `--purge` 保留已有备份，省略 `--legacy` 保留旧 fanout。旧版本独立工具、清理范围与停止条件见 [卸载说明](../docs/UNINSTALL.md)。

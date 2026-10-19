@@ -2,6 +2,7 @@
 set -euo pipefail
 case "${1:-status}" in
   install|update) shift; exec bash /usr/local/lib/xnvgatebox/install.sh --mode vps "$@" ;;
+  uninstall) shift; exec python3 /usr/local/lib/xnvgatebox/deploy/uninstall.py "$@" ;;
   version) exec /usr/local/bin/xnvgatebox-fanout -version ;;
   check-update)
     python3 - <<'PY'
@@ -33,5 +34,5 @@ print('管理地址：http://'+public+':'+str(s['port'])+base+'/');print('管理
 if public=='127.0.0.1':print('当前只允许本机访问，请使用 SSH 端口转发。')
 PY
     ;;
-  *) echo '用法：xnvgatebox {version|check-update|update [--version vX.Y.Z]|update-status|status|refresh|restart|access}'; exit 1 ;;
+  *) echo '用法：xnvgatebox {version|check-update|update [--version vX.Y.Z]|update-status|status|refresh|restart|access|uninstall [--dry-run] [--purge] [--legacy] [--yes]}'; exit 1 ;;
 esac

@@ -4,9 +4,9 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
-最新版本：[v0.7.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.7.0)。候选检测参与选点，建连并发可配置，国家证据与住宅类型分开，接入入口集中管理。提供 VPN Gate 多出口、VPS 本机直出、手动第三方 SOCKS5、原始 SSTP 和完整包在线更新；无需额外面板。
+最新版本：[v0.8.0](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.8.0)。增加正式卸载与可选旧版清理，移除过时 fanout 安装入口。提供 VPN Gate 多出口、VPS 本机直出、手动第三方 SOCKS5、原始 SSTP 和完整包在线更新；无需额外面板。
 
-使用者已重装 Debian 12 并报告安装成功，管理页已观察到候选通过和运行出口就绪；本轮版本更新与完整客户端验收仍需另行完成。本轮发布与验证范围见 [v0.7.0 记录](docs/evidence/github-first-use-flow-20261019.json)。
+使用者已重装 Debian 12 并报告安装成功，管理页已观察到候选通过和运行出口就绪；本轮版本更新与完整客户端验收仍需另行完成。卸载范围见 [卸载说明](docs/UNINSTALL.md)。
 
 ## Debian 12 安装
 
@@ -14,7 +14,7 @@
 
 ```sh
 apt-get update && apt-get install -y ca-certificates curl
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.7.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.7.0 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.8.0/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.8.0 && xnvgatebox access
 ```
 
 安装包含管理程序、Pool Builder、固定版本 Xray 和系统协议依赖。VPS 自行解析 VPN Gate 官方当次公开清单，每十分钟刷新，不需要 GitHub 或 Cloudflare 账号，也不需要 3x-ui。
@@ -86,3 +86,14 @@ Python 回归覆盖入口变化、字段缺失、画像冲突、429、IP 不匹�
 第一轮结果与后续实测步骤见 [ROUND1.md](docs/ROUND1.md)。核心工具许可为 GPL-3.0-only；独立 EdgeTunnel 修改为 GPL-2.0-only，依赖与复用边界见 [THIRD_PARTY.md](THIRD_PARTY.md)。本版不支持未经验证的 UDP、IPv6、XHTTP。
 
 接口来源：[VPN Gate 官方 CSV](https://www.vpngate.net/en/)、[Xray 配置文档](https://xtls.github.io/en/config/transport.html)、[ipify 官方接口](https://www.ipify.org/)、[icanhaz 官方实现](https://github.com/major/icanhaz)、[IPLocate 身份认证](https://www.iplocate.io/docs/getting-started/authentication)。
+
+## 卸载
+
+以 root 执行 `xnvgatebox uninstall`，默认保留已有备份。彻底清理并包括可确认归属的旧版安装：
+
+```sh
+xnvgatebox uninstall --dry-run --purge --legacy
+xnvgatebox uninstall --purge --legacy
+```
+
+执行时确认删除，详见 [卸载与旧版清理](docs/UNINSTALL.md)。v0.7.0 及更早版本可按文档下载独立卸载工具。
