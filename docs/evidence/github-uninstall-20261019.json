@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-19",
+  "version": "v0.8.0",
+  "status": "published_and_public_download_verified",
+  "source_commit": "2cc003c60f15ee0b76059192aec38d86792bc6e8",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/9",
+  "release": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.8.0",
+  "workflows": {
+    "test": 39266856116,
+    "formal_linux_package": 39266862401,
+    "publish": 39267328341
+  },
+  "validation": {
+    "local_python_passed": 99,
+    "uninstall_regressions": 14,
+    "github_python_versions": [
+      "3.9",
+      "3.12"
+    ],
+    "linux_top_level_passed": 258,
+    "linux_pass_events": 317,
+    "race_passed": true,
+    "skipped_live_or_helper_entries": [
+      "TestLiveNativeTransactions",
+      "TestLiveNativeInterruptedChild",
+      "TestLiveNativeSIGKILLRecovery",
+      "TestLiveManagementFailures",
+      "TestLiveSstpIsolationAndRecovery",
+      "TestLiveSstpEndToEnd",
+      "TestThirdPartyLiveSupplierProbe"
+    ],
+    "isolated_linux_kernel_cleanup": {
+      "status": "passed",
+      "owned_namespaces_removed": 3,
+      "unrelated_namespace_interface_rules_preserved": true,
+      "live_process_refused": true,
+      "repeat_safe": true,
+      "service_control": "model_only"
+    },
+    "shell_syntax_passed": true
+  },
+  "repository_cleanup": {
+    "removed": [
+      "vps/fanout/install.sh",
+      "vps/fanout/f.sh",
+      "vps/fanout/fanout.service"
+    ],
+    "component_readme_rewritten": true,
+    "license_and_upstream_notice_retained": true,
+    "runtime_identity_compatibility_preserved": true,
+    "deployment_python_cache_excluded_from_package": true
+  },
+  "package": {
+    "status": "passed",
+    "package_sha256": "35dffc039cac298ef8250733319e1fd03f8eb339ec0e9d7084927fd15f1dc230",
+    "members": 38,
+    "all_member_checksums_verified": true,
+    "source_snapshot_verified_against_git_tree": true,
+    "private_secret_scan_passed": true,
+    "build": {
+      "git_head": "2cc003c60f15ee0b76059192aec38d86792bc6e8",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "4054b57b2c08aecddf083a0c1e15be7b0e153daa1634c60ac917bbfc2bf38fa8",
+      "version": "v0.8.0",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "public_validation": {
+    "latest": "v0.8.0",
+    "anonymous_package_matches_tested_artifact": true,
+    "tagged_installer_verified": true,
+    "standalone_uninstaller_verified": true,
+    "uninstaller_sha256": "a91e1937a7b2363f94a68aeeec7b74c40478678c8cf941f33c66489a1f6fe3b0",
+    "legacy_entries_removed_and_notices_retained": true
+  },
+  "boundaries": {
+    "github_only": true,
+    "vps_changed": false,
+    "vps_uninstall_executed": false,
+    "vps_systemd_uninstall_verified": false,
+    "new_vps_client_chain_verified": false,
+    "cloudflare_paused": true,
+    "xui_unchanged": true,
+    "unknown_not_residential": true
+  }
+}
