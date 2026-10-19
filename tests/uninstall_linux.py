@@ -37,7 +37,7 @@ def child(host_net, host_mount):
         put('etc/x-ui/x-ui.db','protected-panel');put('usr/bin/openvpn','protected-dependency')
         put('var/backups/xnvgatebox/install-old/project.tar.gz')
         put('etc/systemd/system/fanout.service','[Service]\nExecStart=/usr/local/bin/fanout -dir /var/lib/fanout\n')
-        put('usr/local/bin/f','WORK_DIR=/var/lib/fanout\nSERVICE=fanout\nBIN=/usr/local/bin/fanout\n')
+        put('usr/local/bin/f','#!/usr/bin/env bash\nWORK_DIR=/var/lib/fanout\nSERVICE=fanout\nBIN=/usr/local/bin/fanout\n')
         put('usr/local/bin/fanout');put(u.LEGACY_WORK+'/state.json','{"tunnels":[{"slot":2}]}')
         class Kernel(u.System):
             def loaded(self, unit): return (root/'etc/systemd/system'/unit).exists()

@@ -223,7 +223,8 @@ class Uninstaller:
         unit = self.path('etc/systemd/system/fanout.service')
         menu = self.path('usr/local/bin') / 'f'
         service_ok = unit.is_file() and re.findall(r'^ExecStart=(.*)$', unit.read_text(), re.M) == ['/usr/local/bin/fanout -dir /var/lib/fanout'] and not re.search(r'^Exec(StartPre|StartPost|Stop|StopPost|Reload)=', unit.read_text(), re.M)
-        menu_ok = not menu.is_symlink() and menu.is_file() and all(re.search('^' + re.escape(v) + r'\s*$', menu.read_text(), re.M) for v in ('WORK_DIR=/var/lib/fanout', 'SERVICE=fanout', 'BIN=/usr/local/bin/fanout'))
+        menu_text = menu.read_text(errors='replace') if not menu.is_symlink() and menu.is_file() else ''
+        menu_ok = menu_text.startswith(('#!/usr/bin/env bash\n', '#!/bin/bash\n')) and all(re.search('^' + re.escape(v) + r'\s*$', menu_text, re.M) for v in ('WORK_DIR=/var/lib/fanout', 'SERVICE=fanout', 'BIN=/usr/local/bin/fanout'))
         if self.path('etc/init.d/fanout').exists(): raise Refuse('检测到旧 OpenRC/SysV 服务，请先核对其管理方式')
         exists = menu_ok or any(self.path(n).exists() for n in LEGACY_PATHS)
         if exists and not (service_ok or menu_ok): raise Refuse('旧 fanout 缺少标准安装归属证据，保留现场')

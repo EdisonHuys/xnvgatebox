@@ -88,7 +88,7 @@ class UninstallTests(unittest.TestCase):
 
     def legacy(self):
         put(self.root/'etc/systemd/system/fanout.service','[Service]\nExecStart=/usr/local/bin/fanout -dir /var/lib/fanout\n')
-        put(self.root/'usr/local/bin/f','WORK_DIR=/var/lib/fanout\nSERVICE=fanout\nBIN=/usr/local/bin/fanout\n')
+        put(self.root/'usr/local/bin/f','#!/usr/bin/env bash\nWORK_DIR=/var/lib/fanout\nSERVICE=fanout\nBIN=/usr/local/bin/fanout\n')
         put(self.root/'usr/local/bin/fanout')
         put(self.root/u.LEGACY_WORK/'state.json','{"tunnels":[{"slot":2}]}')
         self.network(u.LEGACY_WORK,2,128,99)
@@ -195,6 +195,11 @@ class UninstallTests(unittest.TestCase):
         self.legacy(); p=self.root/'usr/local/bin/f';p.unlink();p.symlink_to(self.root/'etc/x-ui/x-ui.db')
         self.i.legacy=True;self.i.execute()
         self.assertTrue(p.is_symlink());self.protected()
+
+    def test_legacy_cleanup_keeps_unrelated_binary_f_without_decode_failure(self):
+        self.legacy();p=self.root/'usr/local/bin/f';p.write_bytes(b'\x7fELF\xff\x00unrelated-tool')
+        self.i.legacy=True;self.i.execute()
+        self.assertEqual(p.read_bytes(),b'\x7fELF\xff\x00unrelated-tool');self.protected()
 
     def test_custom_timer_target_and_lifecycle_hooks_are_rejected_before_stop(self):
         p=self.root/'etc/systemd/system'/u.UNITS[0];original=p.read_text()
