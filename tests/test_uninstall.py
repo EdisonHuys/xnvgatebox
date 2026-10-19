@@ -190,3 +190,17 @@ class UninstallTests(unittest.TestCase):
         import os
         subprocess.run(['/bin/bash', str(ROOT/'vps/deploy/xnvgatebox'), 'uninstall','--dry-run','--purge','--legacy'],env={**os.environ,'PATH':str(bin_dir)},check=True)
         self.assertEqual(target.read_text().splitlines(),['/usr/local/lib/xnvgatebox/deploy/uninstall.py','--dry-run','--purge','--legacy'])
+
+    def test_legacy_cleanup_keeps_an_unrelated_f_symlink(self):
+        self.legacy(); p=self.root/'usr/local/bin/f';p.unlink();p.symlink_to(self.root/'etc/x-ui/x-ui.db')
+        self.i.legacy=True;self.i.execute()
+        self.assertTrue(p.is_symlink());self.protected()
+
+    def test_custom_timer_target_and_lifecycle_hooks_are_rejected_before_stop(self):
+        p=self.root/'etc/systemd/system'/u.UNITS[0];original=p.read_text()
+        put(p,original.replace('[Timer]','[Timer]\nUnit=x-ui.service'))
+        with self.assertRaises(u.Refuse):self.i.plan()
+        put(p,original)
+        p=self.root/'etc/systemd/system'/u.UNITS[2];put(p,p.read_text()+'\nExecStop=/usr/bin/custom-action\n')
+        with self.assertRaises(u.Refuse):self.i.plan()
+        self.assertFalse(any(a[0]=='systemctl' and a[1]=='disable' for a in self.r.events))
