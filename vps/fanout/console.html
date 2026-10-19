@@ -421,6 +421,16 @@
         padding: 6px 10px;
         font-size: 12px;
       }
+      #managedThirdExits .exithead > div {
+        min-width: 0;
+      }
+      #managedThirdExits h2 {
+        overflow-wrap: anywhere;
+      }
+      #managedDirectExit .exitfoot,
+      #managedThirdExits .exitfoot {
+        flex-wrap: wrap;
+      }
       .bottomgrid {
         display: grid;
         grid-template-columns: 1.4fr 1fr;
@@ -1051,7 +1061,7 @@
               <div class="card pad">
                 <h2>订阅链接</h2>
                 <p class="muted" style="margin: 8px 0 16px">
-                  只输出已就绪且启用的入站；等待或停止的出口会暂时移出。
+                  本机直出与自定义代理按启用和订阅设置输出；VPN Gate 仅输出已就绪入口。
                 </p>
                 <textarea
                   id="subURL"
@@ -2370,24 +2380,21 @@
           );
         $("subCount").textContent =
           "当前范围：" +
-          ready.length +
-          " 个就绪出口 · " +
-          ready.reduce(
-            (s, e) => s + (e.inbounds || []).filter((i) => i.enable).length,
-            0,
-          ) +
-          " 个 VPN Gate 入站" +
           ($("subDirect").checked && hostDirect.some((i) => i.enable)
-            ? " + VPS 本机直出"
+            ? "VPS 本机直出 · "
             : "") +
-          " + " +
           thirdProxies.filter(
             (p) =>
               p.enabled &&
               p.subscribe &&
               ($("subThirdAll").checked || subThirdSelected.has(p.id)),
           ).length +
-          " 个第三方入口";
+          " 个自定义入口 · " +
+          ready.reduce(
+            (s, e) => s + (e.inbounds || []).filter((i) => i.enable).length,
+            0,
+          ) +
+          " 个 VPN Gate 入站（" + ready.length + " 个就绪出口）";
         $("subSlots").innerHTML = exits
           .map(
             (e) =>
