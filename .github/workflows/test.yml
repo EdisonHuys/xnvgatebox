@@ -23,4 +23,5 @@ jobs:
       - run: node tests/test_cf_control.mjs
       - run: node tests/test_console_sstp.mjs
       - run: node tests/test_console_third_party.mjs
+      - run: node tests/test_console_flow.mjs
       - run: python -m unittest discover -s tests -v

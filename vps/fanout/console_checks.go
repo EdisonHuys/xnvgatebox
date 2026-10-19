@@ -92,9 +92,9 @@ func checkFailure(err error, ctx context.Context) string {
 }
 
 // Each worker reserves a distinct diagnostic Slot outside user capacity. The
-// job uses the saved operator limit and leaves production dial permits free.
+// job uses the saved operator limit and shares its dial budget with production recovery.
 func (c *Console) probeCandidate(parent context.Context, node Node, slot int, progress func(string)) CheckResult {
-	result := CheckResult{Host: node.HostName, Status: "failed", IPType: "unknown", ProfileSHA: profileDigest(node.Config)}
+	result := CheckResult{Protocol: "openvpn", Host: node.HostName, Status: "failed", IPType: "unknown", ProfileSHA: profileDigest(node.Config)}
 	if slot > diagnosticFirstSlot || slot < -networkLinkCount {
 		result.Code = "probe_environment_failed"
 		return result
@@ -157,6 +157,8 @@ func (c *Console) probeCandidate(parent context.Context, node Node, slot int, pr
 	}
 	t := &Tunnel{networkIndex: &index, Slot: slot, Port: port, Node: node, Status: "starting", Cred: cred, Policy: &policy, workCtx: ctx, cancelWork: cancel, onProbePhase: progress}
 	helper := NewManager(1, dir)
+	helper.connectBudget = c.m.connectBudget
+	helper.evidenceDir = c.m.evidenceDir
 	helper.tunnels[t.Slot] = t
 	defer func() { progress("cleanup"); t.stop(); _ = os.RemoveAll(filepath.Join("/etc/netns", t.nsName())) }()
 	if err := helper.tryNode(t); err != nil {
@@ -175,7 +177,7 @@ func (c *Console) probeCandidate(parent context.Context, node Node, slot int, pr
 	result.ActualIP = t.ExitIP
 	result.LatencyMS = t.LatencyMS
 	if t.egress != nil {
-		if t.egress.IntelligenceStatus == "passed" {
+		if verifiedProfileCountry(*t.egress) != "" {
 			result.Country = stringValue(t.egress.Country)
 		}
 		result.IPType = t.egress.IPType
@@ -236,7 +238,7 @@ func (c *Console) checkExit(ctx context.Context, slot int, expectedHost string, 
 	}
 	result.Status, result.Code, result.ActualIP, result.LatencyMS = "passed", "", ip, latency
 	if v.Egress != nil {
-		if v.Egress.IntelligenceStatus == "passed" {
+		if verifiedProfileCountry(*v.Egress) != "" {
 			result.Country = stringValue(v.Egress.Country)
 		}
 		result.IPType = v.Egress.IPType
@@ -486,6 +488,7 @@ func (c *Console) runCheckItem(ctx context.Context, j *CheckRun, index int, item
 	if (result.Status == "passed" || result.Status == "failed") && result.Host != "" {
 		c.checksMu.Lock()
 		c.results[result.Host] = result
+		c.m.recordConnectivity(result)
 		if blob, err := json.Marshal(c.results); err == nil {
 			_ = atomicConfigWrite(filepath.Join(c.m.workDir, "checks.json"), blob)
 		}

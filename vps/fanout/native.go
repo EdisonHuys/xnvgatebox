@@ -90,7 +90,7 @@ func (n *Native) Inbounds(live map[string]bool) ([]Inbound, error) {
 		out = append(out, Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			HostDirect: ib.HostDirect, BoundTo: ib.BoundTo, BoundUp: boundUp, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
+			HostDirect: ib.HostDirect, ManagedSlot: ib.ManagedSlot, Manual: ib.Manual, BoundTo: ib.BoundTo, BoundUp: boundUp, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		})
 	}
 	return out, nil
@@ -111,11 +111,11 @@ func (n *Native) InboundDetail(id int, publicHost string) (*InboundDetail, error
 		Inbound: Inbound{
 			ID: ib.ID, Port: ib.Port, Protocol: ib.Protocol,
 			Remark: ib.Remark, Enable: ib.Enable, Tag: ib.tag(),
-			HostDirect: ib.HostDirect, BoundTo: ib.BoundTo, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
+			HostDirect: ib.HostDirect, ManagedSlot: ib.ManagedSlot, Manual: ib.Manual, BoundTo: ib.BoundTo, BoundSlot: ib.BoundSlot, NameMode: inboundNameMode(ib.NameMode, ib.Remark),
 		},
 		Listen:  "0.0.0.0",
 		Network: ib.netOrTCP(),
-		TLS:     "none",
+		TLS:     ib.securityOrNone(),
 	}
 	for _, c := range ib.Clients {
 		id := c.ID
@@ -184,7 +184,7 @@ func (n *Native) Bind(inboundTag string, hostname string, tunnels []*Tunnel) err
 		return fmt.Errorf("入站 %s 不存在", inboundTag)
 	}
 
-	if found.HostDirect || found.SocksSlot > 0 || found.ThirdParty != nil {
+	if found.HostDirect || found.SocksSlot > 0 || found.ThirdParty != nil || found.ManagedSlot {
 		return fmt.Errorf("此入口由本机直出或 SOCKS 访问设置管理")
 	}
 	if target == nil {
@@ -287,6 +287,7 @@ func (n *Native) CloneToTunnels(templateID int, hosts []string, tunnels []*Tunne
 			Reality:   tpl.Reality,
 			Remark:    remark,
 			Enable:    true,
+			Manual:    true,
 			Clients:   append([]nativeClient(nil), tpl.Clients...),
 			BoundTo:   sanitizeTag(t.Node.HostName),
 			BoundSlot: t.Slot, NameMode: "auto",
@@ -314,6 +315,15 @@ func (n *Native) DeleteInbounds(ids []int, tunnels []*Tunnel) error {
 	drop := map[int]bool{}
 	for _, id := range ids {
 		drop[id] = true
+	}
+	for _, ib := range n.store.Inbounds {
+		if drop[ib.ID] && ib.ManagedSlot {
+			for _, t := range tunnels {
+				if t.Slot == ib.BoundSlot {
+					return fmt.Errorf("自动入口由出口数量维护，请停用入口或在出口管理删除对应出口")
+				}
+			}
+		}
 	}
 	kept := make([]*nativeInbound, 0, len(n.store.Inbounds))
 	for _, ib := range n.store.Inbounds {
@@ -472,6 +482,7 @@ type NewInboundSpec struct {
 	// Internal batch provisioning may reuse one successful check of the exact
 	// same destination. This field cannot be set by HTTP/JSON input.
 	realityChecked bool
+	BoundSlot      int // explicit stable target for a new manual entry
 	Protocol       string
 	Network        string
 	Port           int
@@ -504,11 +515,32 @@ func (n *Native) CreateInbound(spec NewInboundSpec, tunnels []*Tunnel) (*Created
 	finish := n.beginChange()
 	defer finish()
 
+	var target *Tunnel
+	if spec.BoundSlot < 0 {
+		return nil, fmt.Errorf("出口编号无效")
+	}
+	if spec.BoundSlot > 0 {
+		for _, t := range tunnels {
+			if t.Slot == spec.BoundSlot {
+				target = t
+				break
+			}
+		}
+		if target == nil {
+			return nil, fmt.Errorf("选择的出口不存在")
+		}
+	}
 	ib, err := n.prepareInbound(spec, n.store.usedPorts())
 	if err != nil {
 		return nil, err
 	}
 
+	ib.Manual = true
+	if target != nil {
+		v := target.snapshot()
+		ib.BoundSlot = v.Slot
+		ib.BoundTo = sanitizeTag(v.Node.HostName)
+	}
 	n.store.NextID++
 	n.store.Inbounds = append(n.store.Inbounds, ib)
 

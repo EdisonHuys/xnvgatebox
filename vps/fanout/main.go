@@ -578,7 +578,18 @@ func apiXUIBind(m *Manager) http.HandlerFunc {
 			writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
 			return
 		}
-		if err := x.Bind(tag, host, m.Tunnels()); err != nil {
+		if raw := r.URL.Query().Get("slot"); raw != "" {
+			slot, parseErr := strconv.Atoi(raw)
+			n, native := x.(*Native)
+			if parseErr != nil || slot < 0 || !native {
+				writeJSON(w, 400, map[string]string{"error": "出口编号无效"})
+				return
+			}
+			err = n.BindSlot(tag, slot, m.Tunnels())
+		} else {
+			err = x.Bind(tag, host, m.Tunnels())
+		}
+		if err != nil {
 			writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
 			return
 		}
@@ -843,15 +854,26 @@ func apiInboundCreate(m *Manager) http.HandlerFunc {
 
 		q := r.URL.Query()
 		port, _ := strconv.Atoi(q.Get("port"))
+		slot := 0
+		if raw := q.Get("slot"); raw != "" {
+			var parseErr error
+			slot, parseErr = strconv.Atoi(raw)
+			_, native := p.(*Native)
+			if parseErr != nil || slot < 0 || !native {
+				writeJSON(w, 400, map[string]string{"error": "出口编号无效"})
+				return
+			}
+		}
 		ib, err := p.CreateInbound(NewInboundSpec{
-			Protocol: q.Get("protocol"),
-			Network:  q.Get("network"),
-			Port:     port,
-			Remark:   q.Get("remark"),
-			Path:     q.Get("path"),
-			Host:     q.Get("host"),
-			Security: q.Get("security"),
-			Vision:   q.Get("vision") == "1",
+			BoundSlot: slot,
+			Protocol:  q.Get("protocol"),
+			Network:   q.Get("network"),
+			Port:      port,
+			Remark:    q.Get("remark"),
+			Path:      q.Get("path"),
+			Host:      q.Get("host"),
+			Security:  q.Get("security"),
+			Vision:    q.Get("vision") == "1",
 
 			ServerName: q.Get("sni"),
 			CertFile:   q.Get("cert"),

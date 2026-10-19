@@ -444,39 +444,8 @@
       .pad {
         padding: 24px;
       }
-      .quickstart {
-        margin: 0 0 22px;
-      }
-      .quickstart summary strong {
-        color: var(--text);
-        font-size: 17px;
-      }
-      .quickstart ol {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px 36px;
-        padding-left: 22px;
-        margin: 22px 0;
-      }
-      .quickstart li::marker {
-        color: var(--accent);
-        font-weight: 700;
-      }
-      .quickstart p {
-        color: var(--muted);
-        line-height: 1.7;
-        margin: 7px 0 12px;
-      }
-      .quickstart .guide-note {
-        border-top: 1px solid var(--line);
-        padding-top: 16px;
-        margin-bottom: 0;
-      }
-      @media (max-width: 720px) {
-        .quickstart ol {
-          grid-template-columns: 1fr;
-        }
-      }
+      .start-steps { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 22px; }
+      .start-steps > span { color: var(--muted); }
       .callout {
         background: var(--soft);
         border-color: transparent;
@@ -1003,32 +972,12 @@
               </button>
             </div>
           </div>
-          <details class="card pad quickstart" open>
-            <summary><strong>首次使用</strong> · 先验证一条连接，再添加出口</summary>
-            <ol>
-              <li>
-                <h3>建议先验证 VPS 本机直出</h3>
-                <p>在出口管理启用“VPS 本机直出”，用服务器公网 IP 验证接入。此项可选；已有就绪的 VPN Gate 出口也可直接使用。</p>
-                <button data-page="exits">打开出口管理 →</button>
-              </li>
-              <li>
-                <h3>导入订阅，在客户端选择节点</h3>
-                <p>打开“我的订阅”复制订阅链接，在 v2rayN 等支持 VLESS / REALITY 的客户端添加订阅地址并更新；选择“VPS 本机直出”或已就绪出口，开启客户端代理后测试网页。服务器防火墙需放行实际接入端口。</p>
-                <button data-page="subscription">打开我的订阅 →</button>
-              </li>
-              <li>
-                <h3>需要 VPN Gate 时再设置数量</h3>
-                <p>设置目标数量，国家可留空。程序自动连接并创建接入入口；等待出口“已就绪”，再更新客户端订阅并手动选择。无需先检测全部候选，也无需另建入站；暂时无合适节点会等待。</p>
-                <button data-action="target">设置 VPN Gate 数量 →</button>
-              </li>
-              <li>
-                <h3>按需添加自己的代理</h3>
-                <p>在“代理资源 → 第三方 SOCKS5”填写固定地址、端口及账号密码，保存并检测，确认“启用”和“加入订阅”已开启，再更新客户端订阅。VPS SOCKS5 供其他程序接入；原始 SSTP 需支持该协议的客户端。</p>
-                <button data-page="resources" data-third-resources>添加第三方 SOCKS5 →</button>
-              </li>
-            </ol>
-            <p class="guide-note">候选“检测通过”是一次连通记录；出口“已就绪”才表示当前连接可加入 VPN Gate 订阅。“国家待验证”表示地理证据不足，类型 unknown 不代表家宽。订阅勾选“全选”时单项会变灰，取消全选后可逐个选择。VPN Gate 或自定义代理故障时阻断，不自动回落本机直出。</p>
-          </details>
+          <div class="card pad start-steps" aria-label="使用步骤">
+            <button data-action="target">① 设置出口</button><span>→</span>
+            <button data-page="exits">② 等待就绪</button><span>→</span>
+            <button data-page="subscription">③ 复制订阅</button><span>→</span>
+            <span>④ 导入使用</span>
+          </div>
           <div class="stats" id="stats">
             <div class="stat loading">正在读取运行状态…</div>
           </div>
@@ -1182,7 +1131,7 @@
                   min="1"
                   step="1"
                   required
-                  aria-label="检测并发数"
+                  aria-label="检测与建连并发数"
                   inputmode="numeric" /></label
               ><button id="saveCheckSettings">保存</button
               ><button class="primary" id="testSelected">检测所选节点</button
@@ -1340,7 +1289,7 @@
               <h2>检测与更新</h2>
               <div class="resourcefilters" style="margin: 16px 0">
                 <label
-                  >检测并发<input
+                  >检测与建连并发<input
                     id="sstpParallelism"
                     type="number"
                     min="1"
@@ -1805,6 +1754,7 @@
         softwareCheckMessage = "";
       const submittingChecks = new Set();
       const phases = {
+        waiting_capacity: "等待并发名额",
         precheck: "快速端口预检",
         setup: "准备临时连接",
         connecting: "连接上游节点",
@@ -1869,7 +1819,7 @@
         countryNames = new Intl.DisplayNames(["zh-CN"], { type: "region" });
       } catch {}
       function country(code) {
-        if (!/^[A-Z]{2}$/.test(code || "")) return "待验证";
+        if (!/^[A-Z]{2}$/.test(code || "")) return "地区未知";
         return (
           String.fromCodePoint(
             ...[...code].map((c) => 127397 + c.charCodeAt(0)),
@@ -1879,7 +1829,7 @@
         );
       }
       function verified(e) {
-        return e.status === "up" && e.egress?.intelligence_status === "passed"
+        return e.status === "up" && (e.egress?.country_status === "passed" || (e.egress?.country_status === undefined && e.egress?.intelligence_status === "passed"))
           ? e.egress.country
           : "";
       }
@@ -2009,6 +1959,11 @@
           action(loadResourceSstp);
         }
       }
+      function countryEvidenceLabel(e) {
+        if (verified(e)) return "实际出口国家";
+        const labels = {failed: "国家查询失败", stale: "国家证据过期", not_configured: "国家查询已关闭"};
+        return (labels[e.egress?.country_status] || "出口国家未知") + " · 来源 " + country(e.region);
+      }
       function exitCards(list) {
         return list.length
           ? list
@@ -2025,17 +1980,18 @@
                   esc(
                     code
                       ? country(code).split(" ").slice(1).join(" ")
-                      : "待验证",
+                      : "地区未知",
                   ) +
                   "</h2><small>VPN Gate · 出口 " +
                   String(e.slot).padStart(2, "0") +
                   "</small></div></div>" +
-                  badge(e.status) +
+                  badge(e.status === "starting" && e.phase === "waiting_capacity" ? "queued" : e.status) +
+                  (e.status === "starting" ? "<small>" + esc(phases[e.phase] || "准备建连") + "</small>" : "") +
                   '</div><div class="ip">' +
                   esc(e.status === "up" ? e.exit_ip || "核验中" : "等待连接") +
                   "</div><small>" +
                   esc(types[e.egress?.ip_type] || "未知 / unknown") +
-                  '</small><div class="details"><span>HTTPS <b>' +
+                  '</small><small>' + esc(countryEvidenceLabel(e)) + '</small><div class="details"><span>HTTPS <b>' +
                   lat +
                   "</b></span><span>目标 <b>" +
                   esc(
@@ -3225,7 +3181,7 @@
           toast("请等待状态读取完成");
           return;
         }
-        $("targetCount").value = summary.target;
+        $("targetCount").value = summary.target_configured === false ? (summary.suggested_target || 4) : summary.target;
 
         $("targetCountry").value = summary.plan?.policy?.country || "";
         $("targetServer").value =

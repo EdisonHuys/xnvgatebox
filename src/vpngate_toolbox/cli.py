@@ -13,6 +13,7 @@ from .config import load_env, load_settings, mode_a_environment
 from .pipeline import clear_publication, publish, run_mode_a
 from .pool import build_pool
 from .intelligence import profile_measured_exit
+from .country import attach_country
 
 
 @contextmanager
@@ -52,6 +53,8 @@ def main(argv=None):
     socks_profile = sub.add_parser("profile-socks5", help="Profile a measured third-party SOCKS5 exit")
     socks_profile.add_argument("--ip", required=True)
     socks_profile.add_argument("--cache", type=Path, default=Path("runtime/intelligence/socks5-cache.json"))
+    for command in (profile, sstp_profile, socks_profile):
+        command.add_argument("--country", action="store_true", help="Independently locate the measured IP without inferring residential type")
     args = parser.parse_args(argv)
     try:
         if args.command in ("profile-openvpn", "profile-sstp", "profile-socks5"):
@@ -61,6 +64,9 @@ def main(argv=None):
             # cache read/query/write without locking or rewriting the node pool.
             with output_lock(args.cache.parent, wait=True):
                 image = profile_measured_exit(args.ip, settings, args.cache, args.command.removeprefix("profile-"))
+            if args.country:
+                with output_lock(args.cache.parent / "country", wait=True):
+                    image = attach_country(image, args.cache.parent / "country/cache.json")
             print(json.dumps(image, ensure_ascii=False))
             return 0
         with output_lock(args.output):

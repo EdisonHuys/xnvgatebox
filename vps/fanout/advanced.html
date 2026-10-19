@@ -775,17 +775,18 @@
       </div>
       <div id="loadError" class="notice" role="alert" hidden></div>
       <div class="tools">
-        <h2>出口与接入入口</h2>
+        <h2>接入入口</h2>
         <span class="count" id="ecount"></span><span class="spacer"></span
         ><button id="subBtn">订阅口令</button
         ><button id="exportAll">导出链接</button
         ><button id="exportXray">导出配置</button
         ><button id="rollbackNative">恢复上次配置</button>
       </div>
+      <div id="nativeConnections" hidden></div>
       <div id="list"><div class="empty">正在读取连接…</div></div>
       <div id="orphans"></div>
       <p class="footnote">
-        修改接入配置可能短暂中断客户端连接。缺少可信国家证据时显示“待验证”；出口类型
+        修改接入配置可能短暂中断客户端连接。缺少可信国家证据时显示“地区未知”；出口类型
         unknown 不代表家宽。
       </p>
     </main>
@@ -803,10 +804,10 @@
         </div>
         <div class="body">
           <p class="hint" style="margin: 0 0 20px">
-            创建后，在该入口的“配置 →
-            出口”中选择已有的就绪出口。此操作不会增加出口数量；未绑定时流量保持阻断。
+            选择要绑定的出口后创建入口；等待中的出口也可先绑定，连通前保持阻断。此操作不会增加出口数量。
           </p>
-          <label class="f">
+          <label id="nslotwrap" class="f" hidden><span>绑定出口</span><select id="nslot"></select></label>
+            <label class="f">
             <span>协议</span>
             <select id="nproto">
               <option value="vless">VLESS</option>
@@ -1265,7 +1266,7 @@
       } catch {}
       function exitName(e) {
         const c =
-          e.status === "up" && e.egress?.intelligence_status === "passed"
+          e.status === "up" && (e.egress?.country_status === "passed" || (e.egress?.country_status === undefined && e.egress?.intelligence_status === "passed"))
             ? e.egress.country
             : "";
         return (
@@ -1275,7 +1276,7 @@
               ) +
               " " +
               (countryNames ? countryNames.of(c) : c)
-            : "待验证") +
+            : "地区未知") +
           " · " +
           String(e.slot).padStart(2, "0")
         );
@@ -1419,6 +1420,27 @@
           "</details>";
       }
 
+      function renderNativeConnections() {
+        $("#list").hidden = true; $("#orphans").hidden = true;
+        if ($("#hostConnections")) $("#hostConnections").hidden = true;
+        const box = $("#nativeConnections"); box.hidden = false;
+        const rows = [...(view.host_direct || []).map(i => ({i, direct:true})), ...view.exits.flatMap(e => (e.inbounds || []).map(i => ({i,e}))), ...(view.direct || []).map(i => ({i}))];
+        $("#ecount").textContent = rows.length + " 个入口";
+        $("#exportAll").disabled = !rows.length;
+        box.innerHTML = rows.length ? '<div style="overflow:auto"><table class="nodetable"><thead><tr><th>接入入口</th><th>协议 / 端口</th><th>绑定出口</th><th>状态</th><th>管理</th></tr></thead><tbody>' + rows.map(({i,e,direct}) => {
+          const auto = i.managed_slot && !!e;
+          const place = direct ? 'VPS 本机直出' : e ? exitName(e) : '未绑定';
+          const state = !i.enable ? '已停用' : direct ? '已启用' : !e ? '未绑定 · 阻断' : (e.status === 'starting' && e.phase === 'waiting_capacity' ? '等待建连' : STATUS[e.status] || e.status);
+          return '<tr><td><strong>' + esc(e ? connectionName(i,e) : i.remark || '未命名入口') + '</strong><small style="display:block">' + (auto ? '自动入口' : direct ? '本机直出' : '手动入口') + '</small></td><td>' + esc(i.protocol.toUpperCase()) + ' · ' + i.port + '</td><td>' + esc(place) + '</td><td>' + esc(state) + '</td><td><div style="display:flex;gap:8px;flex-wrap:wrap"><button data-detail="' + i.id + '">配置</button><button data-entry-toggle="' + i.id + '" data-enabled="' + (i.enable ? '1' : '0') + '">' + (i.enable ? '停用' : '启用') + '</button>' + (auto ? '<a href="./#exits">管理出口</a>' : '<button data-delone="' + i.id + '">删除</button>') + '</div></td></tr>';
+        }).join('') + '</tbody></table></div>' : '<div class="empty">暂无入口，请先在出口管理设置数量或启用本机直出。</div>';
+      }
+      document.addEventListener('click', async e => {
+        const b = e.target.closest('[data-entry-toggle]'); if (!b) return;
+        b.disabled = true;
+        try { await api('/api/panel/inbound/update?id=' + encodeURIComponent(b.dataset.entryToggle) + '&enable=' + (b.dataset.enabled === '1' ? '0' : '1'), {method:'POST'}); await poll(); toast('已更新入口'); }
+        catch (err) { toast(err.message, true); b.disabled = false; }
+      });
+
       async function poll() {
         try {
           view = await api("/api/exits");
@@ -1426,9 +1448,7 @@
           $("#newnode").hidden = isXCL();
           $("#exportAll").hidden = isXCL();
           $("#rollbackNative").hidden = !isNative();
-          renderExits();
-          renderHostDirect();
-          renderOrphans();
+          if (isNative()) renderNativeConnections(); else { renderExits(); renderHostDirect(); renderOrphans(); }
           if (!window.resourceSlotOpened) {
             const requested = Number(
               new URLSearchParams(location.search).get("slot"),
@@ -1487,6 +1507,8 @@
         if (e.target.closest("#newnode") || e.target.closest("#newnode2")) {
           $("#nnhint").textContent = "";
           syncNodeForm();
+          $("#nslotwrap").hidden = !isNative();
+          $("#nslot").innerHTML = exitOptions("", (view.exits.find(e => e.status === "up") || view.exits[0])?.slot || 0);
           openModal("newnodebox");
         }
       });
@@ -1537,6 +1559,7 @@
 
       $("#ncreate").onclick = async (e) => {
         const q = new URLSearchParams({
+          ...(isNative() ? {slot: $("#nslot").value.replace("slot:", "")} : {}),
           protocol: $("#nproto").value,
           network: $("#nnet").value,
           security: $("#nsec").value,
@@ -1554,7 +1577,7 @@
           const r = await api("/api/panel/inbound/new?" + q.toString(), {
             method: "POST",
           });
-          toast("已创建 " + r.protocol + " 节点，端口 " + r.port);
+          toast("已创建接入入口，端口 " + r.port + (isNative() && $("#nslot").value !== "slot:0" ? "，已绑定所选出口" : "，未绑定将阻断"));
           closeModal("newnodebox");
           $("#nport").value = "";
           $("#nremark").value = "";
@@ -1603,16 +1626,17 @@
           const d = await api("/api/xui/detail?id=" + id);
           curDetail = d;
           renderDetail(d);
-          $("#ddel").hidden = isXCL();
-          $("#ddel").disabled = isXCL();
+          $("#ddel").hidden = isXCL() || !!(d.managed_slot && view.exits.some(e => e.slot === d.bound_slot));
+          $("#ddel").disabled = isXCL() || $("#ddel").hidden;
         } catch (err) {
           $("#dbody").innerHTML =
             '<div class="empty">读取失败: ' + esc(err.message) + "</div>";
         }
       }
 
-      // 出口下拉：列出所有已连通的隧道，外加"直连"。绑定按 Xray 的 inboundTag 走。
-      function exitOptions(currentHost) {
+      // 内置入口按稳定编号绑定，等待中的出口也能预先选择。
+      function exitOptions(currentHost, currentSlot = 0) {
+        if (isNative()) return '<option value="slot:0"' + (currentSlot ? '' : ' selected') + '>未绑定（阻断流量）</option>' + view.exits.map(e => '<option value="slot:' + e.slot + '"' + (currentSlot === e.slot ? ' selected' : '') + '>' + esc(exitName(e) + ' · ' + (STATUS[e.status] || e.status)) + '</option>').join('');
         const up = view.exits.filter((e) => e.status === "up");
         return (
           '<option value=""' +
@@ -1685,12 +1709,12 @@
         const editable = !isXCL();
         $("#dbody").innerHTML =
           '<dl class="kv">' +
-          (d.host_direct
-            ? "<dt>出口</dt><dd>VPS 本机直出（独立入口）</dd>"
+          ((d.host_direct || (d.managed_slot && owner))
+            ? "<dt>出口</dt><dd>" + (d.host_direct ? "VPS 本机直出（独立入口）" : esc(exitName(owner) + " · 自动入口")) + "</dd>"
             : '<dt>出口</dt><dd><select id="dbind" data-tag="' +
               esc(d.tag) +
               '">' +
-              exitOptions(owner ? owner.host : "") +
+              exitOptions(owner ? owner.host : "", owner?.slot || d.bound_slot || 0) +
               "</select></dd>") +
           "<dt>协议</dt><dd>" +
           esc(d.protocol) +
@@ -1749,8 +1773,7 @@
           await api(
             "/api/xui/bind?tag=" +
               encodeURIComponent(sel.dataset.tag) +
-              "&host=" +
-              encodeURIComponent(sel.value),
+              (isNative() ? "&slot=" + encodeURIComponent(sel.value.replace("slot:", "")) : "&host=" + encodeURIComponent(sel.value)),
             { method: "POST" },
           );
           toast("已绑定");
@@ -1770,8 +1793,7 @@
           await api(
             "/api/xui/bind?tag=" +
               encodeURIComponent(sel.dataset.tag) +
-              "&host=" +
-              encodeURIComponent(sel.value),
+              (isNative() ? "&slot=" + encodeURIComponent(sel.value.replace("slot:", "")) : "&host=" + encodeURIComponent(sel.value)),
             { method: "POST" },
           );
           toast(sel.value ? "已绑定" : "已解绑");

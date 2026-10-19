@@ -106,7 +106,10 @@ func freshSstpResult(n Node, r CheckResult, now time.Time) CheckResult {
 		image := *r.Egress
 		expiry, err := time.Parse(time.RFC3339Nano, image.ExpiresAt)
 		if image.Protocol == "sstp" && image.IP == r.ActualIP && image.IntelligenceStatus == "passed" && err == nil && expiry.After(now) && image.Provider != "" && image.QueriedAt != "" && image.RuleVersion != "" {
-			r.Country, r.IPType = stringValue(image.Country), image.IPType
+			r.Country, r.IPType = verifiedProfileCountry(image), image.IPType
+		}
+		if image.Protocol == "sstp" && image.IP == r.ActualIP {
+			r.Country = verifiedProfileCountry(image)
 		}
 		image.Raw = nil
 		r.Egress = &image

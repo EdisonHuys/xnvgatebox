@@ -48,6 +48,7 @@ type Tunnel struct {
 	validating          bool // permits only the manager's own expected/actual probe
 	validationCred      *SocksCred
 	onProbePhase        func(string)
+	probeStage          string
 	networkIndex        *int
 	egress              *EgressProfile
 	egressExpectedIP    string

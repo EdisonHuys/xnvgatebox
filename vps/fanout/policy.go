@@ -127,8 +127,8 @@ func stringValue(p *string) string {
 	return strings.TrimSpace(*p)
 }
 
-// unknown never supplies a positive match for country, ISP or ASN. Blacklists
-// also need the field: absence is not proof that an exit avoids the blacklist.
+// Country has independent evidence. Type, ISP and ASN still require full
+// intelligence; missing fields never prove that an exit avoids a blacklist.
 func (p SlotPolicy) checkImage(image EgressProfile) error {
 	if image.Protocol != "openvpn" || image.IP == "" {
 		return fmt.Errorf("缺少对应 OpenVPN 出口画像")
@@ -138,10 +138,10 @@ func (p SlotPolicy) checkImage(image EgressProfile) error {
 		if err != nil || !expiry.After(time.Now()) {
 			return fmt.Errorf("画像证据已过期")
 		}
-	} else if p.Country != "" || len(p.AllowedISP)+len(p.BlockedISP)+len(p.AllowedASN)+len(p.BlockedASN) > 0 || image.IPType != "unknown" {
+	} else if len(p.AllowedISP)+len(p.BlockedISP)+len(p.AllowedASN)+len(p.BlockedASN) > 0 || image.IPType != "unknown" {
 		return fmt.Errorf("画像不可用，不能证明满足策略")
 	}
-	if p.Country != "" && !strings.EqualFold(stringValue(image.Country), p.Country) {
+	if p.Country != "" && !strings.EqualFold(verifiedProfileCountry(image), p.Country) {
 		return fmt.Errorf("实际出口国家不满足 %s", p.Country)
 	}
 	if !containsFold(p.AllowedIPTypes, image.IPType) {
@@ -217,6 +217,14 @@ func (m *Manager) policyCandidates(p SlotPolicy, avoid map[string]bool, exceptSl
 		out = append(out, n)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
+		ra, la := m.connectivityRank(out[i])
+		rb, lb := m.connectivityRank(out[j])
+		if ra != rb {
+			return ra < rb
+		}
+		if ra == 0 && la > 0 && lb > 0 && la != lb {
+			return la < lb
+		}
 		a, b := freshCandidateImage(out[i]), freshCandidateImage(out[j])
 		pa, pb := a != nil && containsFold(p.PreferredISP, stringValue(a.ISP)), b != nil && containsFold(p.PreferredISP, stringValue(b.ISP))
 		if pa != pb {
