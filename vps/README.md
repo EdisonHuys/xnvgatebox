@@ -2,13 +2,13 @@
 
 当前支持 Debian / Ubuntu、Linux amd64、systemd。管理进程、内置 Xray、共享候选池都在 VPS 本地运行。已有 3x-ui 不会被卸载或修改数据库。
 
-## 安装与升级（v0.6.1）
+## 安装与升级（v0.6.2）
 
 Debian 12 amd64、systemd，以 root 执行：
 
 ```sh
 apt-get update && apt-get install -y ca-certificates curl
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.1/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.1 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.2/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.6.2 && xnvgatebox access
 ```
 
 只下载本项目 GitHub Release 的完整包和 SHA256，固定 Xray 在构建时验证官方归档摘要。安装器检查归档路径、类型、重复项、完整文件清单、成员摘要和正式版本构建信息。下载、包校验及候选清单准备在停止旧服务之前完成；来源暂时失败且已有可用候选快照时保留旧池。
@@ -17,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.1/vps/ins
 
 上面的一键安装命令已接上 `xnvgatebox access`，安装成功后直接显示登录信息。首次安装生成独立随机路径、密码和订阅凭据；已有安装更新时继续保留原值。查看命令不会重置密码。重装系统后的全新测试会生成新身份，旧链接需更新或在之后有意恢复备份。
 
-更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.6.1` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
+更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.6.2` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
 
 使用者已在 2026-10-19 通过后台完成 v0.6.0 → v0.6.1，随后实际版本与持久更新任务复核通过。重装前的完整私有项目归档、源码和 Git 历史已保存本机并校验；它不是整机或 3x-ui 备份。见 [重装准备](../docs/BACKUP_REINSTALL.md)。
 
@@ -27,15 +27,18 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.6.1/vps/ins
 
 ## 首次管理和订阅
 
-1. 执行 `xnvgatebox access`，使用打印的私有地址与密码登录。
-2. 在总览启用“VPS 本机直出”，复制默认订阅到 v2rayN 并更新。此项直接使用 VPS IP，能在尚无 VPN Gate 出口时先验收接入链路。
-3. 设置目标出口数。系统自动创建并绑定接入入口；也可在“接入管理 → 新增接入入口”手动配置协议和出口。
-4. 在候选页刷新来源和检测；用户自行设置检测并发，含 64/128，程序报告真实资源限制，不因测试机配置而静默调低。手动任务优先，同一候选去重；显示等待或实际检测阶段。
-5. 代理资源分“VPS SOCKS5”和“原始 SSTP”。前者显式开启外部认证端口并私有导出；后者在隔离环境实测正常证书、PPP、准确 HTTPS 出口后才作为有效结果导出，可自定并发、有效期和定时检测。
+1. 执行 `xnvgatebox access`，使用打印的私有地址与密码登录。总览有可展开的「首次使用」引导。
+2. 建议在「出口管理」启用「VPS 本机直出」，先使用服务器公网 IP 验证接入；这一步可选，已有就绪的 VPN Gate 出口也可直接使用。
+3. 在「我的订阅」复制订阅链接，在 v2rayN 等支持 VLESS / REALITY 的客户端新建订阅分组、粘贴地址并更新；选择直出或已就绪出口，开启客户端代理模式后测试网页。防火墙需允许实际接入端口，只开放管理端口不足以连接代理。
+4. 需要 VPN Gate 时，在「出口管理」设置目标数量，国家可留空。程序自动建连、创建并绑定入站，等待「已就绪」后更新原客户端订阅并手动选择。无需预先检测全部候选，也无需手动新增入站。数量和检测并发由使用者设置，真实资源或上游供给不足如实提示等待，不静默降低目标。
+5. 有固定代理时，在「代理资源 → 第三方 SOCKS5」填写地址、端口、账号密码及可选国家/城市/备注；保存并检测，确认启用和加入订阅后再更新客户端。
+6. 「候选节点」用于按需诊断。「VPS SOCKS5」供其他电脑或程序通过本 VPS 接入，外部端口需显式开启；「原始 SSTP」导出给支持 SSTP 的客户端，自身不是 VLESS 订阅。普通使用不需另外新增入口；自行新建入口须绑定出口，未绑定会阻断。
 
-默认订阅可选择所有入口或指定范围，国家国旗与名称使用实际证据；未知保持待验证。上游暂时无合适国家或数量时保留策略与端口并等待。VPN Gate 出口故障会阻断，不自动切换到本机直出。原始 SSTP 导出不依赖本 VPS 持续转发，但使用端需自行支持 SSTP，且节点可能失效。
+候选「检测通过」表示那次临时连通，运行出口「已就绪」才表示当前可加入 VPN Gate 订阅。「待验证」表示国家证据不足，unknown 不代表家宽；它们与连通状态分开判断。勾选订阅「全选」时单项变灰，取消对应全选后可逐个选择。默认订阅可按来源或指定范围选择，实际仅输出就绪的 VPN Gate 入口。
 
-完整操作见 [控制台](../docs/CONSOLE.md)、[代理资源](../docs/PROXY_RESOURCES.md) 和 [安装更新及全新验收](../docs/INSTALL_UPDATE.md)。
+指定国家、ISP/ASN 或住宅类型策略需要相应可信画像；没有画像服务时可先保持国家不限且允许 unknown，不能用来源国家补证。上游暂时无合适节点时保留策略与端口等待；故障阻断，不自动切换本机直出。客户端须主动更新订阅并选择要用的节点。原始 SSTP 不依赖本 VPS 持续转发，但消费端需自行支持 SSTP，且节点可能失效。
+
+完整步骤及状态表见 [首页首次使用](../README.md#首次使用从登录到客户端上网)，其他操作见 [控制台](../docs/CONSOLE.md)、[代理资源](../docs/PROXY_RESOURCES.md) 和 [安装更新及全新验收](../docs/INSTALL_UPDATE.md)。
 
 ## 本地刷新
 

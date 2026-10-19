@@ -109,4 +109,8 @@ with tarfile.open(base/name) as t:
 PY
 python3 "$task_tmp/unpack/deploy/installer.py" install --stage "$task_tmp/unpack" --job-id "$job_id"
 echo '安装完成。查看管理地址和密码：xnvgatebox access'
-echo '首次使用：登录 → 启用本机直出并刷新订阅 → 设置目标出口数 → 代理资源。'
+echo '首次使用：登录后按“出口总览 → 首次使用”操作。'
+echo '1. 建议先启用 VPS 本机直出，验证客户端接入；此项使用服务器公网 IP。'
+echo '2. 在“我的订阅”复制订阅链接，添加到 v2rayN 等客户端，更新订阅并选择节点使用。'
+echo '3. 需要 VPN Gate 时，在“出口管理”设置目标数量；程序自动建立接入入口，等“已就绪”后更新客户端订阅。'
+echo '4. “候选节点”用于按需诊断，无需先全部检测；第三方 SOCKS5 等可选连接在“代理资源”管理。'

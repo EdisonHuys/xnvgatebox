@@ -123,9 +123,19 @@ def checked_archive(archive, destination, expected_version=''):
 class Runner:
     def run(self, args, check=True, **kwargs):
         return subprocess.run([str(x) for x in args], check=check, **kwargs)
+    def loaded(self, unit):
+        # is-enabled --quiet still writes an error for absent units on Debian.
+        # show reports not-found without treating a fresh install as a failure;
+        # a real systemd/bus error must still abort the deployment snapshot.
+        state = self.run(['systemctl','show','--property=LoadState','--value',unit],
+                         stdout=subprocess.PIPE, text=True).stdout.strip()
+        if not state: raise RuntimeError('systemd_load_state_missing')
+        return state != 'not-found'
     def active(self, unit):
+        if not self.loaded(unit): return False
         return self.run(['systemctl','is-active','--quiet',unit],check=False).returncode == 0
     def enabled(self, unit):
+        if not self.loaded(unit): return False
         return self.run(['systemctl','is-enabled','--quiet',unit],check=False).returncode == 0
 
 

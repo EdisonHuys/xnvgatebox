@@ -8,6 +8,7 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 SOURCE = Path(__file__).resolve().parents[1] / 'vps/deploy/installer.py'
 spec = importlib.util.spec_from_file_location('deployment', SOURCE)
@@ -55,6 +56,44 @@ class Deployment(d.Installer):
         if (self.l.lib / 'VERSION').read_text().strip() != expected:
             raise RuntimeError('wrong_actual_version')
         if self.fail_health: raise RuntimeError('simulated_health_failure')
+
+
+class ServiceSnapshotTests(unittest.TestCase):
+    def snapshot(self, loaded, active=(), enabled=()):
+        runner = d.Runner()
+        def systemctl(args, check=True, **kwargs):
+            unit = args[-1]
+            if args[1] == 'show':
+                return subprocess.CompletedProcess(args, 0, loaded.get(unit, 'not-found') + '\n')
+            if unit not in loaded:
+                self.fail('queried state of absent unit: would print No such file or directory')
+            status = active if args[1] == 'is-active' else enabled
+            return subprocess.CompletedProcess(args, 0 if unit in status else 1)
+        with mock.patch.object(runner, 'run', side_effect=systemctl):
+            return d.Installer(None, 'snapshot-test-01', runner=runner).service_snapshot()
+
+    def test_fresh_install_skips_state_queries_for_all_missing_units(self):
+        self.assertEqual(self.snapshot({}),
+                         {u: {'active': False, 'enabled': False} for u in d.UNITS})
+
+    def test_existing_enabled_disabled_and_masked_unit_intent_is_preserved(self):
+        loaded = dict(zip(d.UNITS, ('loaded', 'loaded', 'masked')))
+        self.assertEqual(self.snapshot(loaded, active=d.UNITS[:1], enabled=d.UNITS[:2]), {
+            d.UNITS[0]: {'active': True, 'enabled': True},
+            d.UNITS[1]: {'active': False, 'enabled': True},
+            d.UNITS[2]: {'active': False, 'enabled': False},
+        })
+
+    def test_systemd_failure_aborts_snapshot_instead_of_recording_stopped(self):
+        # Exercise Runner.run, including check=True, rather than faking a
+        # successful snapshot when systemd cannot be reached.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'systemctl'
+            path.write_text('#!/bin/sh\necho "synthetic systemd failure" >&2\nexit 1\n')
+            path.chmod(0o700)
+            with mock.patch.dict('os.environ', {'PATH': tmp}):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    d.Installer(None, 'snapshot-test-01').service_snapshot()
 
 
 class InstallerTests(unittest.TestCase):

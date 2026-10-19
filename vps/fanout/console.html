@@ -444,6 +444,39 @@
       .pad {
         padding: 24px;
       }
+      .quickstart {
+        margin: 0 0 22px;
+      }
+      .quickstart summary strong {
+        color: var(--text);
+        font-size: 17px;
+      }
+      .quickstart ol {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 36px;
+        padding-left: 22px;
+        margin: 22px 0;
+      }
+      .quickstart li::marker {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .quickstart p {
+        color: var(--muted);
+        line-height: 1.7;
+        margin: 7px 0 12px;
+      }
+      .quickstart .guide-note {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+        margin-bottom: 0;
+      }
+      @media (max-width: 720px) {
+        .quickstart ol {
+          grid-template-columns: 1fr;
+        }
+      }
       .callout {
         background: var(--soft);
         border-color: transparent;
@@ -970,6 +1003,32 @@
               </button>
             </div>
           </div>
+          <details class="card pad quickstart" open>
+            <summary><strong>首次使用</strong> · 先验证一条连接，再添加出口</summary>
+            <ol>
+              <li>
+                <h3>建议先验证 VPS 本机直出</h3>
+                <p>在出口管理启用“VPS 本机直出”，用服务器公网 IP 验证接入。此项可选；已有就绪的 VPN Gate 出口也可直接使用。</p>
+                <button data-page="exits">打开出口管理 →</button>
+              </li>
+              <li>
+                <h3>导入订阅，在客户端选择节点</h3>
+                <p>打开“我的订阅”复制订阅链接，在 v2rayN 等支持 VLESS / REALITY 的客户端添加订阅地址并更新；选择“VPS 本机直出”或已就绪出口，开启客户端代理后测试网页。服务器防火墙需放行实际接入端口。</p>
+                <button data-page="subscription">打开我的订阅 →</button>
+              </li>
+              <li>
+                <h3>需要 VPN Gate 时再设置数量</h3>
+                <p>设置目标数量，国家可留空。程序自动连接并创建接入入口；等待出口“已就绪”，再更新客户端订阅并手动选择。无需先检测全部候选，也无需另建入站；暂时无合适节点会等待。</p>
+                <button data-action="target">设置 VPN Gate 数量 →</button>
+              </li>
+              <li>
+                <h3>按需添加自己的代理</h3>
+                <p>在“代理资源 → 第三方 SOCKS5”填写固定地址、端口及账号密码，保存并检测，确认“启用”和“加入订阅”已开启，再更新客户端订阅。VPS SOCKS5 供其他程序接入；原始 SSTP 需支持该协议的客户端。</p>
+                <button data-page="resources" data-third-resources>添加第三方 SOCKS5 →</button>
+              </li>
+            </ol>
+            <p class="guide-note">候选“检测通过”是一次连通记录；出口“已就绪”才表示当前连接可加入 VPN Gate 订阅。“国家待验证”表示地理证据不足，类型 unknown 不代表家宽。订阅勾选“全选”时单项会变灰，取消全选后可逐个选择。VPN Gate 或自定义代理故障时阻断，不自动回落本机直出。</p>
+          </details>
           <div class="stats" id="stats">
             <div class="stat loading">正在读取运行状态…</div>
           </div>
