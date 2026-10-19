@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-19",
+  "version": "v0.6.2",
+  "status": "published_and_public_download_verified",
+  "source_commit": "3a4d004299e4f849d43fcf93a455b240758e9b5f",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/7",
+  "release": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.6.2",
+  "workflows": {
+    "test": 39232999845,
+    "formal_linux_package": 39233017307,
+    "publish": 39233302518
+  },
+  "changes": [
+    "Missing systemd units skip active/enabled queries after LoadState=not-found; real query failures abort deployment",
+    "README and console first-use guide with navigation, client subscription and readiness explanations",
+    "Installer completion guidance and current installation documentation"
+  ],
+  "local_validation": {
+    "python_passed": 82,
+    "new_installer_regressions": 3,
+    "node_existing_suites_passed": true,
+    "shell_and_embedded_js_syntax_passed": true,
+    "browser_demo_four_guide_routes_passed": true,
+    "browser_demo_is_not_live_proxy_validation": true,
+    "initial_python_attempt": {
+      "result": "failed",
+      "cause": "sandbox could not launch pinned Xray; two existing real-process cases failed"
+    },
+    "same_source_python_with_required_process_permissions": "82 passed"
+  },
+  "linux_validation": {
+    "top_level_passed": 254,
+    "pass_events": 313,
+    "race_passed": true,
+    "skipped_live_or_helper_entries": [
+      "TestLiveNativeTransactions",
+      "TestLiveNativeInterruptedChild",
+      "TestLiveNativeSIGKILLRecovery",
+      "TestLiveManagementFailures",
+      "TestLiveSstpIsolationAndRecovery",
+      "TestLiveSstpEndToEnd",
+      "TestThirdPartyLiveSupplierProbe"
+    ]
+  },
+  "package": {
+    "status": "passed",
+    "package_sha256": "3eea7815b73d36e3835b4f52303289017883d513d9e4c270facbe6b8307ba393",
+    "members": 36,
+    "all_member_checksums_verified": true,
+    "source_snapshot_verified_against_git_tree": true,
+    "private_secret_scan_passed": true,
+    "build": {
+      "git_head": "3a4d004299e4f849d43fcf93a455b240758e9b5f",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "fe3f50a8fb8d4b938e2a6575ed6feeeb515622ecfcfb4ea023584239f8814fe8",
+      "version": "v0.6.2",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "public_verification": {
+    "anonymous_package_and_checksums_downloaded": true,
+    "public_package_identical_to_tested_artifact": true,
+    "tagged_installer_identical_to_source": true,
+    "latest_release_api": "v0.6.2",
+    "exact_installer_fix_and_embedded_guide_in_package": true
+  },
+  "server_scope": {
+    "user_reported_fresh_debian12_install_success": true,
+    "read_only_browser_observed_candidate_pass_and_running_exit_ready": true,
+    "server_changed_this_round": false,
+    "v0_6_2_online_update_tested_on_user_server": false,
+    "fresh_os_client_end_to_end_tested_this_round": false
+  },
+  "boundaries": {
+    "cloudflare_paused": true,
+    "no_3x_ui_changes": true,
+    "unknown_is_not_verified_residential": true,
+    "no_fallback_to_host_direct": true
+  }
+}

@@ -4,7 +4,9 @@
 
 **当前开发重心是 VPS Standalone。Cloudflare 部署已备份撤下，旧 CF 自动发布任务已停用。** Mode A 的源码与测试暂保留为历史参考，不是当前部署入口。
 
-最新版本：[v0.6.2](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.6.2)。修复首次安装查询尚不存在服务时的误导报错，新增首次使用引导。出口管理统一展示本机直出、自定义代理和 VPN Gate；订阅按此顺序输出，自定义备注旁保留来源标识。新增手动第三方 SOCKS5 管理，支持国家/城市标注与检测、用户备注命名、独立启停和分类订阅。客户端仍通过 VLESS/REALITY 接入，供应商凭据不进入订阅；故障不切换出口。使用和验证范围见 [第三方代理说明](docs/THIRD_PARTY_SOCKS.md)。保留独立控制台、VPN Gate 多出口、VPS 本机直出、外部 SOCKS5、原始 SSTP 与完整包在线更新；安装和升级见 [说明](docs/INSTALL_UPDATE.md)。使用者已重装 Debian 12 并报告安装成功；管理页已观察到候选通过和运行出口就绪，完整客户端验收仍需另行完成。
+最新版本：[v0.6.2](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.6.2)。修复首次安装的服务缺失误报，补齐首页与控制台首次使用引导。提供 VPN Gate 多出口、VPS 本机直出、手动第三方 SOCKS5、原始 SSTP 和完整包在线更新；无需额外面板。安装后请按下方 [首次使用步骤](#首次使用从登录到客户端上网) 操作。
+
+使用者已重装 Debian 12 并报告安装成功，管理页已观察到候选通过和运行出口就绪；完整客户端验收仍需另行完成。本轮发布与验证范围见 [v0.6.2 记录](docs/evidence/github-install-guide-20261019.json)。
 
 ## Debian 12 安装
 
