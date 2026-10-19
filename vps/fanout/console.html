@@ -427,6 +427,10 @@
       #managedThirdExits h2 {
         overflow-wrap: anywhere;
       }
+      #managedThirdExits .exithead > .badge {
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
       #managedDirectExit .exitfoot,
       #managedThirdExits .exitfoot {
         flex-wrap: wrap;
@@ -2421,7 +2425,7 @@
                   '" ' +
                   (thirdAll || subThirdSelected.has(p.id) ? "checked " : "") +
                   (thirdAll ? "disabled " : "") +
-                  ">" +
+                  "><span>" +
                   esc(p.name) +
                   ' <small>自定义 · SOCKS5</small> ' +
                   (!p.enabled
@@ -2429,7 +2433,7 @@
                     : !p.subscribe
                       ? " <small>未允许订阅</small>"
                       : "") +
-                  "</label>",
+                  "</span></label>",
               )
               .join("")
           : '<p class="muted">尚未添加第三方代理</p>';
