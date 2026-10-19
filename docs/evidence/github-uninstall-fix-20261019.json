@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-19",
+  "version": "v0.8.1",
+  "status": "published_and_public_download_verified",
+  "source_commit": "47b93f99dcc8f2b083d1791aec997d08224f2905",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/10",
+  "release": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.8.1",
+  "reported_failure": {
+    "version": "v0.8.0",
+    "operation": "systemctl reset-failed",
+    "result": "uninstall_aborted",
+    "file_deletion_not_reached_by_source_order": true,
+    "some_project_services_may_be_disabled": true,
+    "retained_data_not_remotely_inspected": true
+  },
+  "fix": {
+    "inactive_units_skip_reset": true,
+    "failed_units_reset_and_verified": true,
+    "reset_error_only_accepted_with_inactive_or_unloaded_query_evidence": true,
+    "real_system_or_query_failure_still_refused": true,
+    "old_versions_can_retry_standalone_tool": true
+  },
+  "workflows": {
+    "pr_linux": 39270219734,
+    "test": 39270427935,
+    "formal_linux_package": 39270449361,
+    "publish": 39270760026
+  },
+  "validation": {
+    "local_python_passed": 105,
+    "uninstall_regressions": 20,
+    "github_python_versions": [
+      "3.9",
+      "3.12"
+    ],
+    "linux_top_level_passed": 258,
+    "linux_pass_events": 317,
+    "race_passed": true,
+    "node_suites_passed": true,
+    "shell_syntax_passed": true,
+    "skipped_live_or_helper_entries": [
+      "TestLiveNativeTransactions",
+      "TestLiveNativeInterruptedChild",
+      "TestLiveNativeSIGKILLRecovery",
+      "TestLiveManagementFailures",
+      "TestLiveSstpIsolationAndRecovery",
+      "TestLiveSstpEndToEnd",
+      "TestThirdPartyLiveSupplierProbe"
+    ],
+    "isolated_linux_kernel_cleanup": {
+      "status": "passed",
+      "owned_namespaces_removed": 3,
+      "unrelated_namespace_interface_rules_preserved": true,
+      "live_process_refused": true,
+      "repeat_safe": true,
+      "service_control": "model_only"
+    },
+    "real_systemd": {
+      "environment": "GitHub ubuntu-24.04 disposable runner",
+      "status": "passed",
+      "unique_temporary_units_only": true,
+      "redundant_reset_of_inactive_timer_exit_code": 1,
+      "fixed_timer_stop_skips_reset": true,
+      "failed_oneshot_reset_to_inactive": true,
+      "fixture_units_and_symlinks_removed": true,
+      "user_project_units_not_used": true
+    }
+  },
+  "package": {
+    "status": "passed",
+    "package_sha256": "f8223af198b7ab420773b06a09750f0ad1f3e20fb7ebad6ff97f250a18dc025d",
+    "members": 38,
+    "all_member_checksums_verified": true,
+    "source_snapshot_verified_against_git_tree": true,
+    "private_secret_scan_passed": true,
+    "build": {
+      "git_head": "47b93f99dcc8f2b083d1791aec997d08224f2905",
+      "manager_origin": "built_from_source",
+      "source_dirty": false,
+      "source_snapshot_sha256": "27a031eb176d9a92d2fa718996e6be38bbb9cee88c964bcef9d2999d19706428",
+      "version": "v0.8.1",
+      "xray_version": "v26.3.27"
+    }
+  },
+  "public_validation": {
+    "latest": "v0.8.1",
+    "anonymous_package_matches_tested_artifact": true,
+    "tagged_installer_verified": true,
+    "standalone_uninstaller_verified": true,
+    "uninstaller_sha256": "2b4f05935b80541944fc56a84ff83bb3ff8fac9856c03733e6a9a32ab98fb859"
+  },
+  "verification_note": "An early public metadata assertion ran before the download command completed; the complete downloaded files were checked again and passed.",
+  "boundaries": {
+    "github_only": true,
+    "agent_connected_to_user_vps": false,
+    "agent_vps_changed": false,
+    "fixed_tool_user_vps_retry_verified": false,
+    "cloudflare_paused": true,
+    "xui_unchanged": true,
+    "unknown_not_residential": true
+  }
+}
