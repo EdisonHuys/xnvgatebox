@@ -1,6 +1,6 @@
 # xnvgatebox VPS Standalone
 
-当前支持 Debian / Ubuntu、Linux amd64、systemd。管理进程、内置 Xray、共享候选池都在 VPS 本地运行。已有 3x-ui 不会被卸载或修改数据库。
+当前支持 Debian / Ubuntu、Linux amd64、systemd。CentOS、RHEL、Rocky Linux 和 AlmaLinux 当前不在安装器支持范围内；不能只把 `apt-get` 替换为 `dnf` 或 `yum`。管理进程、内置 Xray、共享候选池都在 VPS 本地运行。已有 3x-ui 不会被卸载或修改数据库。
 
 ## 安装与升级（v0.8.1）
 
@@ -19,7 +19,7 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.8.1/vps/ins
 
 更新入口为“设置 → 版本与更新”或 `xnvgatebox update`；`xnvgatebox check-update` 检查最新正式版，`xnvgatebox update-status` 查看结果。可用 `xnvgatebox update --version v0.8.1` 指定正式版本。旧 v0.4.0 先执行新版安装命令迁移。网页任务独立于管理服务，更新后重新登录查看结果。
 
-使用者已在 2026-10-19 通过后台完成 v0.6.0 → v0.6.1，随后实际版本与持久更新任务复核通过。重装前的完整私有项目归档、源码和 Git 历史已保存本机并校验；它不是整机或 3x-ui 备份。见 [重装准备](../docs/BACKUP_REINSTALL.md)。
+备份仅覆盖本项目受管文件，不是整机或 3x-ui 备份；重装前请另存到本机。见 [重装准备](../docs/BACKUP_REINSTALL.md)。
 
 离线包：`bash vps/install.sh --mode vps --package /path/xnvgatebox-linux-amd64.tar.gz`，相邻目录须有 `checksums.txt`。完整包包含管理器、Xray、Python 源码、脚本和服务，不只替换一个二进制。
 

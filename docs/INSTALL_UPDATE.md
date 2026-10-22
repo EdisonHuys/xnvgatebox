@@ -8,6 +8,8 @@ v0.8.1 安装与更新规范（2026-10-19）。固定版本安装命令见 READM
 
 系统采用 Debian 12 amd64、systemd；Ubuntu 保留支持说明，未实测的系统不称为已验收。操作系统由用户自行重装，本项目不执行重装或磁盘清除。
 
+CentOS、RHEL、Rocky Linux 和 AlmaLinux 当前不支持本安装入口。安装脚本需要 `apt-get`，而且完整链路还依赖 OpenVPN、SSTP/PPP、iptables、network namespace 和 systemd；不能把 Debian 命令中的 `apt-get` 机械替换为 `dnf` 或 `yum`。待 RPM 依赖、EPEL 中的 SSTP 客户端和真实 systemd/network 验收完成后，再单独发布对应命令。
+
 ## 安装与升级约定
 
 - 下载固定发布标签对应完整包与 SHA256，检查归档路径、类型、重复项、文件清单和每个成员摘要；失败不替换现有部署。只有本项目官方 GitHub 发布资产作为默认来源。
