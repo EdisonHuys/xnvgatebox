@@ -2,6 +2,24 @@
   "date": "2026-10-23",
   "scope": "Unified Linux installer and public documentation",
   "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/11",
+  "release": {
+    "version": "v0.9.0",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.0",
+    "source_commit": "1d2ad815f90f0b197e338f8dad65600b9732b2ad",
+    "full_package_tests": "https://github.com/hanhaoops/xnvgatebox/actions/runs/39897597251",
+    "full_package_tests_conclusion": "success; Go/race and all six distribution jobs passed",
+    "publish_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/39897908876",
+    "publish_conclusion": "success",
+    "package_sha256": "88b6d7a5dc7bbcc877c1de949651513403108babede3cb1618b6bcd2c9052e63",
+    "package_file_count": 38,
+    "source_snapshot_sha256": "e96080d1f9975e312372df434f0e63e059f8cc360db81cc502d10a3731484124",
+    "public_verification": [
+      "Anonymous release asset download and archive checksum passed",
+      "All package member digests and clean source snapshot passed",
+      "Fixed-tag installer matches package and source",
+      "Latest-release API returns v0.9.0"
+    ]
+  },
   "tested_code_commit": "57073671a64bd3e9621de4e4090c725ef87cf914",
   "automatic_validation": {
     "workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/39896246807",

@@ -1,12 +1,12 @@
 # Linux 安装与完整包在线更新
 
-v0.9.0 安装与更新规范（2026-10-23）。固定版本统一安装命令见 [README](../README.md#安装)，自动选择 APT 或 DNF，并在安装后显示随机管理地址和密码。六系统自动新装、真实直出订阅 HTTPS、更新保留和卸载已通过，独立 CentOS VPS 仍待验收。使用者此前已报告 Debian 12 安装成功、v0.8.1 卸载重试成功。卸载和旧版本独立工具见 [卸载说明](UNINSTALL.md)。
+v0.9.0 安装与更新规范（2026-10-23）。固定版本统一安装命令见 [README](../README.md#安装)，自动选择 APT 或 DNF，并在安装后显示随机管理地址和密码。六系统自动新装、真实直出订阅 HTTPS、更新保留和卸载已通过，独立 CentOS VPS 仍待验收。卸载和旧版本独立工具见 [卸载说明](UNINSTALL.md)。
 
-## 本轮范围
+## 运行要求
 
-将已验收控制台、可自定出口/并发、默认订阅直出、外部 SOCKS5、原始 SSTP 管理同步到默认分支和正式完整安装包。统一安装、命令行更新、网页在线更新使用同一完整包，不只替换管理器二进制。CF 继续暂停，不修改 3x-ui，不把 unknown 称为家宽。
+统一安装、命令行更新、网页在线更新使用同一完整包，包含控制台、管理程序、内置 Xray 和候选池工具。
 
-系统为 Linux amd64、systemd，需 root 权限及 TUN/network namespace 能力。操作系统由用户自行重装，本项目不执行重装或磁盘清除。
+系统为 Linux amd64、systemd，需 root 权限及 TUN/network namespace 能力。
 
 统一入口支持 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10。安装器识别系统后分别使用 APT 或 DNF；CentOS 自动配置 EPEL 并构建校验过源码的 SSTP RPM。各系统范围、软件来源和容器验收限制见 [系统兼容性](LINUX_SUPPORT.md)。旧 v0.8.1 安装器不会因发布新版而自动获得 CentOS 支持，首次需使用新版固定标签命令。
 
@@ -24,7 +24,7 @@ v0.9.0 安装与更新规范（2026-10-23）。固定版本统一安装命令见
 
 README 的一键命令在安装成功后自动执行 `xnvgatebox access`，直接显示本机私有管理地址和初始密码。首次安装生成独立随机路径、密码和订阅凭据；该查看命令不重置凭据，已有更新保留原值。`xnvgatebox version` 查看安装版本，`xnvgatebox check-update` 检查正式更新，`xnvgatebox update` 更新完整部署；网页“设置 → 版本与更新”提供检查、执行及进度。旧 v0.4.0 网页尚无完整升级能力，首次迁移使用新版一键安装入口。
 
-完整安装命令、首次登录与更新操作已同步到 [README](../README.md) 和 [VPS 文档](../vps/README.md)。本机已有完整私有备份保留，重装后第一次验收不导入旧状态，以免把迁移当全新安装。
+完整安装命令、首次登录与更新操作见 [README](../README.md) 和 [VPS 文档](../vps/README.md)。重装系统前请将私有备份另存至其他设备。
 
 ## 验证范围
 
@@ -41,6 +41,10 @@ README 的一键命令在安装成功后自动执行 `xnvgatebox access`，直�
 7. 检查更新：当前最新版应显示无需更新；新正式版发布后可在网页执行完整包更新，重新登录查看完成结果并确认原订阅及设置保留。
 
 全新工作目录、已有系统升级、全新操作系统分别记录；前两项测试不替代用户重装后的最终验收。
+
+## v0.9.0 多发行版安装
+
+正式来源 `1d2ad81`，构建与六系统测试 [39897597251](https://github.com/hanhaoops/xnvgatebox/actions/runs/39897597251)、发布 [39897908876](https://github.com/hanhaoops/xnvgatebox/actions/runs/39897908876) 均成功。公开包 SHA256 为 `88b6d7a5dc7bbcc877c1de949651513403108babede3cb1618b6bcd2c9052e63`，38 个成员、源码快照、固定标签脚本和匿名下载均已核验，latest 接口返回 v0.9.0。测试覆盖六系统真实依赖、systemd、实际直出订阅 HTTPS、更新保留及卸载；独立 VPS 的内核、SELinux/firewalld 和上游正向连接仍需单独验收。详细范围见 [系统兼容性](LINUX_SUPPORT.md) 和 [发布记录](evidence/github-linux-install-20261023.json)。
 
 ## 发布候选实际验证（2026-10-18）
 
