@@ -31,7 +31,8 @@ command -v flock >/dev/null || { echo '请先安装 util-linux'; exit 1; }
 mkdir -p /run/lock
 exec 9>/run/lock/xnvgatebox-deploy.lock
 flock -n 9 || { echo '已有安装或更新任务运行，请稍后查看状态'; exit 1; }
-task_tmp=$(mktemp -d)
+mkdir -p /var/lib/xnvgatebox-deploy
+task_tmp=$(mktemp -d /var/lib/xnvgatebox-deploy/install.XXXXXXXX)
 trap 'rm -rf "$task_tmp"' EXIT
 missing=0
 for dependency in curl python3 openvpn ip iptables sstpc pppd unshare mount sysctl; do
@@ -88,7 +89,7 @@ mkdir -p %{buildroot}%{_licensedir}/%{name}
 cp $task_tmp/sstp-client-1.0.20/COPYING %{buildroot}%{_licensedir}/%{name}/COPYING
 %files
 /usr/sbin/sstpc
-%{_libdir}/libsstp_api.so.*
+%{_libdir}/libsstp_api-*.so.*
 $ppp_libdir/sstp-pppd-plugin.so
 %license %{_licensedir}/%{name}/COPYING
 %exclude %{_includedir}/*
@@ -97,6 +98,7 @@ $ppp_libdir/sstp-pppd-plugin.so
 %exclude %{_libdir}/libsstp_api.so
 %exclude %{_libdir}/pkgconfig/*
 %exclude $ppp_libdir/*.la
+%exclude $ppp_libdir/*.a
 %{_datadir}/doc/sstp-client/*
 %{_mandir}/man8/sstpc.8*
 SPEC
