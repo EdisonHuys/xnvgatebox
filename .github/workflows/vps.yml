@@ -1,7 +1,7 @@
 name: VPS tests and package
 on:
   push:
-    paths: ['vps/**', 'src/**', 'config/**', 'scripts/build_vps_package.py', '.github/workflows/vps.yml']
+    paths: ['vps/**', 'src/**', 'config/**', 'tests/**', 'scripts/build_vps_package.py', '.github/workflows/vps.yml']
   pull_request:
   workflow_dispatch:
     inputs:
@@ -50,3 +50,22 @@ jobs:
         with:
           name: xnvgatebox-linux-amd64
           path: dist/
+
+  distro-install:
+    name: Install ${{ matrix.image }}
+    needs: vps
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['debian:12', 'debian:13', 'ubuntu:22.04', 'ubuntu:24.04', 'quay.io/centos/centos:stream9', 'quay.io/centos/centos:stream10']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: xnvgatebox-linux-amd64
+          path: dist/
+      - run: bash tests/distro_install.sh "${{ matrix.image }}"

@@ -21,19 +21,94 @@ done
 [[ -z $release_tag || $release_tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo '版本须为 vX.Y.Z'; exit 1; }
 [[ -z $job_id || $job_id =~ ^[A-Za-z0-9-]{8,64}$ ]] || { echo '更新任务编号无效'; exit 1; }
 command -v systemctl >/dev/null || { echo '需要 systemd'; exit 1; }
-command -v apt-get >/dev/null || { echo '当前安装入口支持 Debian / Ubuntu'; exit 1; }
+. /etc/os-release
+case "${ID:-}:${VERSION_ID:-}" in
+  debian:12|debian:13|ubuntu:22.04|ubuntu:24.04) package_family=deb ;;
+  centos:9|centos:10) package_family=rpm ;;
+  *) echo '支持 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10'; exit 1 ;;
+esac
 command -v flock >/dev/null || { echo '请先安装 util-linux'; exit 1; }
 mkdir -p /run/lock
 exec 9>/run/lock/xnvgatebox-deploy.lock
 flock -n 9 || { echo '已有安装或更新任务运行，请稍后查看状态'; exit 1; }
+task_tmp=$(mktemp -d)
+trap 'rm -rf "$task_tmp"' EXIT
 missing=0
-for dependency in curl python3 openvpn ip iptables sstpc pppd unshare mount; do
+for dependency in curl python3 openvpn ip iptables sstpc pppd unshare mount sysctl; do
   command -v "$dependency" >/dev/null || missing=1
 done
 if ((missing)); then
-  DEBIAN_FRONTEND=noninteractive apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y -qq ca-certificates curl python3 openvpn iproute2 iptables sstp-client ppp util-linux
+  if [[ $package_family == deb ]]; then
+    DEBIAN_FRONTEND=noninteractive apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y -qq ca-certificates curl python3 openvpn iproute2 iptables sstp-client ppp util-linux procps
+  else
+    dnf -y install ca-certificates python3 iproute iptables ppp util-linux procps-ng
+    command -v curl >/dev/null || dnf -y install curl
+    dnf -y install epel-release
+    dnf -y install openvpn
+    if ! command -v sstpc >/dev/null; then
+      # Build a native RPM against this host's PPP ABI, never install a Fedora binary.
+      dnf -y --enablerepo=crb install gcc make autoconf automake libtool pkgconf-pkg-config openssl-devel libevent-devel ppp-devel rpm-build
+      curl -fLsS --retry 3 --connect-timeout 15 --max-time 180 \
+        https://gitlab.com/sstp-project/sstp-client/-/archive/1.0.20/sstp-client-1.0.20.tar.gz -o "$task_tmp/sstp.tar.gz"
+      printf '%s  %s\n' 9150c96c61c71aa3fd0ac7c2b95f60cecb8bf761febb07e00e34794c47eac9fa "$task_tmp/sstp.tar.gz" | sha256sum -c -
+      tar -xzf "$task_tmp/sstp.tar.gz" -C "$task_tmp"
+      ppp_version=$(rpm -q --qf '%{VERSION}' ppp)
+      ppp_release=$(rpm -q --qf '%{RELEASE}' ppp)
+      ppp_libdir=$(rpm --eval '%{_libdir}')/pppd/$ppp_version
+      if ! pkg-config --exists pppd; then
+        mkdir -p "$task_tmp/pkgconfig"
+        printf 'Name: pppd\nDescription: Local PPP development headers\nVersion: %s\nLibs:\nCflags:\n' "$ppp_version" >"$task_tmp/pkgconfig/pppd.pc"
+        export PKG_CONFIG_PATH="$task_tmp/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+      fi
+      (
+        cd "$task_tmp/sstp-client-1.0.20"
+        autoreconf -fi
+        ./configure --prefix=/usr --libdir="$(rpm --eval '%{_libdir}')" --sysconfdir=/etc \
+          --with-runtime-dir=/run/sstpc --with-system-ca-path=/etc/pki/tls/certs \
+          --with-pppd-plugin-dir="$ppp_libdir" --with-pppd-auth-notify-support
+        make -j2
+        make DESTDIR="$task_tmp/rpmroot" install
+      )
+      mkdir -p "$task_tmp/rpmbuild/SPECS"
+      # Package only the client, runtime libraries and ABI-specific plugin.
+      cat >"$task_tmp/rpmbuild/SPECS/sstp.spec" <<SPEC
+Name: xnvgatebox-sstp-client
+Version: 1.0.20
+Release: 1%{?dist}
+Summary: SSTP client built for the local PPP version
+License: GPL-2.0-or-later
+URL: https://gitlab.com/sstp-project/sstp-client
+Requires: ppp = $ppp_version-$ppp_release
+%description
+Unmodified upstream SSTP client, built and packaged locally by xnvgatebox.
+%install
+cp -a $task_tmp/rpmroot/. %{buildroot}/
+mkdir -p %{buildroot}%{_licensedir}/%{name}
+cp $task_tmp/sstp-client-1.0.20/COPYING %{buildroot}%{_licensedir}/%{name}/COPYING
+%files
+/usr/sbin/sstpc
+%{_libdir}/libsstp_api.so.*
+$ppp_libdir/sstp-pppd-plugin.so
+%license %{_licensedir}/%{name}/COPYING
+%exclude %{_includedir}/*
+%exclude %{_libdir}/*.la
+%exclude %{_libdir}/*.a
+%exclude %{_libdir}/libsstp_api.so
+%exclude %{_libdir}/pkgconfig/*
+%exclude $ppp_libdir/*.la
+%{_datadir}/doc/sstp-client/*
+%{_mandir}/man8/sstpc.8*
+SPEC
+      rpmbuild --define "_topdir $task_tmp/rpmbuild" --define '_build_id_links none' -bb "$task_tmp/rpmbuild/SPECS/sstp.spec"
+      dnf -y install "$task_tmp"/rpmbuild/RPMS/x86_64/xnvgatebox-sstp-client-*.rpm
+    fi
+  fi
 fi
+python3 -c 'import sys; assert sys.version_info >= (3,9), "需要 Python 3.9+"'
+for dependency in curl python3 openvpn ip iptables sstpc pppd unshare mount sysctl; do
+  command -v "$dependency" >/dev/null || { echo "缺少系统依赖：$dependency"; exit 1; }
+done
 [[ -n $job_id ]] || job_id=$(python3 -c 'import secrets;print(secrets.token_hex(12))')
 status_helper=/usr/local/lib/xnvgatebox/deploy/installer.py
 [[ -f $status_helper ]] || status_helper=/var/lib/xnvgatebox-deploy/recover.py
@@ -45,7 +120,6 @@ mark_phase() {
     python3 "$status_helper" mark --job-id "$job_id" --phase "$1" --target "$release_tag"
   fi
 }
-task_tmp=$(mktemp -d)
 on_exit() {
   task_code=$?
   if ((task_code)); then mark_phase failed || true; fi
