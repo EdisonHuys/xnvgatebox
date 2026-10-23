@@ -6,6 +6,7 @@ run_install() {
   if ! bash /src/vps/install.sh --package /package/xnvgatebox-linux-amd64.tar.gz >/tmp/install.log 2>&1; then
     tail -120 /tmp/install.log
     journalctl -u xnvgatebox-fanout --no-pager -n 40
+    /usr/local/bin/xnvgatebox-fanout -check-state -dir /var/lib/xnvgatebox/fanout || true
     exit 1
   fi
 }
@@ -22,7 +23,7 @@ if command -v rpm >/dev/null; then
   rpm -q xnvgatebox-sstp-client
   ppp_version=$(rpm -q --qf '%{VERSION}' ppp)
   # dryrun loads the real plugin without a VPN peer or kernel PPP negotiation.
-  pppd plugin "$(rpm --eval '%{_libdir}')/pppd/$ppp_version/sstp-pppd-plugin.so" dryrun noauth >/tmp/ppp.log 2>&1 || { cat /tmp/ppp.log; exit 1; }
+  timeout 10 pppd plugin "$(rpm --eval '%{_libdir}')/pppd/$ppp_version/sstp-pppd-plugin.so" dryrun noauth notty >/tmp/ppp.log 2>&1 || { cat /tmp/ppp.log; exit 1; }
 fi
 run_install
 python3 /src/tests/distro_verify.py compare

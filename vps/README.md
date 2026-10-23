@@ -1,6 +1,6 @@
 # xnvgatebox VPS Standalone
 
-当前支持 Debian / Ubuntu、Linux amd64、systemd。CentOS、RHEL、Rocky Linux 和 AlmaLinux 当前不在安装器支持范围内；不能只把 `apt-get` 替换为 `dnf` 或 `yum`。管理进程、内置 Xray、共享候选池都在 VPS 本地运行。已有 3x-ui 不会被卸载或修改数据库。
+管理进程、内置 Xray、共享候选池都在 VPS 本地运行，无需额外安装 3x-ui。要求 Linux amd64、root 和 systemd；新版正在验证 Debian 12/13、Ubuntu 22.04/24.04 与 CentOS Stream 9/10 的统一安装入口。当前正式版与各系统验收范围见 [系统兼容性](../docs/LINUX_SUPPORT.md)。
 
 ## 安装与升级（v0.8.1）
 

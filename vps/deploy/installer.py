@@ -136,7 +136,11 @@ class Runner:
         return self.run(['systemctl','is-active','--quiet',unit],check=False).returncode == 0
     def enabled(self, unit):
         if not self.loaded(unit): return False
-        return self.run(['systemctl','is-enabled','--quiet',unit],check=False).returncode == 0
+        state = self.run(['systemctl','is-enabled',unit],check=False,
+                         stdout=subprocess.PIPE, text=True).stdout.strip()
+        if not state: raise RuntimeError('systemd_enable_state_missing')
+        # Static/indirect units can return success but have no [Install] target.
+        return state in ('enabled', 'enabled-runtime')
 
 
 class Installer:

@@ -1,4 +1,4 @@
-# Debian 12 全新安装与完整包在线更新
+# Linux 安装与完整包在线更新
 
 v0.8.1 安装与更新规范（2026-10-19）。固定版本安装命令见 README；使用者已重装 Debian 12 并报告安装成功；已只读观察到候选通过与出口就绪，完整客户端验收仍需另行记录。卸载、彻底清理和旧版本独立工具见 [卸载说明](UNINSTALL.md)。
 
@@ -8,7 +8,7 @@ v0.8.1 安装与更新规范（2026-10-19）。固定版本安装命令见 READM
 
 系统采用 Debian 12 amd64、systemd；Ubuntu 保留支持说明，未实测的系统不称为已验收。操作系统由用户自行重装，本项目不执行重装或磁盘清除。
 
-CentOS、RHEL、Rocky Linux 和 AlmaLinux 当前不支持本安装入口。安装脚本需要 `apt-get`，而且完整链路还依赖 OpenVPN、SSTP/PPP、iptables、network namespace 和 systemd；不能把 Debian 命令中的 `apt-get` 机械替换为 `dnf` 或 `yum`。待 RPM 依赖、EPEL 中的 SSTP 客户端和真实 systemd/network 验收完成后，再单独发布对应命令。
+新版统一入口正在验证 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10。安装器识别系统后分别使用 APT 或 DNF；CentOS 自动配置 EPEL 并构建校验过源码的 SSTP RPM。各系统范围、软件来源和容器验收限制见 [系统兼容性](LINUX_SUPPORT.md)。当前正式 v0.8.1 仍只支持 Debian / Ubuntu，新版通过自动验收后再发布统一命令。
 
 ## 安装与升级约定
 

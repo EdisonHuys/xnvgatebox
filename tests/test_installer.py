@@ -68,7 +68,8 @@ class ServiceSnapshotTests(unittest.TestCase):
             if unit not in loaded:
                 self.fail('queried state of absent unit: would print No such file or directory')
             status = active if args[1] == 'is-active' else enabled
-            return subprocess.CompletedProcess(args, 0 if unit in status else 1)
+            return subprocess.CompletedProcess(args, 0 if unit in status else 1,
+                                               'enabled\n' if unit in status else 'disabled\n')
         with mock.patch.object(runner, 'run', side_effect=systemctl):
             return d.Installer(None, 'snapshot-test-01', runner=runner).service_snapshot()
 
@@ -94,6 +95,15 @@ class ServiceSnapshotTests(unittest.TestCase):
             with mock.patch.dict('os.environ', {'PATH': tmp}):
                 with self.assertRaises(subprocess.CalledProcessError):
                     d.Installer(None, 'snapshot-test-01').service_snapshot()
+
+    def test_static_and_indirect_units_are_not_enabled_despite_success_status(self):
+        runner = d.Runner()
+        for state in ('static', 'indirect', 'disabled', 'masked', 'enabled', 'enabled-runtime'):
+            def systemctl(args, **kwargs):
+                return subprocess.CompletedProcess(args, 0,
+                    'loaded\n' if args[1] == 'show' else state+'\n')
+            with self.subTest(state=state), mock.patch.object(runner, 'run', side_effect=systemctl):
+                self.assertEqual(runner.enabled(d.UNITS[1]), state in ('enabled', 'enabled-runtime'))
 
 
 class InstallerTests(unittest.TestCase):
