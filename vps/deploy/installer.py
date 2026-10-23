@@ -161,7 +161,8 @@ class Installer:
         self.r.run(['systemctl','daemon-reload'])
         for u in UNITS:
             if (self.l.path('etc/systemd/system') / u).exists():
-                self.r.run(['systemctl','enable' if before[u]['enabled'] else 'disable',u])
+                if self.r.enabled(u) != before[u]['enabled']:
+                    self.r.run(['systemctl','enable' if before[u]['enabled'] else 'disable',u])
                 if before[u]['active']: self.r.run(['systemctl','start',u])
     def backup(self, record):
         path = Path(record['backup'])

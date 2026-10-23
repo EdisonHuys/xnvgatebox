@@ -212,6 +212,13 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse(self.r.active(d.UNITS[0]))
         self.assertFalse(self.r.enabled(d.UNITS[0]))
 
+    def test_restore_does_not_toggle_unchanged_enable_states(self):
+        self.existing()
+        before = self.i.service_snapshot()
+        self.i.restore_services(before)
+        self.assertFalse(any(e[:2] in (['systemctl', 'enable'], ['systemctl', 'disable'])
+                             for e in self.r.events))
+
     def test_failed_recovery_keeps_journal_and_can_retry(self):
         self.existing(); self.i.fail_health = True
         real_restore = self.i.restore_files
