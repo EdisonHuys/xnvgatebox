@@ -78,10 +78,13 @@ func checkMigrationState(dir string, maxSlots, defaultPort int) migrationReport 
 		}
 		return blob, true
 	}
+	expectedSlots := false
 	if blob, ok := read("console.json", true); ok {
 		var plan *ExitPlan
 		if json.Unmarshal(blob, &plan) != nil || plan == nil || validateExitPlan(plan, maxSlots) != nil {
 			issue("console.json", "invalid_exit_plan")
+		} else {
+			expectedSlots = plan.Count > 0
 		}
 	}
 	if blob, ok := read("sstp.json", true); ok {
@@ -110,7 +113,8 @@ func checkMigrationState(dir string, maxSlots, defaultPort int) migrationReport 
 			issue("basepath", "invalid_base_path")
 		}
 	}
-	if blob, ok := read("state.json", false); ok {
+	stateBlob, hasState := read("state.json", true)
+	if blob, ok := stateBlob, hasState; ok {
 		var original *persistedState
 		if json.Unmarshal(blob, &original) != nil || original == nil {
 			issue("state.json", "invalid_state")
@@ -135,7 +139,17 @@ func checkMigrationState(dir string, maxSlots, defaultPort int) migrationReport 
 			if name == "native.json" {
 				r.InboundCount = len(store.Inbounds)
 			}
+			for _, ib := range store.Inbounds {
+				if ib.BoundSlot != 0 || ib.BoundTo != "" || ib.SocksSlot != 0 {
+					expectedSlots = true
+				}
+			}
 		}
+	}
+	// A new direct-only installation has never allocated VPN Gate state.
+	// Missing state is acceptable only when no plan or entry refers to a Slot.
+	if !hasState && expectedSlots {
+		issue("state.json", "missing_slot_state")
 	}
 	r.ConfigValid = len(r.Issues) == 0
 	return r

@@ -87,6 +87,22 @@ func TestMigrationCheckV031ThreeSlotsReadOnlyAndRedacted(t *testing.T) {
 	}
 }
 
+func TestMigrationMissingStateOnlyAcceptsInstallationsWithoutSlots(t *testing.T) {
+	for _, bound := range []bool{false, true} {
+		dir := migrationFixture(t)
+		os.Remove(filepath.Join(dir, "state.json"))
+		if !bound {
+			os.WriteFile(filepath.Join(dir, "native.json"), []byte(`{"next_id":1,"inbounds":[]}`), 0600)
+			os.Remove(filepath.Join(dir, "native.previous.json"))
+		}
+		before := migrationTree(t, dir)
+		report := checkMigrationState(dir, 32, 8899)
+		if report.ConfigValid == bound || !reflect.DeepEqual(before, migrationTree(t, dir)) {
+			t.Fatalf("missing state handling: bound=%v, report=%+v", bound, report)
+		}
+	}
+}
+
 func TestMigrationV031PreparationPreservesBindingsWithoutRevivingHealth(t *testing.T) {
 	dir := migrationFixture(t)
 	blob, _ := os.ReadFile(statePath(dir))
