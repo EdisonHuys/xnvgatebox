@@ -89,7 +89,7 @@ mkdir -p %{buildroot}%{_licensedir}/%{name}
 cp $task_tmp/sstp-client-1.0.20/COPYING %{buildroot}%{_licensedir}/%{name}/COPYING
 %files
 /usr/sbin/sstpc
-%{_libdir}/libsstp_api-*.so.*
+%{_libdir}/libsstp_api-*.so*
 $ppp_libdir/sstp-pppd-plugin.so
 %license %{_licensedir}/%{name}/COPYING
 %exclude %{_includedir}/*

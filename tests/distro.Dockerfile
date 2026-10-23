@@ -1,4 +1,4 @@
-ARG BASE_IMAGE
+ARG BASE_IMAGE=debian:12
 FROM ${BASE_IMAGE}
 ENV container=docker
 RUN if command -v apt-get >/dev/null; then \

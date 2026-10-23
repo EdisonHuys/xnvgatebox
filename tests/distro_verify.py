@@ -32,9 +32,11 @@ if sys.argv[1] == 'save':
               {'Cookie': cookie, 'Content-Type': 'application/json'})
     r = c.getresponse(); r.read()
     assert r.status == 200, 'Host direct creation failed'
-settings = json.loads((p/'settings.json').read_text())
+c.request('GET', base+'/api/sub', headers={'Cookie': cookie})
+r = c.getresponse(); subscription = json.loads(r.read())
+assert r.status == 200
 c.request('GET', base+'/sub?'+urllib.parse.urlencode({
-    'token': settings['sub_token'], 'host': '127.0.0.1', 'vpn': '0', 'third': '0'}))
+    'token': subscription['token'], 'host': '127.0.0.1', 'vpn': '0', 'third': '0'}))
 r = c.getresponse(); blob = r.read()
 assert r.status == 200
 profiles = parse_subscription(blob)
