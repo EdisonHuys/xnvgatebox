@@ -123,7 +123,7 @@ func (s *SstpManager) probeNode(parent context.Context, n Node, settings SstpSet
 
 // The child mount namespace hides all host PPP options/hooks/runtime files.
 // Both SSTP and PPP remain in this instance's isolated network namespace.
-const sstpLaunch = "#!/bin/sh\nset -eu\ntask_dir=$1\nmount --make-rprivate /\nmount --bind \"$task_dir/ppp\" /etc/ppp\nmount -t tmpfs -o mode=755 tmpfs /run\nmkdir -p /run/sstpc /run/ppp /run/lock\nexec \"$2\" --log-stderr --log-level 2 --tls-ext --host \"$3\" --ipparam \"$4\" \"$5\" file \"$task_dir/$4.ppp\"\n"
+const sstpLaunch = "#!/bin/sh\nset -eu\ntask_dir=$1\nmount --make-rprivate /\nmount --bind \"$task_dir/ppp\" /etc/ppp\nmount -t tmpfs -o mode=755 tmpfs /run\nmkdir -p /run/sstpc /run/ppp /run/lock\nca=/etc/ssl/certs/ca-certificates.crt\n[ -f \"$ca\" ] || ca=/etc/pki/tls/certs/ca-bundle.crt\n[ -r \"$ca\" ] || exit 1\nexec \"$2\" --ca-cert \"$ca\" --log-stderr --log-level 2 --tls-ext --host \"$3\" --ipparam \"$4\" \"$5\" file \"$task_dir/$4.ppp\"\n"
 
 func writeSstpFiles(dir, ns string) error {
 	pppDir := filepath.Join(dir, "ppp")

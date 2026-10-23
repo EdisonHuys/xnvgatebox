@@ -327,6 +327,9 @@ func TestSstpPrivatePPPFilesAndProcessOwnership(t *testing.T) {
 	if !strings.Contains(string(b), "nodefaultroute") || strings.Contains(sstpLaunch, "--cert-warn") || !strings.Contains(sstpLaunch, "mount --bind") || !strings.Contains(sstpLaunch, "tmpfs /run") {
 		t.Fatal("isolation or TLS regression")
 	}
+	if !strings.Contains(sstpLaunch, "--ca-cert") || !strings.Contains(sstpLaunch, "/etc/pki/tls/certs/ca-bundle.crt") || !strings.Contains(sstpLaunch, "[ -r") {
+		t.Fatal("system CA bundle missing or absence does not fail closed")
+	}
 	if !diagnosticProcessOwned(dir, ns, "/usr/sbin/pppd", filepath.Join(work, ns+".ppp")) || diagnosticProcessOwned(dir, ns, "/usr/sbin/pppd", "/etc/ppp/host") || diagnosticProcessOwned(dir, ns, "/bin/other", filepath.Join(work, ns+".ppp")) {
 		t.Fatal("wrong ownership")
 	}

@@ -136,7 +136,11 @@ class Runner:
         return self.run(['systemctl','is-active','--quiet',unit],check=False).returncode == 0
     def enabled(self, unit):
         if not self.loaded(unit): return False
-        return self.run(['systemctl','is-enabled','--quiet',unit],check=False).returncode == 0
+        state = self.run(['systemctl','is-enabled',unit],check=False,
+                         stdout=subprocess.PIPE, text=True).stdout.strip()
+        if not state: raise RuntimeError('systemd_enable_state_missing')
+        # Static/indirect units can return success but have no [Install] target.
+        return state in ('enabled', 'enabled-runtime')
 
 
 class Installer:
@@ -157,7 +161,8 @@ class Installer:
         self.r.run(['systemctl','daemon-reload'])
         for u in UNITS:
             if (self.l.path('etc/systemd/system') / u).exists():
-                self.r.run(['systemctl','enable' if before[u]['enabled'] else 'disable',u])
+                if self.r.enabled(u) != before[u]['enabled']:
+                    self.r.run(['systemctl','enable' if before[u]['enabled'] else 'disable',u])
                 if before[u]['active']: self.r.run(['systemctl','start',u])
     def backup(self, record):
         path = Path(record['backup'])

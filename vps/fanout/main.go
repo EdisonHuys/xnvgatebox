@@ -126,6 +126,13 @@ func main() {
 		go mgr.ReconcileOutbounds()
 	}
 	startConfiguredSlot(mgr)
+	// Direct and third-party entries must restart even when there are no VPN
+	// Gate Slots to trigger an outbound reconciliation after process restart.
+	if p, err := openPanel(); err == nil && p.Kind() == "native" {
+		if err := p.OnTunnelsChanged(mgr.Tunnels()); err != nil {
+			log.Fatalf("恢复内置接入失败: %v", err)
+		}
+	}
 
 	go console.watch()
 	go console.sstp.watch()

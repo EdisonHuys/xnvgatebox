@@ -1,14 +1,14 @@
-# Debian 12 全新安装与完整包在线更新
+# Linux 安装与完整包在线更新
 
-v0.8.1 安装与更新规范（2026-10-19）。固定版本安装命令见 README；使用者已重装 Debian 12 并报告安装成功；已只读观察到候选通过与出口就绪，完整客户端验收仍需另行记录。卸载、彻底清理和旧版本独立工具见 [卸载说明](UNINSTALL.md)。
+v0.9.0 安装与更新规范（2026-10-23）。固定版本统一安装命令见 [README](../README.md#安装)，自动选择 APT 或 DNF，并在安装后显示随机管理地址和密码。六系统自动新装、真实直出订阅 HTTPS、更新保留和卸载已通过，独立 CentOS VPS 仍待验收。使用者此前已报告 Debian 12 安装成功、v0.8.1 卸载重试成功。卸载和旧版本独立工具见 [卸载说明](UNINSTALL.md)。
 
 ## 本轮范围
 
 将已验收控制台、可自定出口/并发、默认订阅直出、外部 SOCKS5、原始 SSTP 管理同步到默认分支和正式完整安装包。统一安装、命令行更新、网页在线更新使用同一完整包，不只替换管理器二进制。CF 继续暂停，不修改 3x-ui，不把 unknown 称为家宽。
 
-系统采用 Debian 12 amd64、systemd；Ubuntu 保留支持说明，未实测的系统不称为已验收。操作系统由用户自行重装，本项目不执行重装或磁盘清除。
+系统为 Linux amd64、systemd，需 root 权限及 TUN/network namespace 能力。操作系统由用户自行重装，本项目不执行重装或磁盘清除。
 
-CentOS、RHEL、Rocky Linux 和 AlmaLinux 当前不支持本安装入口。安装脚本需要 `apt-get`，而且完整链路还依赖 OpenVPN、SSTP/PPP、iptables、network namespace 和 systemd；不能把 Debian 命令中的 `apt-get` 机械替换为 `dnf` 或 `yum`。待 RPM 依赖、EPEL 中的 SSTP 客户端和真实 systemd/network 验收完成后，再单独发布对应命令。
+统一入口支持 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10。安装器识别系统后分别使用 APT 或 DNF；CentOS 自动配置 EPEL 并构建校验过源码的 SSTP RPM。各系统范围、软件来源和容器验收限制见 [系统兼容性](LINUX_SUPPORT.md)。旧 v0.8.1 安装器不会因发布新版而自动获得 CentOS 支持，首次需使用新版固定标签命令。
 
 ## 安装与升级约定
 
@@ -33,7 +33,7 @@ README 的一键命令在安装成功后自动执行 `xnvgatebox access`，直�
 ## 全新系统验收清单
 
 1. 用户重装 Debian 12 amd64，核实新的 SSH 主机指纹，再以 root 执行 README 的固定版本安装命令；不关闭 SSH 主机身份检查。
-2. 确认 `xnvgatebox version` 为 v0.8.1，管理服务及候选刷新定时器正常；执行 `xnvgatebox access`，开放实际管理端口后登录。
+2. 确认 `xnvgatebox version` 为 v0.9.0，管理服务及候选刷新定时器正常；执行 `xnvgatebox access`，开放实际管理端口后登录。
 3. 不导入旧备份，确认生成了新的私有路径、管理密码与订阅；启用 VPS 本机直出，在 v2rayN 更新默认订阅并实际访问 HTTPS，出口应为 VPS IP。
 4. 设置需要的目标出口数和检测并发，刷新候选并检测，验证进度、手动优先、去重及取消。先使用不限国家且允许 unknown 的技术策略验收；没有画像证据不标家宽。上游供给不足如实等待。
 5. VPN Gate 出口可用时验证订阅对应实际 IP、国家命名、外部 SOCKS；停止出口后对应连接失败，本机直出独立可用，不自动回落。
