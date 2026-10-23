@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-23",
+  "scope": "Unified Linux installer and public documentation",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/11",
+  "tested_code_commit": "57073671a64bd3e9621de4e4090c725ef87cf914",
+  "automatic_validation": {
+    "workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/39896246807",
+    "conclusion": "success",
+    "systems": ["Debian 12", "Debian 13", "Ubuntu 22.04", "Ubuntu 24.04", "CentOS Stream 9", "CentOS Stream 10"],
+    "checks": [
+      "Install real distribution dependencies and start real systemd services",
+      "Fresh full-package install with generated private management identity",
+      "Login, enable host-direct, obtain actual VLESS/REALITY subscription",
+      "Use actual Xray client to verify expected egress IP and HTTPS content",
+      "Create, check and remove network namespace and iptables rules",
+      "Same-version full-package update retains configuration and credentials",
+      "Actual subscription HTTPS works again after update and restart",
+      "Deployment backup exists, then purge and legacy uninstall removes project files",
+      "CentOS native SSTP RPM, privilege separation account and PPP plugin load",
+      "Linux Go regression, race checks and isolated network/systemd uninstall"
+    ],
+    "python_node": "https://github.com/hanhaoops/xnvgatebox/actions/runs/39896246890"
+  },
+  "earlier_failure_runs_preserved": [
+    {"run_id": "39893451334", "findings": "Test token lookup and non-executable temporary workspace"},
+    {"run_id": "39893955034", "findings": "SSTP shared library soname packaging and subscription initialization"},
+    {"run_id": "39894932688", "findings": "Missing initial VPN Gate state and PPP test tty"},
+    {"run_id": "39895382461", "findings": "Direct-only installations legitimately have no state.json"},
+    {"run_id": "39895539658", "findings": "Native Xray was not restarted when VPN Gate slot count was zero"}
+  ],
+  "not_validated": [
+    "Independent CentOS VPS with SELinux enforcing and firewalld",
+    "Independent distribution kernels, provider firewall and TUN/PPP availability",
+    "Positive live VPN Gate tunnels on each distribution",
+    "ARM64, CentOS 7, CentOS Linux 8, Rocky, AlmaLinux and RHEL"
+  ],
+  "environment": "Privileged distribution containers share GitHub Ubuntu runner kernel; user elected automatic tests without a CentOS VPS",
+  "production_vps_accessed": false,
+  "cloudflare_deployed": false,
+  "three_x_ui_modified": false,
+  "residential_classification": "unknown remains unknown; no residential claim"
+}

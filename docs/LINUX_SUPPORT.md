@@ -6,17 +6,19 @@
 
 | 系统 | 软件来源 | 当前状态 |
 | --- | --- | --- |
-| Debian 12 / 13 | 发行版 APT 仓库 | 新版自动安装验收中；Debian 12 有此前 VPS 记录 |
-| Ubuntu 22.04 / 24.04 | 发行版 APT 仓库（含 Universe） | 新版自动安装验收中 |
-| CentOS Stream 9 / 10 | 系统仓库、EPEL、固定上游 SSTP 源码 | 新版自动安装验收中 |
+| Debian 12 / 13 | 发行版 APT 仓库 | 自动新装、更新、卸载通过；Debian 12 有此前 VPS 记录 |
+| Ubuntu 22.04 / 24.04 | 发行版 APT 仓库（含 Universe） | 自动新装、更新、卸载通过 |
+| CentOS Stream 9 / 10 | 系统仓库、EPEL、固定上游 SSTP 源码 | 自动新装、更新、卸载通过；独立 VPS 待验收 |
 
-以上新版尚未正式发布，当前 v0.8.1 安装器仍只支持 Debian / Ubuntu。ARM64、CentOS 7、CentOS Linux 8、OpenVZ 等受限容器和非 systemd 系统不在本轮范围；Rocky/Alma/RHEL 尚未单独验收。
+从 v0.9.0 起使用同一个安装入口，命令见 [README](../README.md#安装)。v0.8.1 及更早安装器仍只支持 Debian / Ubuntu。ARM64、CentOS 7、CentOS Linux 8、OpenVZ 等受限容器和非 systemd 系统不在本轮范围；Rocky/Alma/RHEL 尚未单独验收。
 
 ## CentOS 依赖
 
 使用 DNF 安装系统依赖及 EPEL OpenVPN。EPEL 9/10 未提供所需 SSTP 包，安装器下载上游 `sstp-client 1.0.20`，验证 SHA256 后构建本机 RPM，匹配本机 PPP 版本。只安装客户端、库和 PPP 插件，不覆盖系统 PPP 或第三方服务。源码地址和固定摘要在 `vps/install.sh` 中，保留 GPL-2.0-or-later 许可。
 
 本机 RPM 名为 `xnvgatebox-sstp-client`，通过 DNF 管理；与其他共享依赖一样，项目卸载不自动删除它。系统 PPP 大版本升级时应同步重建对应插件。构建依赖包括 gcc、make、autoconf、automake、libtool、OpenSSL/libevent/PPP 开发包和 rpm-build，部分来自 CRB。安装失败保留错误，不能跳过依赖后称为安装成功。
+
+RPM 创建上游所需的 `sstpc` 系统用户与组供连接后降权，已有同名账户不修改；卸载项目不删除共享账户。系统证书使用发行版 CA bundle，不关闭证书或主机名校验。
 
 ## 防火墙与隔离
 
