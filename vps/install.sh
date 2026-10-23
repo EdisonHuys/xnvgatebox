@@ -81,8 +81,12 @@ Summary: SSTP client built for the local PPP version
 License: GPL-2.0-or-later
 URL: https://gitlab.com/sstp-project/sstp-client
 Requires: ppp = $ppp_version-$ppp_release
+Requires(pre): shadow-utils
 %description
 Unmodified upstream SSTP client, built and packaged locally by xnvgatebox.
+%pre
+getent group sstpc >/dev/null || groupadd --system sstpc
+getent passwd sstpc >/dev/null || useradd --system --gid sstpc --home-dir /run/sstpc --shell /sbin/nologin sstpc
 %install
 cp -a $task_tmp/rpmroot/. %{buildroot}/
 mkdir -p %{buildroot}%{_licensedir}/%{name}

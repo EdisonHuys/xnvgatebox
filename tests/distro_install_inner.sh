@@ -21,6 +21,8 @@ ip netns exec xnv-ci iptables -C OUTPUT -j REJECT
 ip netns delete xnv-ci
 if command -v rpm >/dev/null; then
   rpm -q xnvgatebox-sstp-client
+  sstpc --version
+  getent passwd sstpc >/dev/null
   ppp_version=$(rpm -q --qf '%{VERSION}' ppp)
   # dryrun loads the real plugin without a VPN peer or kernel PPP negotiation.
   timeout 10 pppd plugin "$(rpm --eval '%{_libdir}')/pppd/$ppp_version/sstp-pppd-plugin.so" dryrun noauth notty >/tmp/ppp.log 2>&1 || { cat /tmp/ppp.log; exit 1; }
