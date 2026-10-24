@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-24",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/14",
+  "source_commit": "b86b08dd748ad0859ada2ee74a9625d74fba5c11",
+  "scope": "Opt-in raw CSV fallback; retrieval, filtering and exit verification remain on the owner's VPS",
+  "release": {
+    "version": "v0.9.3",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.3",
+    "full_package_tests": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40069597294",
+    "full_package_tests_conclusion": "success: Go/race, six distribution installations and live Linux mirror acquisition",
+    "publish_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40069843103",
+    "publish_conclusion": "success",
+    "package_sha256": "b6e23e84e2ff93dfac76ae0ba5bdfdce97236566ba258755664b9503a14b2c18",
+    "package_file_count": 40,
+    "source_snapshot_sha256": "f9c1ae6cd1cc2dbb48abefcb9a25bc292a897f4fd281e44dc80aa11078b1da8d",
+    "anonymous_archive_members_and_source": "passed",
+    "fixed_tag_installer_matches_package_and_source": "passed",
+    "latest_release_api": "v0.9.3"
+  },
+  "user_observations": {
+    "official_source": "DNS resolves; all eight reported IPv4 endpoints time out before TCP/TLS and return HTTP 000",
+    "cause_attribution": "Unresolved; installation success on other systems is not evidence of source refresh success",
+    "authorization": "User opted for an optional third-party fallback, requiring acquisition and validation on their own VPS"
+  },
+  "behavior": [
+    "Mirror disabled by default; original configured sources take priority",
+    "VPS-local requests have a total wall-time budget; late results cannot publish files",
+    "Fixed commit, byte length, SHA256, declared age, future time and rollback checks",
+    "Mirror OpenVPN configuration accepts only data directives and inline PEM; scripts, plugins, file references and obfuscation rejected",
+    "No imported mirror probe, country or residential verdict; candidates remain not_tested with no egress evidence",
+    "Display local retrieval separately from publisher-declared snapshot time",
+    "Failures preserve prior pool; source preferences preserve other private fields and exit identities"
+  ],
+  "local_checks": {"source_fallback_tests": 15, "existing_source_tests": 7, "installer_tests": 25, "node_console_regressions": "passed"},
+  "github_checks": {
+    "python_node": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40069295015",
+    "python_node_conclusion": "success: Python 3.9/3.12 and Node",
+    "branch_six_system": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40069294992",
+    "branch_six_system_conclusion": "success",
+    "systems": ["Debian 12", "Debian 13", "Ubuntu 22.04", "Ubuntu 24.04", "CentOS Stream 9", "CentOS Stream 10"],
+    "checks": ["Real direct subscription HTTPS", "Source settings API and private-field preservation", "Untrusted HTTPS certificate rejection", "Controlled HTTPS pool recovery", "Update preservation including explicit disabled direct", "Network isolation, backup and uninstall"]
+  },
+  "live_linux_acquisition": {
+    "job": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40069597294/job/120800162321",
+    "execution": "Disposable Linux CI machine runs production Pool Builder and downloads the raw mirror itself; not a runtime shared pool service",
+    "nodes": 95,
+    "rejected_rows": 1,
+    "snapshot_fetched_at": "2026-10-23T22:59:20.196000+00:00",
+    "retrieved_at": "2026-10-24T06:18:14.911489Z",
+    "data_commit": "d7306bb4c4100ded9af1bdfd7f97b45da46914bc",
+    "csv_sha256": "9f7a0a3dd433b386004dc7eab53430dd4e0dc37df88207f72aca91442a49c6f8",
+    "live_vpn_validated": false
+  },
+  "limitations": [
+    "No production VPS access or upgrade in this round; user must enable fallback and refresh after updating",
+    "Mirror digest proves agreement with publisher index, not official origin authenticity or usable VPN exits",
+    "No independent CentOS VPS SELinux/firewalld or per-distribution real VPN Gate tunnel acceptance",
+    "Mirror availability and snapshot freshness can change; failures remain explicit"
+  ],
+  "cloudflare_deployed": false,
+  "three_x_ui_modified": false,
+  "unknown_is_residential": false
+}
