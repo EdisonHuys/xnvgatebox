@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-24",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/15",
+  "source_commit": "37f1cd19fc9bfdc17d34c9021487646c532829df",
+  "release": {
+    "version": "v0.9.4",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.4",
+    "full_package_tests": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40072207750",
+    "full_package_tests_conclusion": "success: Go/race, six distribution installations and live mirror acquisition",
+    "publish_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40072459296",
+    "publish_conclusion": "success",
+    "package_sha256": "52f0a0d83b6dc00b338b8a9444d4c94d7eeee6753836e99320eebc2e9c736ba0",
+    "package_file_count": 40,
+    "source_snapshot_sha256": "6cb07cab9b330a82072c2c4b4171ff2c1bb542aab0d66c8c5987bbc60216d36f",
+    "anonymous_archive_members_source_and_installer": "passed",
+    "latest_release_api": "v0.9.4"
+  },
+  "behavior": [
+    "Mirror enabled for fresh installations and configurations without the field; explicit false preserved",
+    "Original official source, official download-domain API, then third-party raw mirror",
+    "Legacy built-in official source extended in memory without rewriting private config; custom-only and empty sources preserved",
+    "All retrieval, filtering, connection and actual egress validation execute on the owner's VPS",
+    "Official backup and mirror candidates remain untested; backup also uses the data-only profile grammar",
+    "Console labels official backup separately from third-party mirror",
+    "Console, login and entry-management brand crosses use centered geometric strokes"
+  ],
+  "authorized_vps_diagnostics": {
+    "original_source": "DNS resolves; TCP connections time out before TLS; exact transit/remote cause remains unproven",
+    "backup_url": "https://download.vpngate.jp/api/iphone/",
+    "http_status": 200,
+    "normal_certificate_verification": true,
+    "candidate_rows": 98,
+    "rejected_rows": 0,
+    "new_builder_test": "Development source ran in a temporary directory on the user's VPS; original timed out and backup returned 98 candidates in 14.14 seconds",
+    "builder_generated_at": "2026-10-24T06:50:34.394548Z",
+    "all_openvpn_not_tested": true,
+    "incorrect_original_hostname_binding": "Rejected with curl 60 hostname mismatch; no insecure retry or permanent IP pin",
+    "active_configuration_or_deployment_changed": false,
+    "temporary_files_cleaned": true,
+    "domain_authority": ["https://forum.vpngate.net/viewtopic.php?t=1388", "https://download.vpngate.jp/en/download.aspx"]
+  },
+  "checks": {
+    "local_source_tests": 17,
+    "local_existing_source_tests": 7,
+    "local_node_console": "passed",
+    "python_node_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40071866876",
+    "python_node_conclusion": "success: Python 3.9/3.12 and Node",
+    "branch_six_system_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40071866821",
+    "branch_six_system_conclusion": "success",
+    "systems": ["Debian 12", "Debian 13", "Ubuntu 22.04", "Ubuntu 24.04", "CentOS Stream 9", "CentOS Stream 10"],
+    "coverage": ["Default enabled and saved disabled source settings", "Official backup priority", "Private config and direct-disabled intent preserved", "Actual direct subscription HTTPS", "Controlled HTTPS recovery and untrusted certificate refusal", "Backup, network cleanup and uninstall"]
+  },
+  "live_mirror_check": {
+    "job": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40072207750/job/120808157513",
+    "nodes": 95,
+    "rejected_rows": 1,
+    "snapshot_fetched_at": "2026-10-23T22:59:20.196000+00:00",
+    "retrieved_at": "2026-10-24T06:58:29.878754Z",
+    "live_vpn_validated": false
+  },
+  "limitations": [
+    "Production VPS remains unchanged; full v0.9.4 deployment is for the user to trigger through existing updater",
+    "Candidate acquisition is not a live VPN tunnel or usability result",
+    "Logo source inspected; local file browser preview blocked by URL policy, so no rendered screenshot acceptance claimed",
+    "Distribution containers share runner kernel and do not replace independent VPS SELinux/firewalld acceptance"
+  ],
+  "cloudflare_deployed": false,
+  "three_x_ui_modified": false,
+  "unknown_is_residential": false
+}
