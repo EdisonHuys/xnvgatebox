@@ -17,7 +17,7 @@ PY
     ;;
   update-status) exec python3 /usr/local/lib/xnvgatebox/deploy/installer.py status ;;
   status) systemctl --no-pager status xnvgatebox-fanout.service xnvgatebox-pool.timer ;;
-  refresh) systemctl start xnvgatebox-pool.service ;;
+  refresh) exec python3 /usr/local/lib/xnvgatebox/scripts/toolbox.py --config /etc/xnvgatebox/pool.json pool --output /var/lib/xnvgatebox/pool --schedule-dir /var/lib/xnvgatebox/fanout ;;
   restart) systemctl restart xnvgatebox-fanout.service ;;
   access)
     python3 - <<'PY'

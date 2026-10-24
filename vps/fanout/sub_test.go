@@ -253,7 +253,7 @@ func TestHandleSubRejectsUnknownTarget(t *testing.T) {
 	tok, _ := subToken()
 
 	rec := httptest.NewRecorder()
-	handleSub(m)(rec, httptest.NewRequest(http.MethodGet, "/sub?token="+tok+"&target=clash", nil))
+	handleSub(m)(rec, httptest.NewRequest(http.MethodGet, "/sub?token="+tok+"&target=unknown-format", nil))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("不认识的 target 应当 400，实际 %d", rec.Code)
 	}

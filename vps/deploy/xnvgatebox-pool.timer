@@ -1,9 +1,9 @@
 [Unit]
-Description=Refresh xnvgatebox candidate pool every ten minutes
+Description=Refresh xnvgatebox candidate pool on configured schedule
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=10min
+OnUnitActiveSec=30min
 RandomizedDelaySec=30
 Persistent=true
 

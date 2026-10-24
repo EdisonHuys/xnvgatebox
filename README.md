@@ -3,8 +3,8 @@
 在自己的 VPS 上管理 VPN Gate、第三方 SOCKS5 和本机直出，通过一个订阅链接在 v2rayN 等客户端使用。
 
 - **多种出口**：自动连接 VPN Gate，也可手动添加固定 SOCKS5 地址、账号和密码。
-- **网页管理**：管理出口、接入、检测并发、国家策略与订阅范围。
-- **统一订阅**：按本机直出、自定义代理、VPN Gate 排序，显示国家和自定义备注。
+- **网页管理**：管理出口、接入、检测并发、周期任务、国家策略与订阅范围。
+- **统一订阅**：支持 v2rayN 与 Clash/Mihomo 格式，按本机直出、自定义代理、VPN Gate 排序，显示国家和自定义备注。
 - **独立运行**：内置 Xray，无需额外安装 3x-ui，也不需要 Cloudflare 或 GitHub 账号。
 - **更新与恢复**：支持网页更新、更新前备份、失败恢复及完整卸载。
 - **原始 SSTP**：检测并导出 VPN Gate SSTP 资源，供支持 SSTP 的客户端直接使用。
@@ -13,13 +13,13 @@
 
 需要 root、Linux x86_64、systemd 和可用的 TUN/network namespace。支持范围与各系统测试结果见 [系统兼容性](docs/LINUX_SUPPORT.md)。
 
-当前版本：[v0.9.5](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.5)。统一安装入口支持 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10。六个系统已通过自动安装、更新及卸载测试；CentOS 独立 VPS 验收尚未完成。CentOS 7/8（含 Stream 8）不在支持范围。
+当前版本：[v0.9.6](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.6)。统一安装入口支持 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10。六个系统已通过自动安装、更新及卸载测试；CentOS 独立 VPS 验收尚未完成。CentOS 7/8（含 Stream 8）不在支持范围。
 
 以上系统均以 root 执行同一段命令，自动选择 APT 或 DNF：
 
 ```sh
 if command -v apt-get >/dev/null; then apt-get update && apt-get install -y ca-certificates curl; else dnf -y install ca-certificates && { command -v curl >/dev/null || dnf -y install curl; }; fi &&
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.5/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.5 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.6/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.6 && xnvgatebox access
 ```
 
 安装完成后显示随机生成的管理地址和密码。之后可随时查看：
@@ -44,6 +44,10 @@ CentOS 首次安装会编译 SSTP 客户端，耗时和内存需求高于 Debian
 4. 导入使用
 
 可先用默认的“VPS 本机直出”测试客户端接入。未设置数量且无旧 Slot 时，取得候选后自动创建 16 个 VPN Gate 出口并按当前并发连接，无需先设置数量或检测全部候选；已有数量（含 0）和旧出口保留。可按需调整数量或添加自己的 SOCKS5，出口就绪后更新客户端订阅。候选刷新显示等待时间、完成结果和上次成功获取时间。详细操作见 [首次使用](docs/FIRST_USE.md)。
+
+「候选节点 → 周期任务」可分别设置来源刷新和候选检测，默认每 60 分钟一次，最低 30 分钟，也可关闭；检测沿用用户设置的并发。同一自动任务不重叠，刷新失败保留旧候选。所有获取与检测均由自己的 VPS 执行。
+
+使用 Clash Verge 时，在「我的订阅」选择 Clash/Mihomo 格式再复制链接；v2rayN 保持默认格式。无需第三方订阅转换服务，详见 [周期任务与订阅格式](docs/SCHEDULE_AND_CLASH.md)。
 
 ## 更新
 

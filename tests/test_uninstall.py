@@ -60,6 +60,14 @@ class Model:
 
 
 class UninstallTests(unittest.TestCase):
+    def test_pre_schedule_units_remain_owned_and_removable(self):
+        timer=self.root/'etc/systemd/system/xnvgatebox-pool.timer'
+        timer.write_text(timer.read_text().replace('Refresh xnvgatebox candidate pool on configured schedule','Refresh xnvgatebox candidate pool every ten minutes').replace('OnUnitActiveSec=30min','OnUnitActiveSec=10min'))
+        service=self.root/'etc/systemd/system/xnvgatebox-pool.service'
+        service.write_text(service.read_text().replace(' --schedule-dir /var/lib/xnvgatebox/fanout --scheduled',''))
+        self.i.execute()
+        self.assertFalse(timer.exists());self.assertFalse(service.exists());self.protected()
+
     def test_zero_slots_serialized_as_null_keeps_deleted_resource_cleanup(self):
         put(self.root/u.WORK/'state.json',json.dumps({'tunnels':None,'deleted_slots':[1]}))
         self.i.execute()

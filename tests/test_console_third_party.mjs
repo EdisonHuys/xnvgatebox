@@ -20,6 +20,7 @@ const c = vm.createContext({
     subAll: { checked: true },
     subDirect: { checked: true },
     subThirdAll: { checked: true },
+    subFormat: { value: 'base64' },
   },
 });
 vm.runInContext(
@@ -32,6 +33,9 @@ vm.runInContext(
   c,
 );
 let u = new URL(c.selectedSubURL());
+assert.equal(u.searchParams.get('target'),null);
+c.elements.subFormat.value='clash';u=new URL(c.selectedSubURL());assert.equal(u.searchParams.get('target'),'clash');
+c.elements.subFormat.value='base64';u=new URL(c.selectedSubURL());assert.equal(u.searchParams.get('target'),null);
 assert.equal(u.searchParams.get("third"), "1");
 assert.equal(u.searchParams.get("slots"), null);
 c.elements.subAll.checked = false;

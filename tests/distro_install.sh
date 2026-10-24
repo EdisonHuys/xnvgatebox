@@ -5,6 +5,11 @@ set -euo pipefail
 image=${1:?base image required}
 root=$(cd "$(dirname "$0")/.." && pwd)
 command -v docker >/dev/null
+test_mount=()
+if [[ ${XNV_TEST_CLIENT:-} == mihomo ]]; then
+  python3 "$root/scripts/install_mihomo_test.py"
+  test_mount=(-v "$root/tools/bin:/mihomo:ro")
+fi
 for attempt in {1..3}; do
   if docker build --build-arg "BASE_IMAGE=$image" -f "$root/tests/distro.Dockerfile" -t xnvgatebox-distro-check "$root/tests"; then break; fi
   ((attempt < 3)) || exit 1
@@ -15,7 +20,7 @@ trap 'docker logs "$name"; docker rm -f "$name" >/dev/null' EXIT
 docker run -d --name "$name" --privileged --cgroupns=host \
   --tmpfs /run --tmpfs /run/lock --tmpfs /tmp \
   -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-  -v "$root:/src:ro" -v "$root/dist:/package:ro" xnvgatebox-distro-check
+  -v "$root:/src:ro" -v "$root/dist:/package:ro" "${test_mount[@]}" xnvgatebox-distro-check
 for attempt in {1..30}; do
   if docker exec "$name" systemctl show --property=Version --value >/dev/null 2>&1; then break; fi
   sleep 1

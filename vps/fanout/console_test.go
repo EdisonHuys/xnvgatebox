@@ -35,6 +35,7 @@ func consoleFixture(t *testing.T) *Console {
 	}
 	c.remove = func(s int) error { m.mu.Lock(); defer m.mu.Unlock(); delete(m.tunnels, s); return nil }
 	c.ensure = func([]*Tunnel, string) error { return nil }
+	t.Cleanup(c.shutdown)
 	return c
 }
 
@@ -298,6 +299,14 @@ func waitConsoleCheck(t *testing.T, j *CheckRun) {
 	t.Helper()
 	// Large batches fsync every completed observation. Slow CI storage is not
 	// a concurrency failure; worker-count assertions remain separate.
+	if j.finished != nil {
+		select {
+		case <-j.finished:
+			return
+		case <-time.After(30 * time.Second):
+			t.Fatal("check queue did not finish persistence and cleanup")
+		}
+	}
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
 		j.mu.Lock()

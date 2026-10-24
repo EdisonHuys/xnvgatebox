@@ -249,11 +249,14 @@ class Uninstaller:
                 if fields[2] not in ('inactive', 'failed'): raise Refuse('在线更新任务尚未结束，请稍后重试')
         for unit, marker in zip(UNITS, ('Description=Refresh xnvgatebox candidate pool every ten minutes', 'ExecStart=/usr/bin/python3 /usr/local/lib/xnvgatebox/scripts/toolbox.py --config /etc/xnvgatebox/pool.json pool --output /var/lib/xnvgatebox/pool', 'ExecStart=/usr/local/bin/xnvgatebox-fanout -dir /var/lib/xnvgatebox/fanout -panel native')):
             p = self.path('etc/systemd/system/' + unit)
-            if p.exists() and marker not in p.read_text(): raise Refuse('项目服务已自定义，保留现场：' + unit)
+            alternatives=[marker]
+            if unit==UNITS[0]: alternatives.append('Description=Refresh xnvgatebox candidate pool on configured schedule')
+            if unit==UNITS[1]: alternatives.append(marker+' --schedule-dir /var/lib/xnvgatebox/fanout --scheduled')
+            if p.exists() and not any(m in p.read_text() for m in alternatives): raise Refuse('项目服务已自定义，保留现场：' + unit)
             if p.exists():
                 text = p.read_text()
                 if re.search(r'^Exec(StartPre|StartPost|Stop|StopPost|Reload)=', text, re.M): raise Refuse('服务含自定义生命周期操作，保留现场')
-                if unit != UNITS[0] and re.findall(r'^ExecStart=(.*)$', text, re.M) != [marker.removeprefix('ExecStart=')]: raise Refuse('服务启动参数已自定义，保留现场')
+                if unit != UNITS[0] and re.findall(r'^ExecStart=(.*)$', text, re.M) not in [[m.removeprefix('ExecStart=')] for m in alternatives]: raise Refuse('服务启动参数已自定义，保留现场')
                 if unit == UNITS[0] and any(v.strip() != 'xnvgatebox-pool.service' for v in re.findall(r'^Unit=(.*)$', text, re.M)): raise Refuse('定时器指向其他服务，保留现场')
         if self.path(WORK).exists(): instances.append(Instance(self, WORK))
         if self.purge: paths.append('var/backups/xnvgatebox')
