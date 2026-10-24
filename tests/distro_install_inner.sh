@@ -42,7 +42,7 @@ if command -v rpm >/dev/null; then
   timeout 10 pppd plugin "$(rpm --eval '%{_libdir}')/pppd/$ppp_version/sstp-pppd-plugin.so" dryrun noauth notty >/tmp/ppp.log 2>&1 || { cat /tmp/ppp.log; exit 1; }
 fi
 run_install
-python3 /src/tests/distro_verify.py compare
+python3 /src/tests/distro_verify.py compare-empty
 test ! -e /var/lib/xnvgatebox/pool/node_pool.json
 python3 - <<'PY'
 import json

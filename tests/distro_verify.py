@@ -28,6 +28,8 @@ assert cookie
 c.request('GET', base+'/api/exits', headers={'Cookie': cookie})
 r = c.getresponse(); data = json.loads(r.read())
 assert r.status == 200 and isinstance(data, dict)
+if sys.argv[1] == 'compare-empty':
+    assert not data['exits'], 'Missing pool unexpectedly created exits'
 if sys.argv[1] == 'bootstrap':
     deadline = time.monotonic()+50
     while True:
