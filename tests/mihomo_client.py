@@ -15,7 +15,7 @@ def client(binary,profile):
         with socket.socket() as listener:
             listener.bind(('127.0.0.1',0));port=listener.getsockname()[1]
         config=json.loads(json.dumps(profile))
-        config.update({'mixed-port':port,'bind-address':'127.0.0.1','allow-lan':False,'log-level':'error'})
+        config.update({'mixed-port':port,'bind-address':'127.0.0.1','allow-lan':False,'log-level':'warning'})
         path=root/'profile.yaml';path.write_text(json.dumps(config));path.chmod(0o600)
         check=subprocess.run([str(binary),'-t','-d',tmp,'-f',str(path)],capture_output=True,timeout=20)
         assert check.returncode==0,'Mihomo rejected generated subscription'
@@ -30,7 +30,17 @@ def client(binary,profile):
                     except OSError:
                         assert time.monotonic()<deadline,'Mihomo did not listen'
                         time.sleep(.05)
-                yield port
+                try:
+                    yield port
+                except AssertionError as error:
+                    log.flush()
+                    detail=(root/'client.log').read_text(errors='replace')[-3000:]
+                    for proxy in config['proxies']:
+                        for key in ('uuid','password'):
+                            if proxy.get(key):detail=detail.replace(str(proxy[key]),'[redacted]')
+                        for value in proxy.get('reality-opts',{}).values():
+                            if value:detail=detail.replace(str(value),'[redacted]')
+                    raise AssertionError(str(error)+'; sanitized core log: '+detail) from None
             finally:
                 proc.terminate()
                 try:proc.wait(timeout=5)
@@ -49,7 +59,7 @@ def verify_mihomo(binary,body,expected):
     assert profile['proxies'][0].get('skip-cert-verify') is False
     with client(binary,profile) as port:
         reply=request(port,'https://api.ipify.org')
-        assert reply.returncode==0 and reply.stdout.strip()==expected,'Mihomo REALITY egress mismatch'
+        assert reply.returncode==0 and reply.stdout.strip()==expected,'Mihomo REALITY egress mismatch (curl rc='+str(reply.returncode)+', error='+reply.stderr.decode(errors='replace')[:200]+')'
         reply=request(port,'https://www.example.com/')
         assert reply.returncode==0 and b'Example Domain' in reply.stdout,'Mihomo HTTPS content failed'
     # Leave this local port bound but not listening: the selected server fails,

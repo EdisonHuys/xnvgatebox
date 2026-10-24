@@ -20,6 +20,7 @@ node tests/test_cf_control.mjs
 node tests/test_console_sstp.mjs
 node tests/test_console_third_party.mjs
 node tests/test_console_flow.mjs
+node tests/test_console_automation.mjs
 ```
 
 Python 检查解析、证据一致性、异常响应、证书拒绝、订阅清理、私密性、锁和进程清理。Node 检查控制台交互和保留的 Worker 边界。Linux Go 测试包含网络隔离、出口生命周期、阻断及并发检查。合成测试与真实 VPN 节点验收分别记录，不因前者通过而认定后者可用。
@@ -33,6 +34,10 @@ Python 检查解析、证据一致性、异常响应、证书拒绝、订阅清�
 - `update.yml`：仅手动构建共享候选池，不定时运行、不部署 Cloudflare。
 
 多发行版测试在一次性特权容器中运行真正的 systemd、发行版包管理器和安装器，执行安装、实际订阅 HTTPS 访问、更新保留与卸载。测试入口仅允许在 GitHub 一次性 runner 上运行；它不覆盖独立 VPS 的内核、SELinux 或服务商防火墙。范围见 [系统兼容性](LINUX_SUPPORT.md)。
+
+周期任务用受控时间和临时状态验证默认 60 分钟、最低 30 分钟、开关、失败退避、重启保留与手动任务互斥；Python 和 Go 共享刷新状态，避免系统定时器重复请求来源。测试不向 VPN Gate 做高频检测。
+
+Clash 输出用固定官方 Mihomo 测试内核验证配置；Debian 12 隔离安装测试还使用真实订阅连接本机 VLESS/REALITY，校验 HTTPS 出口与内容，并确认选中代理失效时不回落 DIRECT。测试内核仅下载到 CI，不进入产品安装包。GUI 版本未提供，不将内核测试视为所有 Clash Verge 版本已验收。
 
 ## 记录与参考
 

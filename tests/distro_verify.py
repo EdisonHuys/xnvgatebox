@@ -113,6 +113,9 @@ profiles = parse_subscription(blob)
 assert len(profiles) == 1
 c.close()
 expected = get_bytes('https://api.ipify.org').strip()
+with XraySession(profiles[0], str(p/'bin/xray'), 60) as client:
+    assert client.get('https://api.ipify.org').strip() == expected
+    assert b'Example Domain' in client.get('https://www.example.com/')
 if sys.argv[1]=='save' and Path('/mihomo/mihomo').is_file():
     sys.path.insert(0,'/src/tests')
     from mihomo_client import verify_mihomo
@@ -120,9 +123,6 @@ if sys.argv[1]=='save' and Path('/mihomo/mihomo').is_file():
     c2.request('GET',base+'/sub?'+urllib.parse.urlencode({'token':subscription['token'],'host':'127.0.0.1','vpn':'0','third':'0','direct':'1','target':'clash'}))
     response=c2.getresponse();clash_body=response.read();assert response.status==200
     c2.close();verify_mihomo(Path('/mihomo/mihomo'),clash_body,expected)
-with XraySession(profiles[0], str(p/'bin/xray'), 60) as client:
-    assert client.get('https://api.ipify.org').strip() == expected
-    assert b'Example Domain' in client.get('https://www.example.com/')
 subprocess.run([str(p/'bin/xray'), 'version'], check=True, stdout=subprocess.DEVNULL)
 names = ['basepath', 'password', 'settings.json', 'native.json', 'automation.json']
 state = {n: hashlib.sha256((p/n).read_bytes()).hexdigest() for n in names}
