@@ -42,7 +42,7 @@ curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.6/vps/ins
 
 ## 本地刷新
 
-`xnvgatebox-pool.timer` 每十分钟生成本地候选池，管理进程每三十秒读取新快照。`xnvgatebox refresh` 或候选页刷新会触发真实采集，失败保留上一份完整快照。来源配置在 `/etc/xnvgatebox/pool.json`。抓取阶段完整解析官方当次公开响应；数量取决于当次供给，不等于全球所有 VPN Gate，也不等于实测可用数量。
+「候选节点 → 周期任务」分别设置候选清单刷新和批量检测，默认 60 分钟，最低 30 分钟，可独立关闭。管理器与 `xnvgatebox-pool.timer` 共用到期记录和构建锁，不重复请求；定时器每 30 分钟检查一次，仅在设定周期到期时获取来源。管理进程每三十秒读取新快照。`xnvgatebox refresh` 或候选页手动刷新不受自动开关和周期限制，触发真实采集，失败保留上一份完整快照。来源配置在 `/etc/xnvgatebox/pool.json`。抓取阶段完整解析官方当次公开响应；数量取决于当次供给，不等于全球所有 VPN Gate，也不等于实测可用数量。
 
 ## OpenVPN 出口画像
 

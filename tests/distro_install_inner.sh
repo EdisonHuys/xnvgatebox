@@ -88,6 +88,24 @@ fi
 python3 - <<'PY'
 import json
 from pathlib import Path
+p=Path('/var/lib/xnvgatebox/fanout')
+Path('/tmp/xnv-ci-automation-settings').write_bytes((p/'automation.json').read_bytes())
+Path('/tmp/xnv-ci-before-refresh').write_bytes((p/'refresh-state.json').read_bytes())
+settings=json.loads((p/'automation.json').read_text());settings['refresh_enabled']=False
+(p/'automation.json').write_text(json.dumps(settings))
+PY
+systemctl start xnvgatebox-pool.service
+cmp /tmp/xnv-ci-before-refresh /var/lib/xnvgatebox/fanout/refresh-state.json
+SSL_CERT_FILE=/tmp/xnv-ci-source/cert.pem xnvgatebox refresh >/tmp/manual-source.log
+python3 - <<'PY'
+from pathlib import Path
+p=Path('/var/lib/xnvgatebox/fanout')
+assert (p/'refresh-state.json').read_bytes()!=Path('/tmp/xnv-ci-before-refresh').read_bytes(), 'Manual CLI refresh was gated by disabled automatic schedule'
+(p/'automation.json').write_bytes(Path('/tmp/xnv-ci-automation-settings').read_bytes())
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
 pool = json.loads(Path('/var/lib/xnvgatebox/pool/node_pool.json').read_text())
 assert pool['nodes'] and pool['generated_at'] and pool['source']['name'].startswith('https://')
 assert pool['nodes'][0]['hostname'] == 'ci-synthetic.example.invalid'
