@@ -87,8 +87,13 @@ class Instance:
         if state.exists():
             if state.is_symlink(): raise Refuse('出口记录为符号链接')
             data = json.loads(state.read_text())
-            for row in data.get('tunnels', []): self.add(row['slot'], slot_index(row['slot']))
-            for slot in data.get('deleted_slots', []): self.add(slot, slot_index(slot))
+            # Go's empty slice is serialized as null after the last Slot is
+            # removed. Other non-array values still indicate a corrupt record.
+            for key in ('tunnels', 'deleted_slots'):
+                if data.get(key) is not None and not isinstance(data[key], list):
+                    raise Refuse('出口记录列表格式异常，保留配置')
+            for row in data.get('tunnels') or []: self.add(row['slot'], slot_index(row['slot']))
+            for slot in data.get('deleted_slots') or []: self.add(slot, slot_index(slot))
         for p in self.work.glob('*.ovpn'):
             m = self.pattern.fullmatch(p.stem)
             if m and int(m[1]) > 0: self.add(int(m[1]), slot_index(int(m[1])))
