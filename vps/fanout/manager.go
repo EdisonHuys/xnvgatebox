@@ -57,6 +57,14 @@ func (m *Manager) RefreshNodes() (int, error) {
 	m.nodes = nodes
 	m.fetched = time.Now()
 	m.mu.Unlock()
+	// Never wait for plan changes from a reconnect worker: deleting a Slot may
+	// be waiting for that worker to finish. A buffered wake coalesces refreshes.
+	if m.console != nil {
+		select {
+		case m.console.poolChanged <- struct{}{}:
+		default:
+		}
+	}
 	return len(nodes), nil
 }
 

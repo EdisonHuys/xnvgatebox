@@ -2240,6 +2240,7 @@
           " 个 · 停止 " +
           (s.stopped || 0) +
           " 个。候选不足时保留策略等待，不强求指定国家当时必须有节点。" +
+          (s.target_configured === false && !s.allocated ? " 取得候选后将自动创建 16 个出口，无需先设置数量。" : "") +
           (s.plan_error ? " " + (errors[s.plan_error] || "计划等待重试") : "");
         const m = s.memory || {},
           used = Math.max(0, (m.MemTotal || 0) - (m.MemAvailable || 0)),
@@ -3340,7 +3341,7 @@
           toast("请等待状态读取完成");
           return;
         }
-        $("targetCount").value = summary.target_configured === false ? (summary.suggested_target || 4) : summary.target;
+        $("targetCount").value = summary.target_configured === false ? (summary.suggested_target || 16) : summary.target;
 
         $("targetCountry").value = summary.plan?.policy?.country || "";
         $("targetServer").value =

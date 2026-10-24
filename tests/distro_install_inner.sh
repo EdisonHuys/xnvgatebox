@@ -52,6 +52,10 @@ assert status['status'] == 'completed' and status['warning'] == 'pool_not_ready'
 PY
 # Recover through a controlled HTTPS source. Trust only its generated CI CA in
 # this disposable service; TLS verification remains enabled. No live VPN claim.
+# Auto-allocation may dial the synthetic profile. Keep that exact destination
+# local to this disposable test; no VPN traffic goes to the public fixture IP.
+iptables -I OUTPUT -d 8.8.8.8 -p tcp --dport 1194 -j REJECT
+iptables -I FORWARD -d 8.8.8.8 -p tcp --dport 1194 -j REJECT
 command -v openssl >/dev/null || { if command -v apt-get >/dev/null; then apt-get install -y openssl; else dnf -y install openssl; fi; }
 python3 /src/tests/pool_source_fixture.py >/tmp/source-fixture.log 2>&1 &
 source_pid=$!
@@ -88,6 +92,7 @@ pool = json.loads(Path('/var/lib/xnvgatebox/pool/node_pool.json').read_text())
 assert pool['nodes'] and pool['generated_at'] and pool['source']['name'].startswith('https://')
 assert pool['nodes'][0]['hostname'] == 'ci-synthetic.example.invalid'
 PY
+python3 /src/tests/distro_verify.py bootstrap
 run_install
 python3 /src/tests/distro_verify.py compare
 python3 /src/tests/distro_verify.py disable
@@ -98,6 +103,8 @@ rm -rf /run/systemd/system/xnvgatebox-pool.timer.d
 systemctl daemon-reload
 test -n "$(find /var/backups/xnvgatebox -name project.tar.gz -print -quit)"
 xnvgatebox uninstall --yes --purge --legacy
+iptables -D OUTPUT -d 8.8.8.8 -p tcp --dport 1194 -j REJECT
+iptables -D FORWARD -d 8.8.8.8 -p tcp --dport 1194 -j REJECT
 test ! -e /usr/local/lib/xnvgatebox
 test ! -e /var/lib/xnvgatebox
 test ! -e /var/backups/xnvgatebox
