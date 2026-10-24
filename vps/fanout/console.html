@@ -163,6 +163,16 @@
         font-size: 26px;
         font-weight: 500;
       }
+      .mark::before, .mark::after {
+        content: "";
+        grid-area: 1 / 1;
+        width: 17px;
+        height: 3px;
+        border-radius: 1px;
+        background: currentColor;
+        transform: rotate(45deg);
+      }
+      .mark::after { transform: rotate(-45deg); }
       .sidebar nav {
         margin-top: 50px;
         display: grid;
@@ -903,7 +913,7 @@
   <body>
     <aside class="sidebar">
       <div class="brand">
-        <span class="mark">×</span><span class="brandtext">xnvgatebox</span>
+        <span class="mark" aria-hidden="true"></span><span class="brandtext">xnvgatebox</span>
       </div>
       <nav aria-label="主导航">
         <button
@@ -1509,7 +1519,7 @@
       <form id="sourceForm">
         <div class="dialoghead"><h2 id="sourceTitle">候选来源设置</h2><button type="button" data-close="sourceDialog" aria-label="关闭">×</button></div>
         <p>所有清单获取和节点检测都由本 VPS 执行。先尝试当前配置来源；启用后，仅在失败时请求第三方镜像原始 CSV。</p>
-        <label class="choice"><input id="sourceMirrorEnabled" type="checkbox" />允许第三方镜像后备（默认关闭）</label>
+        <label class="choice"><input id="sourceMirrorEnabled" type="checkbox" />允许第三方镜像后备（默认开启，可关闭）</label>
         <p class="muted">镜像提供者：<a href="https://github.com/GeorgeXie2333/vpngate-list-mirror" target="_blank" rel="noopener noreferrer">GeorgeXie2333/vpngate-list-mirror</a>，非官方。只使用原始候选，不采用对方的检测结论；文件摘要不等于官方来源认证。</p>
         <div class="field"><label for="sourceTimeout">每次来源请求最长等待（秒）</label><input id="sourceTimeout" type="number" min="2" max="20" step="1" required /></div>
         <div class="field"><label for="sourceMirrorMaxAge">镜像声明抓取时间的最大年龄（小时）</label><input id="sourceMirrorMaxAge" type="number" min="1" max="168" step="1" required /><small>默认 24 小时；超过 3 小时会提示较旧。摘要、时间或格式校验失败时保留旧清单。节点仍需本 VPS 建连验证。</small></div>

@@ -28,7 +28,7 @@ func validSourceOptions(s poolSourceOptions) bool {
 }
 
 func readSourceOptions(path string) (poolSourceOptions, map[string]json.RawMessage, error) {
-	s := poolSourceOptions{SourceTimeout: 10, MirrorMaxAgeHours: 24}
+	s := poolSourceOptions{MirrorEnabled: true, SourceTimeout: 10, MirrorMaxAgeHours: 24}
 	blob, err := os.ReadFile(path)
 	var fields map[string]json.RawMessage
 	if err != nil || len(blob) > 1<<20 || json.Unmarshal(blob, &fields) != nil || fields == nil {
@@ -132,6 +132,8 @@ func publicPoolSource(s poolSourceMetadata) poolSourceView {
 	switch s.Kind {
 	case "official":
 		v.Kind, v.Label = "official", "官方来源 · 本 VPS 获取"
+	case "official_backup":
+		v.Kind, v.Label = "official_backup", "VPN Gate 官方备用 · 本 VPS 获取"
 	case "configured":
 		v.Kind, v.Label = "configured", "配置来源 · 本 VPS 获取"
 	case "local_csv":

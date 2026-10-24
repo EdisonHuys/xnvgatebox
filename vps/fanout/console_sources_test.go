@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestConsoleSourceSettingsAreOptInAndPreservePrivateFields(t *testing.T) {
+func TestConsoleSourceSettingsPreserveDisabledIntentAndPrivateFields(t *testing.T) {
 	c := consoleFixture(t)
 	path := filepath.Join(t.TempDir(), "pool.json")
 	before := `{"source_urls":["https://private.example/?key=SYNTHETIC_PRIVATE"],"countries":["JP"],"sstp_concurrency":17,"mirror_fallback":{"enabled":false,"max_age_hours":24,"private_note":"SYNTHETIC_PRIVATE"}}`
@@ -42,6 +42,23 @@ func TestConsoleSourceSettingsAreOptInAndPreservePrivateFields(t *testing.T) {
 		after, _ := os.ReadFile(path)
 		if w.Code != 400 || string(after) != string(blob) { t.Fatal("invalid settings replaced configuration") }
 	}
+}
+
+func TestConsoleSourceSettingsDefaultEnabledWithoutOverwritingConfig(t *testing.T) {
+	c := consoleFixture(t)
+	path := filepath.Join(t.TempDir(), "pool.json")
+	before := `{"source_urls":["https://www.vpngate.net/api/iphone/"],"countries":[]}`
+	if err := os.WriteFile(path, []byte(before), 0600); err != nil { t.Fatal(err) }
+	t.Setenv("FANOUT_POOL_CONFIG", path)
+	w := httptest.NewRecorder()
+	c.apiSourceSettings(w, httptest.NewRequest("GET", "/", nil))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"mirror_enabled":true`) { t.Fatal("legacy defaults differ from fresh installation") }
+	after, _ := os.ReadFile(path)
+	if string(after) != before { t.Fatal("read changed configuration") }
+	w = httptest.NewRecorder()
+	c.apiSourceSettings(w, httptest.NewRequest("POST", "/", strings.NewReader(`{"mirror_enabled":false,"source_timeout_seconds":10,"mirror_max_age_hours":24}`)))
+	s, _, err := readSourceOptions(path)
+	if w.Code != 200 || err != nil || s.MirrorEnabled { t.Fatal("explicit opt-out not preserved") }
 }
 
 func TestPoolSourceViewSeparatesSnapshotAndLocalRetrieval(t *testing.T) {

@@ -9,6 +9,9 @@ from urllib.parse import urlsplit
 
 from .common import ToolError, https_url
 
+OFFICIAL_PRIMARY_URL = 'https://www.vpngate.net/api/iphone/'
+OFFICIAL_BACKUP_URL = 'https://download.vpngate.jp/api/iphone/'
+
 
 def load_env(path: Path):
     """Read simple KEY=VALUE files without executing shell syntax."""
@@ -30,7 +33,7 @@ def load_env(path: Path):
 def load_settings(path: Path) -> dict:
     settings = json.loads(path.read_text())
     settings.setdefault('pool_source_timeout_seconds', 10)
-    settings.setdefault('mirror_fallback', {'enabled': False, 'max_age_hours': 24})
+    settings.setdefault('mirror_fallback', {'enabled': True, 'max_age_hours': 24})
     source_timeout = settings['pool_source_timeout_seconds']
     mirror = settings['mirror_fallback']
     if type(source_timeout) is not int or not 2 <= source_timeout <= 20:
@@ -40,6 +43,13 @@ def load_settings(path: Path) -> dict:
         raise ToolError('invalid_setting_mirror_fallback')
     if not isinstance(settings.get('source_urls'), list):
         raise ToolError('invalid_setting_source_urls')
+    # Extend the original built-in source for existing installations in memory.
+    # Custom-only/empty sources and the saved private file remain unchanged.
+    sources = settings['source_urls']
+    if OFFICIAL_PRIMARY_URL in sources and OFFICIAL_BACKUP_URL not in sources:
+        sources = list(sources)
+        sources.insert(sources.index(OFFICIAL_PRIMARY_URL)+1, OFFICIAL_BACKUP_URL)
+        settings['source_urls'] = sources
     limits = {"candidate_limit": 500, "sstp_concurrency": 16, "xray_concurrency": 8,
               "node_timeout_seconds": 120, "chain_timeout_seconds": 180,
               "chain_ttl_seconds": 86400, "intelligence_ttl_seconds": 604800,

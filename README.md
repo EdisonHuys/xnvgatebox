@@ -13,13 +13,13 @@
 
 需要 root、Linux x86_64、systemd 和可用的 TUN/network namespace。支持范围与各系统测试结果见 [系统兼容性](docs/LINUX_SUPPORT.md)。
 
-当前版本：[v0.9.3](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.3)。统一安装入口支持 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10。六个系统已通过自动安装、更新及卸载测试；CentOS 独立 VPS 验收尚未完成。CentOS 7/8（含 Stream 8）不在支持范围。
+当前版本：[v0.9.4](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.4)。统一安装入口支持 Debian 12/13、Ubuntu 22.04/24.04 和 CentOS Stream 9/10。六个系统已通过自动安装、更新及卸载测试；CentOS 独立 VPS 验收尚未完成。CentOS 7/8（含 Stream 8）不在支持范围。
 
 以上系统均以 root 执行同一段命令，自动选择 APT 或 DNF：
 
 ```sh
 if command -v apt-get >/dev/null; then apt-get update && apt-get install -y ca-certificates curl; else dnf -y install ca-certificates && { command -v curl >/dev/null || dnf -y install curl; }; fi &&
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.3/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.3 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.4/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.4 && xnvgatebox access
 ```
 
 安装完成后显示随机生成的管理地址和密码。之后可随时查看：
@@ -34,7 +34,7 @@ CentOS 首次安装会编译 SSTP 客户端，耗时和内存需求高于 Debian
 
 首次安装默认创建并开启本机直出，可直接导入订阅；已有安装的开关和客户端身份保留。VPN Gate 来源暂不可达时仍可完成安装并登录，候选由后台或定时器获取；也可添加第三方 SOCKS5。VPN Gate 出口等待候选，不自动回落直出。
 
-候选页的「来源设置」可选择第三方镜像后备，默认关闭。启用后仍由自己的 VPS 请求原来源、下载并校验镜像原始 CSV，再自行检测节点与真实出口；不采用镜像的检测结论。页面区分本机获取时间和镜像声明的抓取时间。详见 [候选来源](docs/POOL_SOURCE_FALLBACK.md)。
+第三方镜像后备默认开启，可在候选页的「来源设置」关闭；已有明确保存的关闭选择保留。仍由自己的 VPS 优先请求原来源，失败后下载并校验镜像原始 CSV，再自行检测节点与真实出口；不采用镜像的检测结论。页面区分本机获取时间和镜像声明的抓取时间。详见 [候选来源](docs/POOL_SOURCE_FALLBACK.md)。
 
 ## 首次使用
 

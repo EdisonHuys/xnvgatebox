@@ -23,18 +23,20 @@ def build_pool(settings: dict, output: Path, csv_file=None, transport=get_bytes)
         nodes, profiles, rejected = parse_csv(data, settings)
     else:
         fetcher = SourceFetcher(transport)
-        mirror = settings.get('mirror_fallback', {'enabled': False, 'max_age_hours': 24})
+        mirror = settings.get('mirror_fallback', {'enabled': True, 'max_age_hours': 24})
         source_timeout = settings.get('pool_source_timeout_seconds', 10)
         primary_deadline = time.monotonic() + (30 if mirror['enabled'] else 60)
         for source in settings["source_urls"]:
             try:
                 data = fetcher.fetch(source, min(source_timeout, max(0, primary_deadline-time.monotonic())))
-                nodes, profiles, rejected = parse_csv(data, settings)
+                parsed = urlsplit(source)
+                nodes, profiles, rejected = parse_csv(data, settings, safe_profiles=parsed.hostname == 'download.vpngate.jp')
                 if not nodes:
                     raise ServiceError("empty_source_pool")
-                parsed = urlsplit(source)
-                source_info = {'kind': 'official' if parsed.hostname in ('www.vpngate.net', 'vpngate.net')
+                source_info = {'kind': 'official' if parsed.hostname in ('www.vpngate.net', 'vpngate.net', 'download.vpngate.jp')
                                and parsed.path.rstrip('/') == '/api/iphone' else 'configured'}
+                if source_info['kind'] == 'official' and parsed.hostname == 'download.vpngate.jp':
+                    source_info['kind'] = 'official_backup'
                 break
             except (ServiceError, ToolError) as exc:
                 errors.append(str(exc))

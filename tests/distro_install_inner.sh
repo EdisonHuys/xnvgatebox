@@ -13,8 +13,12 @@ run_install() {
 # Deterministic upstream outage: a closed loopback HTTPS port, no TLS bypass or
 # public host modification. Keep it configured through install and update.
 mkdir -p /etc/xnvgatebox
+# Keep source-outage acceptance deterministic even with default mirror fallback.
+# The test starts the source service explicitly after saving its local settings.
+mkdir -p /run/systemd/system/xnvgatebox-pool.timer.d
+printf '%s\n' '[Timer]' 'OnBootSec=' 'OnUnitActiveSec=' 'OnActiveSec=1d' > /run/systemd/system/xnvgatebox-pool.timer.d/fixture.conf
 # Python is an installer dependency and may not exist in the pristine image.
-sed -e 's#https://www.vpngate.net/api/iphone/#https://127.0.0.1:9/#' \
+sed -e 's#"source_urls":.*#"source_urls": ["https://127.0.0.1:9/"],#' \
     -e 's/"node_timeout_seconds": 30/"node_timeout_seconds": 2/' \
     /src/config/settings.json > /etc/xnvgatebox/pool.json
 chmod 600 /etc/xnvgatebox/pool.json
@@ -90,6 +94,7 @@ python3 /src/tests/distro_verify.py disable
 run_install
 python3 /src/tests/distro_verify.py disabled
 rm -rf /run/systemd/system/xnvgatebox-pool.service.d
+rm -rf /run/systemd/system/xnvgatebox-pool.timer.d
 systemctl daemon-reload
 test -n "$(find /var/backups/xnvgatebox -name project.tar.gz -print -quit)"
 xnvgatebox uninstall --yes --purge --legacy

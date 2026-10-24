@@ -89,6 +89,16 @@
         line-height: 1;
         font-weight: 400;
       }
+      .mark::before, .mark::after {
+        content: "";
+        grid-area: 1 / 1;
+        width: 18px;
+        height: 3px;
+        border-radius: 1px;
+        background: currentColor;
+        transform: rotate(45deg);
+      }
+      .mark::after { transform: rotate(-45deg); }
       .theme {
         color: var(--muted);
         background: transparent;
@@ -406,7 +416,7 @@
   <body>
     <header class="top">
       <a class="brand" href="./"
-        ><span class="mark" aria-hidden="true">×</span>xnvgatebox</a
+        ><span class="mark" aria-hidden="true"></span>xnvgatebox</a
       ><button class="theme" id="theme" type="button" aria-label="切换明暗主题">
         ◐ 外观
       </button>
