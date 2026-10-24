@@ -64,7 +64,7 @@ if sys.argv[1] in ('disable', 'disabled'):
                   {'Cookie': cookie, 'Content-Type': 'application/json'})
         r = c.getresponse(); r.read()
         assert r.status == 200
-        c.request('POST',base+'/api/console/target','{"count":0,"policy":{},"server_name":"www.tesla.com"}',{'Cookie':cookie,'Content-Type':'application/json'})
+        c.request('POST',base+'/api/console/target',json.dumps({'count':0,'policy':data['exits'][0]['policy'],'server_name':'www.tesla.com'}),{'Cookie':cookie,'Content-Type':'application/json'})
         r=c.getresponse();r.read();assert r.status==200
     else:
         assert data.get('host_direct') and all(not row['enable'] for row in data['host_direct'])
