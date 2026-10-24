@@ -21,7 +21,7 @@ csv_body.write('*vpn_servers\n')
 writer = csv.writer(csv_body)
 writer.writerow(['#HostName', 'IP', 'Score', 'Ping', 'CountryShort', 'OpenVPN_ConfigData_Base64'])
 profile = b'client\ndev tun\nproto tcp\nremote 8.8.8.8 1194\n'
-writer.writerow(['ci-synthetic-vpn', '8.8.8.8', '100', '10', 'US', base64.b64encode(profile).decode()])
+writer.writerow(['ci-synthetic.example.invalid', '8.8.8.8', '100', '10', 'US', base64.b64encode(profile).decode()])
 csv_body.write('*\n')
 body = csv_body.getvalue().encode()
 

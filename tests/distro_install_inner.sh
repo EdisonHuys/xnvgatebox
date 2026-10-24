@@ -77,7 +77,7 @@ import json
 from pathlib import Path
 pool = json.loads(Path('/var/lib/xnvgatebox/pool/node_pool.json').read_text())
 assert pool['nodes'] and pool['generated_at'] and pool['source']['name'].startswith('https://')
-assert pool['nodes'][0]['hostname'] == 'ci-synthetic-vpn'
+assert pool['nodes'][0]['hostname'] == 'ci-synthetic.example.invalid'
 PY
 run_install
 python3 /src/tests/distro_verify.py compare
