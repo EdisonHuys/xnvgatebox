@@ -6,9 +6,9 @@ const read = name => fs.readFileSync(new URL('../vps/fanout/' + name, import.met
 const section = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b, text.indexOf(a)));
 const html = read('console.html');
 const elements = Object.fromEntries(['targetCount','targetCountry','targetServer','targetHelp','targetDialog'].map(id => [id, {showModal() {this.open = true;}}]));
-const c = vm.createContext({elements, summary:{capacity:8000,target:0,target_configured:false,suggested_target:4}, toast() {throw Error('unexpected toast');}});
+const c = vm.createContext({elements, summary:{capacity:8000,target:0,target_configured:false,suggested_target:16}, toast() {throw Error('unexpected toast');}});
 vm.runInContext('const $ = id => elements[id];\n' + section(html, '      function openTarget()', '      function openExit('), c);
-c.openTarget(); assert.equal(elements.targetCount.value, 4);
+c.openTarget(); assert.equal(elements.targetCount.value, 16);
 c.summary.target_configured = true;
 c.openTarget(); assert.equal(elements.targetCount.value, 0, 'saved zero was overwritten');
 c.summary.target = 24;

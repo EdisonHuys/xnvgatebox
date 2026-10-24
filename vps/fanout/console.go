@@ -45,6 +45,7 @@ type Console struct {
 	refreshCause     string
 	refreshStarted   time.Time
 	sourceMu         sync.Mutex
+	poolChanged      chan struct{}
 	checksMu         sync.Mutex
 	check            *CheckRun
 	results          map[string]CheckResult
@@ -57,7 +58,7 @@ type Console struct {
 }
 
 func newConsole(m *Manager) (*Console, error) {
-	c := &Console{m: m, results: map[string]CheckResult{}, start: m.StartWithPolicy, remove: m.deleteSlot}
+	c := &Console{m: m, results: map[string]CheckResult{}, start: m.StartWithPolicy, remove: m.deleteSlot, poolChanged: make(chan struct{}, 1)}
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 	c.ensure = func(ts []*Tunnel, host string) error {
 		p, err := openPanel()
@@ -180,6 +181,10 @@ func (c *Console) reconcile() error {
 	if c.ctx.Err() != nil {
 		return c.ctx.Err()
 	}
+	if err := c.initializeDefaultTarget(); err != nil {
+		c.planError = "default_initialization_failed"
+		return err
+	}
 	if c.plan == nil {
 		return nil
 	}
@@ -235,6 +240,14 @@ func (c *Console) deleteSlot(slot int) error {
 	if !exists {
 		return fmt.Errorf("出口不存在")
 	}
+	// A final explicit deletion of legacy Slots must not become an untouched
+	// instance that the new default would initialize again on the next refresh.
+	if c.plan == nil && len(c.m.Tunnels()) == 1 && currentPanelMode() == "native" {
+		p := ExitPlan{Count: 0, RemoveSlot: slot, Policy: defaultSlotPolicyForMode("", false)}
+		if err := validateExitPlan(&p, c.m.maxSlots); err != nil { return err }
+		if err := c.savePlan(p); err != nil { return err }
+		return c.reconcile()
+	}
 	// Save the new target before deletion; a crash resumes the explicit decrease.
 	if c.plan != nil {
 		p := *c.plan
@@ -266,6 +279,7 @@ func (c *Console) watch() {
 		select {
 		case <-c.ctx.Done():
 			return
+		case <-c.poolChanged:
 		case <-time.After(15 * time.Second):
 		}
 	}
@@ -388,6 +402,10 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 		target = v.Count
 	}
 	c.targetMu.Unlock()
+	suggestedTarget := defaultExitTarget
+	if plan == nil && target > 0 {
+		suggestedTarget = target
+	}
 	c.refreshMu.Lock()
 	if c.ctx.Err() != nil {
 		c.refreshMu.Unlock()
@@ -448,7 +466,7 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, map[string]any{"version": version, "capacity": c.m.maxSlots, "target": target, "target_configured": plan != nil, "suggested_target": 4, "allocated": len(view.Exits), "ready": ready, "stopped": stopped, "waiting": max(0, target-ready-stopped), "candidates": len(nodes), "pool_read_at": fetched, "pool_generated_at": generated, "pool_source": publicPoolSource(pool.Source), "default_server_name": serverName, "plan": plan, "plan_error": planErr, "refresh": refresh, "check": checkView, "check_settings": map[string]int{"parallelism": parallelism}, "results": results, "memory": memory})
+	writeJSON(w, 200, map[string]any{"version": version, "capacity": c.m.maxSlots, "target": target, "target_configured": plan != nil, "suggested_target": suggestedTarget, "allocated": len(view.Exits), "ready": ready, "stopped": stopped, "waiting": max(0, target-ready-stopped), "candidates": len(nodes), "pool_read_at": fetched, "pool_generated_at": generated, "pool_source": publicPoolSource(pool.Source), "default_server_name": serverName, "plan": plan, "plan_error": planErr, "refresh": refresh, "check": checkView, "check_settings": map[string]int{"parallelism": parallelism}, "results": results, "memory": memory})
 }
 
 func (c *Console) apiPoolRefresh(w http.ResponseWriter, r *http.Request) {

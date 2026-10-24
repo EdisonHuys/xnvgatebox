@@ -996,7 +996,7 @@
             </div>
           </div>
           <div class="card pad start-steps" aria-label="使用步骤">
-            <button data-action="target">① 设置出口</button><span>→</span>
+            <button data-action="refresh">① 刷新候选</button><span>→</span>
             <button data-page="exits">② 等待就绪</button><span>→</span>
             <button data-page="subscription">③ 复制订阅</button><span>→</span>
             <span>④ 导入使用</span>
@@ -1846,6 +1846,7 @@
         cancelled: "已取消",
         pool_refresh_failed_previous_pool_retained: "来源刷新失败，保留旧清单",
         allocation_failed: "出口分配等待重试",
+        default_initialization_failed: "默认 16 个出口尚未创建，请检查实例容量或调整目标数量",
         auto_binding_failed: "入站绑定等待重试",
         tcp_unreachable: "TCP 端口暂不可达",
         network_capacity_exhausted: "实例网络地址已分配完，无法建立临时连接",
@@ -2240,6 +2241,7 @@
           " 个 · 停止 " +
           (s.stopped || 0) +
           " 个。候选不足时保留策略等待，不强求指定国家当时必须有节点。" +
+          (s.target_configured === false && !s.allocated ? " 取得候选后将自动创建 16 个出口，无需先设置数量。" : "") +
           (s.plan_error ? " " + (errors[s.plan_error] || "计划等待重试") : "");
         const m = s.memory || {},
           used = Math.max(0, (m.MemTotal || 0) - (m.MemAvailable || 0)),
@@ -3340,7 +3342,7 @@
           toast("请等待状态读取完成");
           return;
         }
-        $("targetCount").value = summary.target_configured === false ? (summary.suggested_target || 4) : summary.target;
+        $("targetCount").value = summary.target_configured === false ? (summary.suggested_target || 16) : summary.target;
 
         $("targetCountry").value = summary.plan?.policy?.country || "";
         $("targetServer").value =

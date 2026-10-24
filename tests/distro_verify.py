@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 import urllib.parse
 
 sys.path.insert(0, '/usr/local/lib/xnvgatebox/src')
@@ -27,6 +28,35 @@ assert cookie
 c.request('GET', base+'/api/exits', headers={'Cookie': cookie})
 r = c.getresponse(); data = json.loads(r.read())
 assert r.status == 200 and isinstance(data, dict)
+if sys.argv[1] == 'compare-empty':
+    assert not data['exits'], 'Missing pool unexpectedly created exits'
+if sys.argv[1] == 'bootstrap':
+    deadline = time.monotonic()+50
+    while True:
+        c.request('GET', base+'/api/console', headers={'Cookie':cookie})
+        r=c.getresponse(); summary=json.loads(r.read())
+        c.request('GET', base+'/api/exits', headers={'Cookie':cookie})
+        r=c.getresponse(); data=json.loads(r.read())
+        exits=data.get('exits',[])
+        if summary['target']==16 and summary['allocated']==16 and len(exits)==16 and all(e['inbounds'] for e in exits): break
+        assert time.monotonic()<deadline, 'Pool refresh did not automatically create and bind 16 exits'
+        time.sleep(.5)
+    assert all(e['status']!='up' for e in exits), 'Synthetic candidates were published as usable'
+    # Preserve and test stopped Slot identity while avoiding synthetic retries.
+    for e in exits:
+        c.request('POST', base+'/api/stop?slot='+str(e['slot']), headers={'Cookie':cookie})
+        r=c.getresponse();r.read();assert r.status==200
+    record=Path('/tmp/xnvgatebox-ci-state.json');before=json.loads(record.read_text())
+    state={n:hashlib.sha256((p/n).read_bytes()).hexdigest() for n in before}
+    assert all(state[n]==before[n] for n in before if n!='native.json'), 'Auto allocation changed management identity'
+    record.write_text(json.dumps(state))
+    identities=[{k:e[k] for k in ['slot','port','socks_user','socks_pass','policy']} for e in exits]
+    marker=Path('/tmp/xnvgatebox-ci-auto-exits.json');marker.write_text(json.dumps(identities));marker.chmod(0o600)
+    c.close();print('PASS: pool refresh automatically created 16 bound, unverified exits without target submission');sys.exit(0)
+if sys.argv[1] == 'compare':
+    identities=[{k:e[k] for k in ['slot','port','socks_user','socks_pass','policy']} for e in data['exits']]
+    assert identities==json.loads(Path('/tmp/xnvgatebox-ci-auto-exits.json').read_text()), 'Update changed auto Slot identities'
+    assert all(e['status']=='stopped' for e in data['exits'])
 if sys.argv[1] in ('disable', 'disabled'):
     record = Path('/tmp/xnvgatebox-ci-disabled-state.json')
     if sys.argv[1] == 'disable':
@@ -34,8 +64,13 @@ if sys.argv[1] in ('disable', 'disabled'):
                   {'Cookie': cookie, 'Content-Type': 'application/json'})
         r = c.getresponse(); r.read()
         assert r.status == 200
+        c.request('POST',base+'/api/console/target',json.dumps({'count':0,'policy':data['exits'][0]['policy'],'server_name':'www.tesla.com'}),{'Cookie':cookie,'Content-Type':'application/json'})
+        r=c.getresponse();r.read();assert r.status==200
     else:
         assert data.get('host_direct') and all(not row['enable'] for row in data['host_direct'])
+        assert not data['exits'], 'Explicit zero target was overwritten during update'
+        c.request('GET',base+'/api/console',headers={'Cookie':cookie})
+        r=c.getresponse();summary=json.loads(r.read());assert summary['target']==0 and summary['target_configured']
     state = {n: hashlib.sha256((p/n).read_bytes()).hexdigest()
              for n in ['basepath', 'password', 'settings.json', 'native.json']}
     if sys.argv[1] == 'disable':
@@ -50,6 +85,7 @@ if sys.argv[1] == 'save':
     c.request('GET', base+'/api/console', headers={'Cookie': cookie})
     r = c.getresponse(); summary = json.loads(r.read())
     assert r.status == 200 and summary['candidates'] == 0 and not summary['pool_generated_at']
+    assert summary['suggested_target']==16 and not summary['target_configured']
     c.request('GET', base+'/api/console/source-settings', headers={'Cookie': cookie})
     r = c.getresponse(); source_settings = json.loads(r.read())
     assert r.status == 200 and source_settings['mirror_enabled'] is True

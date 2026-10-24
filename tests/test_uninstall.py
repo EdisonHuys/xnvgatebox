@@ -60,6 +60,23 @@ class Model:
 
 
 class UninstallTests(unittest.TestCase):
+    def test_zero_slots_serialized_as_null_keeps_deleted_resource_cleanup(self):
+        put(self.root/u.WORK/'state.json',json.dumps({'tunnels':None,'deleted_slots':[1]}))
+        self.i.execute()
+        self.assertFalse(self.r.ns)
+        self.assertFalse((self.root/u.WORK).exists())
+        self.assertEqual((self.root/'etc/x-ui/x-ui.db').read_text(),'panel-must-survive')
+
+    def test_null_lists_allowed_but_malformed_lists_refused_without_deletion(self):
+        put(self.root/u.WORK/'state.json',json.dumps({'tunnels':None,'deleted_slots':None}))
+        self.assertEqual(u.Instance(self.i,u.WORK).indices,{})
+        for key in ('tunnels','deleted_slots'):
+            for value in ({},False,'',0):
+                with self.subTest(key=key,value=value):
+                    put(self.root/u.WORK/'state.json',json.dumps({key:value}))
+                    with self.assertRaises(u.Refuse):self.i.plan()
+                    self.assertTrue((self.root/u.WORK/'state.json').exists())
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
