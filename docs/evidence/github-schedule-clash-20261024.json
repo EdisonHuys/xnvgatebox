@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-24",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/17",
+  "merge_commit": "351731e9425eaaf9a2a4ef1596ecab5f4142f418",
+  "source_commit": "338e5777184ed8e0348211f65d823f3b623433fa",
+  "release": {
+    "version": "v0.9.6",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.6",
+    "full_package_tests": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40092657869",
+    "full_package_tests_conclusion": "success: Go/race and six distribution lifecycle jobs",
+    "publish_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40093003005",
+    "publish_conclusion": "success",
+    "package_sha256": "6e545e278424c0490091c9ccf281856b70c9823070d749fff40cd9b4b3ef2b52",
+    "package_file_count": 41,
+    "source_snapshot_sha256": "118f39661a4245a96c7ca4209a59beddeea56a52b1b83b50041b5b742ab3fcb7",
+    "anonymous_download_members_source_and_installer": "passed",
+    "latest_release_api": "v0.9.6"
+  },
+  "behavior": [
+    "Source refresh and candidate checks each default to enabled/60 minutes, minimum 30 minutes, independently configurable or disabled",
+    "Completion-based due times persist across restart; simultaneous due jobs refresh first; source failure keeps the prior candidate pool",
+    "Python Builder lock and shared due record deduplicate manager/systemd source acquisition; disabled or not-yet-due scheduled work does not fetch",
+    "Explicit web and CLI refresh bypass automatic interval/off setting but keep the same build lock and update the completion clock",
+    "Candidate batch checks reuse configured concurrency and manual priority without overlapping full batches; running exits keep their independent health checks",
+    "Clash/Mihomo complete profiles generated on the owner VPS; original Base64 default, authentication, source selection, naming, order and ready-state filtering retained",
+    "No third-party subscription converter, DIRECT failover or insecure TLS setting; unsupported transports explicitly refused"
+  ],
+  "checks": {
+    "branch_go_race_and_six_system": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40092276434",
+    "branch_conclusion": "success",
+    "python_node": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40092276462",
+    "python_node_conclusion": "success: Python 3.9/3.12 and Node",
+    "local_schedule_tests": 6,
+    "local_uninstall_tests": 23,
+    "systems": [
+      "Debian 12",
+      "Debian 13",
+      "Ubuntu 22.04",
+      "Ubuntu 24.04",
+      "CentOS Stream 9",
+      "CentOS Stream 10"
+    ],
+    "lifecycle": [
+      "Empty-source installation and authenticated management with direct subscription HTTPS",
+      "Custom automation switches and intervals retained through updates, along with management/subscription identity",
+      "Real systemd timer skips source acquisition when automatic refresh is disabled; explicit CLI refresh still acquires a controlled HTTPS pool",
+      "Candidate recovery automatically creates/binds 16 unverified exits without submitting target settings; synthetic VPN destination locally rejected",
+      "Existing Slot identities and explicit zero/disabled direct intent survive updates",
+      "Complete uninstall removes project state while preserving unrelated resources and shared dependencies"
+    ],
+    "mihomo": {
+      "version": "v1.19.33",
+      "official_test_asset_sha256": "386508bfb1c72c43b6a0eda73708ecdce82546581b0ebcb16366c53757c622b6",
+      "configuration_acceptance": "passed for generated REALITY, TLS WebSocket, Trojan gRPC and VMess profiles",
+      "real_subscription_job": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40092657869/job/120868568138",
+      "new_install": "passed: actual VLESS/REALITY HTTPS egress equality and example content",
+      "after_update": "passed: repeated same actual subscription chain",
+      "failure": "passed: selected server unavailable causes request failure, not DIRECT fallback",
+      "test_binary_in_product_package": false
+    }
+  },
+  "retained_failed_rounds": [
+    {
+      "run": "40091477553",
+      "finding": "First actual Mihomo request failed after static config acceptance. Root network cause was not determined; subsequent tests first establish the Xray control, include sanitized diagnostics and verify the same strict chain on installation and update. No exporter security relaxation."
+    },
+    {
+      "run": "40091795016",
+      "finding": "A prior test helper observed done before new completion persistence finished, causing TempDir cleanup races; wait for the finished channel and fixture shutdown."
+    },
+    {
+      "run": "40091829127",
+      "finding": "Race-suite repeat confirmed the same fixture-cleanup ordering issue; fixed without suppressing assertions."
+    },
+    {
+      "run": "40091795035",
+      "finding": "New legacy timer test used the wrong old description; corrected to the exact shipped signature, preserving strict ownership checks."
+    }
+  ],
+  "limitations": [
+    "Clash Verge GUI version was not supplied; tested the official Mihomo core, not every old GUI release",
+    "Controlled candidate fixtures do not establish current real VPN Gate positive connectivity or guarantee ready exit count/country",
+    "Seven opt-in live/environment-specific Go tests skipped; no production VPS access or deployment in this round",
+    "Container validation shares the runner kernel and does not replace independent VPS SELinux/firewalld/provider-network validation",
+    "Superseded duplicate push/PR workflows were cancelled to release runner capacity; final branch and formal package workflows completed successfully"
+  ],
+  "cloudflare_deployed": false,
+  "three_x_ui_modified": false,
+  "unknown_is_residential": false
+}
