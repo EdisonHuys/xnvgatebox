@@ -83,17 +83,20 @@ assert.match(sourceText,/文件完整性/); assert.match(sourceText,/本 VPS 建
 const sourceElements = Object.fromEntries(['sourceDialog','sourceMirrorEnabled','sourceTimeout','sourceMirrorMaxAge','sourceSettingsButton','sourceForm','saveSourceSettings'].map(id=>[id,{}]));
 sourceElements.sourceDialog.showModal=function(){this.open=true;};
 sourceElements.sourceDialog.close=function(){this.open=false;};
-let sourceTask, savedSource;
+let sourceTask, savedSource, sourcePreference = false;
 const sourceContext = vm.createContext({sourceSettingsLoading:false,sourceSettingsSaving:false,$:id=>sourceElements[id],toast(){},
   action(fn){sourceTask=fn();return sourceTask;}, async api(path,body){
     assert.equal(path,'api/console/source-settings');
     if(body!==undefined){savedSource=body;return body;}
-    return {mirror_enabled:false,source_timeout_seconds:10,mirror_max_age_hours:24};
+    return {mirror_enabled:sourcePreference,source_timeout_seconds:10,mirror_max_age_hours:24};
   }});
 vm.runInContext(section(html,'      async function openSourceSettings()', '      async function refreshPool()'),sourceContext);
 await sourceContext.openSourceSettings();
-assert.equal(sourceElements.sourceMirrorEnabled.checked,false,'mirror silently opted in');
+assert.equal(sourceElements.sourceMirrorEnabled.checked,false,'saved disabled choice overwritten');
 sourceElements.sourceMirrorEnabled.checked=true;
 sourceElements.sourceForm.onsubmit({preventDefault(){}});await sourceTask;
 assert.equal(savedSource.mirror_enabled,true); assert.equal(savedSource.source_timeout_seconds,10);
 assert.equal(savedSource.mirror_max_age_hours,24);assert.equal(Object.keys(savedSource).length,3,'unrelated settings submitted');
+sourcePreference = true;
+await sourceContext.openSourceSettings();
+assert.equal(sourceElements.sourceMirrorEnabled.checked,true,'server default not displayed');

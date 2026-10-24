@@ -144,6 +144,16 @@
         font-size: 27px;
         font-weight: 400;
       }
+      .mark::before, .mark::after {
+        content: "";
+        grid-area: 1 / 1;
+        width: 17px;
+        height: 3px;
+        border-radius: 1px;
+        background: currentColor;
+        transform: rotate(45deg);
+      }
+      .mark::after { transform: rotate(-45deg); }
       .crumb {
         border-left: 1px solid var(--line);
         padding-left: 18px;
@@ -755,7 +765,7 @@
     <header>
       <div class="header-inner">
         <a class="brand" href="./"
-          ><span class="mark" aria-hidden="true">×</span>xnvgatebox</a
+          ><span class="mark" aria-hidden="true"></span>xnvgatebox</a
         ><span class="crumb">接入管理</span><span class="spacer"></span
         ><button
           class="icon"

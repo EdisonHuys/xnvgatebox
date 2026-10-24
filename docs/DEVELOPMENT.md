@@ -1,3 +1,5 @@
+2026-10-24 开发中：按用户要求将镜像后备改为默认开启，新安装与未配置该字段的旧配置生效，明确保存的关闭选择仍保留；原来源优先，所有获取与出口验证仍在用户 VPS。继续只读排查官方入口和其他 HTTPS 获取途径，不降低证书或配置校验；同时修复控制台、登录页、接入管理的方块 × 居中。CF 暂停、3x-ui 不改、unknown 不称家宽。
+
 2026-10-24 已发布 [v0.9.3](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.3)，PR #14 合入，来源 `b86b08d`。候选页新增可选镜像后备，默认关闭；原来源优先，获取、筛选、建连和出口验证仍由用户自己的 VPS 完成。固定提交/长度/摘要/时间校验及配置指令白名单，不采用镜像的检测结论，失败保留旧池。Python 3.9/3.12、Node、Go/race、正式包六系统新装/实际直出订阅 HTTPS/更新保留/卸载通过；Linux Builder 实际获取镜像 95 条未检测候选，拒绝 1 条，未作真实 VPN 正向连通结论。40 个成员、源码快照、匿名下载、固定标签脚本和 latest 已核对，见 [来源后备说明](POOL_SOURCE_FALLBACK.md) 和 [本轮证据](evidence/github-source-fallback-20261024.json)。本轮未访问用户 VPS，由用户后台升级后开启镜像并刷新；代码备份在 runtime/vps-source-fallback-20261024/code-backup/。CF 暂停、3x-ui 不改、unknown 不称家宽。
 
 

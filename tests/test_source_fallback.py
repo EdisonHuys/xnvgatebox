@@ -16,7 +16,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'src'))
 from vpngate_toolbox.common import ServiceError, ToolError
-from vpngate_toolbox.config import load_settings
+from vpngate_toolbox.config import load_settings, OFFICIAL_PRIMARY_URL, OFFICIAL_BACKUP_URL
 from vpngate_toolbox.mirror_source import INDEX_URL, PROVIDER
 from vpngate_toolbox.pool import build_pool
 from vpngate_toolbox.source_fetch import SourceFetcher, _connect_source, _SourceHTTPSConnection
@@ -35,6 +35,28 @@ def candidate_csv():
 
 
 class MirrorFallbackTests(unittest.TestCase):
+    def test_official_backup_precedes_mirror_and_keeps_verdicts_untested(self):
+        def transport(url, timeout):
+            self.calls.append(url)
+            if url == OFFICIAL_PRIMARY_URL: raise ServiceError('https_unavailable')
+            if url == OFFICIAL_BACKUP_URL: return self.data
+            self.fail('mirror should not be requested when official backup works')
+        pool = build_pool(self.settings, self.output, transport=transport)
+        self.assertEqual(self.calls, [OFFICIAL_PRIMARY_URL, OFFICIAL_BACKUP_URL])
+        self.assertEqual(pool['source']['kind'], 'official_backup')
+        self.assertEqual(pool['source']['name'], OFFICIAL_BACKUP_URL)
+        self.assertTrue(all(n['protocols']['openvpn']['status']=='not_tested' for n in pool['nodes']))
+
+    def test_legacy_official_source_expands_without_rewriting_private_file(self):
+        path=self.output/'settings.json'; settings=copy.deepcopy(self.settings)
+        settings['source_urls']=[OFFICIAL_PRIMARY_URL]; path.write_text(json.dumps(settings))
+        before=path.read_bytes()
+        self.assertEqual(load_settings(path)['source_urls'],[OFFICIAL_PRIMARY_URL,OFFICIAL_BACKUP_URL])
+        self.assertEqual(path.read_bytes(),before)
+        for sources in ([],['https://private.example/']):
+            settings['source_urls']=sources;path.write_text(json.dumps(settings))
+            self.assertEqual(load_settings(path)['source_urls'],sources)
+
     def test_mirror_rejects_executable_external_and_obfuscated_options(self):
         base = 'client\ndev tun\nproto tcp\nremote 8.8.8.8 1194\n'
         for extra in ('plugin /tmp/a.so', 'up /tmp/run', 'config /tmp/other',
@@ -96,7 +118,7 @@ class MirrorFallbackTests(unittest.TestCase):
         def transport(url,timeout):
             self.calls.append(url); return self.data
         pool=build_pool(self.settings,self.output,transport=transport)
-        self.assertEqual(self.calls,self.settings['source_urls'])
+        self.assertEqual(self.calls,[OFFICIAL_PRIMARY_URL])
         self.assertEqual(pool['source']['kind'],'official')
 
     def test_local_fetch_checks_fixed_commit_and_does_not_import_evidence(self):
@@ -198,11 +220,13 @@ class MirrorFallbackTests(unittest.TestCase):
         self.assertTrue(connection._context.check_hostname)
         self.assertEqual(connection._context.verify_mode,ssl.CERT_REQUIRED)
 
-    def test_legacy_settings_default_to_mirror_disabled(self):
+    def test_legacy_settings_default_enabled_and_explicit_opt_out_preserved(self):
         settings=copy.deepcopy(self.settings); settings.pop('mirror_fallback');settings.pop('pool_source_timeout_seconds')
         path=Path(self.tmp.name)/'settings.json';path.write_text(json.dumps(settings))
         value=load_settings(path)
-        self.assertEqual(value['mirror_fallback'],{'enabled':False,'max_age_hours':24})
+        self.assertEqual(value['mirror_fallback'],{'enabled':True,'max_age_hours':24})
+        settings['mirror_fallback']={'enabled':False,'max_age_hours':24};path.write_text(json.dumps(settings))
+        self.assertFalse(load_settings(path)['mirror_fallback']['enabled'])
         settings['mirror_fallback']={'enabled':'true','max_age_hours':24};path.write_text(json.dumps(settings))
         with self.assertRaisesRegex(ToolError,'invalid_setting_mirror_fallback'):load_settings(path)
 
