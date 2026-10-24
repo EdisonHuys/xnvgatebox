@@ -45,7 +45,51 @@ def profile_remotes(profile: str) -> list:
     return remotes
 
 
-def parse_csv(data: bytes, settings: dict):
+def validate_mirror_profile(profile: str, server_ip: str):
+    """Accept only the data-only subset emitted by VPN Gate's public profiles.
+
+    OpenVPN configs can load root plugins and scripts. A mirror's digest is not
+    an authenticity proof, so reject unknown directives rather than strip them.
+    Inline PEM bodies cannot escape into another directive or reference files.
+    """
+    arity = {'client': 0, 'dev': 1, 'proto': 1, 'remote': (2, 3), 'cipher': 1,
+             'data-ciphers': 1, 'auth': 1, 'resolv-retry': 1, 'nobind': 0,
+             'persist-key': 0, 'persist-tun': 0, 'verb': 1, 'mute': 1,
+             'auth-nocache': 0, 'remote-cert-tls': 1, 'tls-version-min': 1}
+    inside = None
+    for raw in profile.split('\n'):
+        line = raw.rstrip('\r').strip(' \t')
+        if not line or line.startswith(('#', ';')):
+            continue
+        if any(ord(c) < 32 and c != '\t' for c in line):
+            raise ToolError('unsafe_mirror_profile')
+        if inside:
+            if line == '</' + inside + '>':
+                inside = None
+            elif not (re.fullmatch(r'[A-Za-z0-9+/=]+', line) or
+                      re.fullmatch(r'-----(?:BEGIN|END) (?:CERTIFICATE|PRIVATE KEY|RSA PRIVATE KEY)-----', line)):
+                raise ToolError('unsafe_mirror_profile')
+            continue
+        if line in ('<ca>', '<cert>', '<key>'):
+            inside = line[1:-1]
+            continue
+        # Quotes, backslash continuations, leading --, file paths and inline
+        # option expansion are intentionally outside this narrow grammar.
+        if not re.fullmatch(r'[A-Za-z0-9_.: \t-]+', line):
+            raise ToolError('unsafe_mirror_profile')
+        parts = line.split()
+        count = arity.get(parts[0])
+        if count is None or len(parts)-1 not in (count if isinstance(count, tuple) else (count,)):
+            raise ToolError('unsafe_mirror_profile')
+        if parts[0] == 'remote' and (parts[1] != server_ip or not parts[2].isdigit() or not 1 <= int(parts[2]) <= 65535):
+            raise ToolError('unsafe_mirror_profile')
+        if parts[0] == 'dev' and parts[1] != 'tun':
+            raise ToolError('unsafe_mirror_profile')
+    if inside:
+        raise ToolError('unsafe_mirror_profile')
+
+
+def parse_csv(data: bytes, settings: dict, *, safe_profiles=False):
     try:
         lines = data.decode("utf-8-sig").splitlines()
     except UnicodeError:
@@ -77,6 +121,8 @@ def parse_csv(data: bytes, settings: dict):
                 raise ToolError("profile_too_large")
             raw_profile = base64.b64decode(encoded, validate=True)
             profile = raw_profile.decode("utf-8")
+            if safe_profiles:
+                validate_mirror_profile(profile, ip)
             remotes = profile_remotes(profile)
             sha = digest(raw_profile)
             ports = list(dict.fromkeys([item["port"] for item in remotes if item["transport"] == "tcp"] + [443]))

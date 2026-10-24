@@ -29,6 +29,17 @@ def load_env(path: Path):
 
 def load_settings(path: Path) -> dict:
     settings = json.loads(path.read_text())
+    settings.setdefault('pool_source_timeout_seconds', 10)
+    settings.setdefault('mirror_fallback', {'enabled': False, 'max_age_hours': 24})
+    source_timeout = settings['pool_source_timeout_seconds']
+    mirror = settings['mirror_fallback']
+    if type(source_timeout) is not int or not 2 <= source_timeout <= 20:
+        raise ToolError('invalid_setting_pool_source_timeout_seconds')
+    if (not isinstance(mirror, dict) or type(mirror.get('enabled')) is not bool
+            or type(mirror.get('max_age_hours')) is not int or not 1 <= mirror['max_age_hours'] <= 168):
+        raise ToolError('invalid_setting_mirror_fallback')
+    if not isinstance(settings.get('source_urls'), list):
+        raise ToolError('invalid_setting_source_urls')
     limits = {"candidate_limit": 500, "sstp_concurrency": 16, "xray_concurrency": 8,
               "node_timeout_seconds": 120, "chain_timeout_seconds": 180,
               "chain_ttl_seconds": 86400, "intelligence_ttl_seconds": 604800,

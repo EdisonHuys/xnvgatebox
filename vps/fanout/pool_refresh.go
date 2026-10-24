@@ -38,7 +38,13 @@ func poolRefreshCause(ctx context.Context, err error, stderr string) string {
 			return "pool_source_unavailable"
 		case "Error: another_build_is_running":
 			return "pool_refresh_busy"
-		case "Error: invalid_input_or_filesystem_error", "Error: https_url_required", "Error: no_candidates_matching_filters":
+		case "Error: no_candidates_matching_filters":
+			return "pool_source_no_matching_candidates"
+		case "Error: mirror_index_invalid", "Error: mirror_index_unavailable", "Error: mirror_time_invalid", "Error: mirror_snapshot_expired",
+			"Error: mirror_snapshot_rollback", "Error: mirror_snapshot_conflict", "Error: mirror_download_failed",
+			"Error: mirror_integrity_failed", "Error: mirror_csv_invalid":
+			return strings.TrimPrefix(line, "Error: ")
+		case "Error: invalid_input_or_filesystem_error", "Error: https_url_required":
 			return "pool_refresh_input_error"
 		}
 		if strings.HasPrefix(line, "Error: invalid_setting_") {

@@ -50,6 +50,17 @@ if sys.argv[1] == 'save':
     c.request('GET', base+'/api/console', headers={'Cookie': cookie})
     r = c.getresponse(); summary = json.loads(r.read())
     assert r.status == 200 and summary['candidates'] == 0 and not summary['pool_generated_at']
+    c.request('GET', base+'/api/console/source-settings', headers={'Cookie': cookie})
+    r = c.getresponse(); source_settings = json.loads(r.read())
+    assert r.status == 200 and source_settings['mirror_enabled'] is False
+    c.request('POST', base+'/api/console/source-settings',
+              '{"mirror_enabled":false,"source_timeout_seconds":2,"mirror_max_age_hours":24}',
+              {'Cookie':cookie,'Content-Type':'application/json'})
+    r = c.getresponse(); r.read()
+    assert r.status == 200
+    source_config = json.loads(Path('/etc/xnvgatebox/pool.json').read_text())
+    assert source_config['source_urls'] == ['https://127.0.0.1:9/']
+    assert source_config['pool_source_timeout_seconds'] == 2
 c.request('GET', base+'/api/sub', headers={'Cookie': cookie})
 r = c.getresponse(); subscription = json.loads(r.read())
 assert r.status == 200
