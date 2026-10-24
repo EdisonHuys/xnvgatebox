@@ -49,6 +49,10 @@ Path('/etc/xnvgatebox/pool.json').write_bytes(Path('/src/config/settings.json').
 PY
 # Restore actual upstream access and build an atomic pool via the real timer's
 # service, then repeat the ordinary online update and subscription checks.
+mkdir -p /tmp/xnv-ci-trace /run/systemd/system/xnvgatebox-pool.service.d
+printf '%s\n' 'import faulthandler; faulthandler.dump_traceback_later(15)' > /tmp/xnv-ci-trace/sitecustomize.py
+printf '%s\n' '[Service]' 'Environment=PYTHONPATH=/tmp/xnv-ci-trace' > /run/systemd/system/xnvgatebox-pool.service.d/trace.conf
+systemctl daemon-reload
 if ! systemctl start xnvgatebox-pool.service; then
   journalctl -u xnvgatebox-pool.service --no-pager -n 35
   systemctl show xnvgatebox-pool.service -p Result -p ExecMainStatus -p ActiveState -p SubState
