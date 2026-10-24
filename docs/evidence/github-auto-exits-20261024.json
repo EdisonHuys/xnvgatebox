@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-24",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/16",
+  "source_commit": "9296a9fd94a3935b93dd8c0ae1dbbe1ac97911dc",
+  "release": {
+    "version": "v0.9.5",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.5",
+    "full_package_tests": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40077024616",
+    "full_package_tests_conclusion": "success: Go/race and all six distribution lifecycle tests",
+    "publish_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40082890002",
+    "publish_conclusion": "success",
+    "package_sha256": "8a07f1746f32cc7af91fab31f786d1c92a76493a2ab13d2ebe346555461bedc2",
+    "package_file_count": 40,
+    "source_snapshot_sha256": "ce1a07c373620fdbcebb28861af4faeea003510b11d340419d58cc22106a09ed",
+    "anonymous_download_members_source_and_installer": "passed",
+    "latest_release_api": "v0.9.5"
+  },
+  "behavior": [
+    "Native instance with no saved plan and no legacy Slots initializes a persisted target of 16 after candidates are available",
+    "Allocates and binds entries without posting the target form, then uses the existing connection concurrency budget",
+    "Buffered pool refresh signal wakes reconciliation without waiting from a reconnect worker or holding manager locks",
+    "Existing plans including zero, legacy Slots, port/authentication/policy identities and non-native backends preserved",
+    "Final explicit deletion of legacy Slots persists zero so the default cannot recreate them",
+    "No pool means no new exits; insufficient admin capacity reports an error rather than silently lowering the target",
+    "Unverified or failed candidates remain waiting and are not published as usable subscription entries",
+    "First-use action is refresh candidates; target form suggests 16 for untouched instances",
+    "Uninstaller accepts canonical empty Go slice null but refuses malformed non-array records"
+  ],
+  "checks": {
+    "branch_go_race_six_system": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40076595226",
+    "branch_conclusion": "success",
+    "python_node": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40076595220",
+    "python_node_conclusion": "success: Python 3.9/3.12 and Node",
+    "local_uninstall_tests": 22,
+    "local_console_node": "passed",
+    "systems": ["Debian 12", "Debian 13", "Ubuntu 22.04", "Ubuntu 24.04", "CentOS Stream 9", "CentOS Stream 10"],
+    "full_package_lifecycle": [
+      "Install with empty/unavailable pool and working direct subscription HTTPS",
+      "Update before candidate acquisition keeps empty state and private identity",
+      "Controlled HTTPS candidate pool automatically creates and binds exactly 16 unverified exits without target submission",
+      "Stop synthetic exits, update, compare Slot/port/SOCKS credential/policy identities and native management state",
+      "Save explicit zero target and disable direct, update, verify zero remains and direct stays disabled",
+      "Complete uninstall and precise network cleanup after all exits removed"
+    ]
+  },
+  "retained_failed_rounds": [
+    {"run": "40075597732", "finding": "Harness compared automatic Slot identities during the earlier empty-pool stage; split empty-pool update from post-bootstrap update"},
+    {"run": "40075811622", "finding": "Harness posted an empty policy with zero target and product correctly refused it; test now preserves the actual valid policy like the UI"},
+    {"run": "40076176601", "finding": "Automatic allocation, identity preservation and zero-target update passed, but real uninstall rejected canonical tunnels:null; fixed product parser with strict malformed-list regressions"}
+  ],
+  "limitations": [
+    "Controlled candidate traffic to its exact public fixture IP/port is rejected within disposable containers; this is not real VPN Gate positive connectivity",
+    "Candidate availability and health do not guarantee 16 ready exits",
+    "No production VPS deployment or mutation in this round; user can upgrade through the existing updater",
+    "Container tests do not replace independent VPS kernel/SELinux/firewalld validation"
+  ],
+  "cloudflare_deployed": false,
+  "three_x_ui_modified": false,
+  "unknown_is_residential": false
+}
