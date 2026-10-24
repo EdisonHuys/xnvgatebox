@@ -13,15 +13,11 @@ run_install() {
 # Deterministic upstream outage: a closed loopback HTTPS port, no TLS bypass or
 # public host modification. Keep it configured through install and update.
 mkdir -p /etc/xnvgatebox
-python3 - <<'PY'
-import json, os
-from pathlib import Path
-config = json.loads(Path('/src/config/settings.json').read_text())
-config['source_urls'] = ['https://127.0.0.1:9/']
-config['node_timeout_seconds'] = 2
-Path('/etc/xnvgatebox/pool.json').write_text(json.dumps(config))
-os.chmod('/etc/xnvgatebox/pool.json', 0o600)
-PY
+# Python is an installer dependency and may not exist in the pristine image.
+sed -e 's#https://www.vpngate.net/api/iphone/#https://127.0.0.1:9/#' \
+    -e 's/"node_timeout_seconds": 30/"node_timeout_seconds": 2/' \
+    /src/config/settings.json > /etc/xnvgatebox/pool.json
+chmod 600 /etc/xnvgatebox/pool.json
 run_install
 grep -q 'VPN Gate 候选暂不可用，继续安装' /tmp/install.log
 test ! -e /var/lib/xnvgatebox/pool/node_pool.json
