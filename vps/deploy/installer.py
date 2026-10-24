@@ -150,7 +150,9 @@ class Installer:
         self.id = job_id
         self.l = layout or Layout()
         self.r = runner or Runner()
-    def progress(self, phase, **extra): mark(self.l,self.id,phase,**extra)
+    def progress(self, phase, **extra):
+        print(MESSAGES[phase] + '…', flush=True)
+        mark(self.l,self.id,phase,**extra)
     def journal(self, data): atomic_json(self.l.journal,data)
     def service_snapshot(self):
         return {u:{'active':self.r.active(u),'enabled':self.r.enabled(u)} for u in UNITS}
@@ -216,13 +218,23 @@ class Installer:
         try:
             self.r.run(['python3',self.stage/'scripts/toolbox.py','--config',config,'pool','--output',target],stdout=subprocess.DEVNULL)
             return target
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as exc:
+            if exc.returncode != 4: raise
             previous=self.l.path('var/lib/xnvgatebox/pool/node_pool.json')
-            if not previous.is_file():raise
+            if not previous.exists() and not previous.is_symlink():
+                # Exit 4 is exclusively the Pool Builder's upstream-unavailable
+                # result. Do not create a synthetic pool or weaken other checks.
+                self.progress('pool',pool_status='unavailable',
+                              warning='pool_source_unavailable')
+                print('提示：VPN Gate 候选暂不可用，继续安装；可登录后启用本机直出或添加第三方 SOCKS5，候选来源将定时重试。', flush=True)
+                return None
             # Keep a previous usable snapshot when the source is temporarily
             # unavailable. No replacement happens before the consistent backup.
             value=json.loads(previous.read_text())
             if not isinstance(value.get('nodes'),list) or not value['nodes']:raise ValueError('no_previous_pool')
+            self.progress('pool',pool_status='previous_retained',
+                          warning='pool_source_unavailable_previous_retained')
+            print('提示：候选刷新失败，保留旧清单并继续部署；候选来源将定时重试。', flush=True)
             return None
     def apply_files(self, pool):
         self.l.lib.parent.mkdir(parents=True,exist_ok=True)
@@ -281,7 +293,7 @@ class Installer:
         init_job(self.l, self.id)
         if self.l.journal.exists():self.recover()
         self.progress('preparing',target=(self.stage/'VERSION').read_text().strip())
-        pool=self.prepare_pool()  # Source failure happens before service stop.
+        pool=self.prepare_pool()  # Fetch before stopping; an upstream outage may leave no pool.
         before=self.service_snapshot()
         existing=[n for n in OWNED if self.l.path(n).exists() or self.l.path(n).is_symlink()]
         fresh=not self.l.lib.exists()

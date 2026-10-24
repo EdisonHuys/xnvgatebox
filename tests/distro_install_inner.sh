@@ -10,7 +10,21 @@ run_install() {
     exit 1
   fi
 }
+# Deterministic upstream outage: a closed loopback HTTPS port, no TLS bypass or
+# public host modification. Keep it configured through install and update.
+mkdir -p /etc/xnvgatebox
+python3 - <<'PY'
+import json, os
+from pathlib import Path
+config = json.loads(Path('/src/config/settings.json').read_text())
+config['source_urls'] = ['https://127.0.0.1:9/']
+config['node_timeout_seconds'] = 2
+Path('/etc/xnvgatebox/pool.json').write_text(json.dumps(config))
+os.chmod('/etc/xnvgatebox/pool.json', 0o600)
+PY
 run_install
+grep -q 'VPN Gate 候选暂不可用，继续安装' /tmp/install.log
+test ! -e /var/lib/xnvgatebox/pool/node_pool.json
 systemctl is-active --quiet xnvgatebox-fanout.service
 systemctl is-enabled --quiet xnvgatebox-pool.timer
 python3 /src/tests/distro_verify.py save
@@ -29,9 +43,28 @@ if command -v rpm >/dev/null; then
 fi
 run_install
 python3 /src/tests/distro_verify.py compare
+test ! -e /var/lib/xnvgatebox/pool/node_pool.json
+python3 - <<'PY'
+import json
+from pathlib import Path
+status = json.loads(Path('/var/lib/xnvgatebox-deploy/status.json').read_text())
+assert status['status'] == 'completed' and status['warning'] == 'pool_source_unavailable'
+Path('/etc/xnvgatebox/pool.json').write_bytes(Path('/src/config/settings.json').read_bytes())
+PY
+# Restore actual upstream access and build an atomic pool via the real timer's
+# service, then repeat the ordinary online update and subscription checks.
+systemctl start xnvgatebox-pool.service
+python3 - <<'PY'
+import json
+from pathlib import Path
+pool = json.loads(Path('/var/lib/xnvgatebox/pool/node_pool.json').read_text())
+assert pool['nodes'] and pool['generated_at'] and pool['source']['name'].startswith('https://')
+PY
+run_install
+python3 /src/tests/distro_verify.py compare
 test -n "$(find /var/backups/xnvgatebox -name project.tar.gz -print -quit)"
 xnvgatebox uninstall --yes --purge --legacy
 test ! -e /usr/local/lib/xnvgatebox
 test ! -e /var/lib/xnvgatebox
 test ! -e /var/backups/xnvgatebox
-echo 'PASS: real dependencies, systemd install/update, private settings, network isolation, uninstall'
+echo 'PASS: source outage install/update, real subscription, upstream recovery, normal update, network isolation, uninstall'

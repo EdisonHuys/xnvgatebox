@@ -39,6 +39,7 @@ for dependency in curl python3 openvpn ip iptables sstpc pppd unshare mount sysc
   command -v "$dependency" >/dev/null || missing=1
 done
 if ((missing)); then
+  echo '准备系统依赖…'
   if [[ $package_family == deb ]]; then
     DEBIAN_FRONTEND=noninteractive apt-get update -qq
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y -qq ca-certificates curl python3 openvpn iproute2 iptables sstp-client ppp util-linux procps
@@ -111,6 +112,7 @@ SPEC
     fi
   fi
 fi
+echo '检查系统依赖…'
 python3 -c 'import sys; assert sys.version_info >= (3,9), "需要 Python 3.9+"'
 for dependency in curl python3 openvpn ip iptables sstpc pppd unshare mount sysctl; do
   command -v "$dependency" >/dev/null || { echo "缺少系统依赖：$dependency"; exit 1; }
@@ -152,7 +154,8 @@ PY
   fi
   release_url="https://github.com/hanhaoops/xnvgatebox/releases/download/$release_tag"
   mark_phase downloading
-  curl -fLsS --retry 3 --connect-timeout 15 --max-time 180 "$release_url/xnvgatebox-linux-amd64.tar.gz" -o "$task_tmp/xnvgatebox-linux-amd64.tar.gz"
+  echo '下载完整安装包…'
+  curl -fL --progress-bar --retry 3 --connect-timeout 15 --max-time 180 "$release_url/xnvgatebox-linux-amd64.tar.gz" -o "$task_tmp/xnvgatebox-linux-amd64.tar.gz"
   curl -fLsS --retry 3 --connect-timeout 15 --max-time 60 "$release_url/checksums.txt" -o "$task_tmp/checksums.txt"
 else
   package=$(realpath "$package")
@@ -160,6 +163,7 @@ else
   cp "$package" "$task_tmp/xnvgatebox-linux-amd64.tar.gz"
 fi
 mark_phase verifying
+echo '校验并解包…'
 # Check only the expected member; never let checksum text choose local paths.
 python3 - "$task_tmp" "$release_tag" <<'PY'
 import hashlib,json,pathlib,re,sys,tarfile
