@@ -240,6 +240,14 @@ func (c *Console) deleteSlot(slot int) error {
 	if !exists {
 		return fmt.Errorf("出口不存在")
 	}
+	// A final explicit deletion of legacy Slots must not become an untouched
+	// instance that the new default would initialize again on the next refresh.
+	if c.plan == nil && len(c.m.Tunnels()) == 1 && currentPanelMode() == "native" {
+		p := ExitPlan{Count: 0, RemoveSlot: slot, Policy: defaultSlotPolicyForMode("", false)}
+		if err := validateExitPlan(&p, c.m.maxSlots); err != nil { return err }
+		if err := c.savePlan(p); err != nil { return err }
+		return c.reconcile()
+	}
 	// Save the new target before deletion; a crash resumes the explicit decrease.
 	if c.plan != nil {
 		p := *c.plan

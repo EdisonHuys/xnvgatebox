@@ -54,6 +54,8 @@ func TestConsoleDefaultTargetPreservesZeroCustomAndLegacySlots(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	c.m.nodes = []Node{{HostName: "new"}}
 	if err := c.reconcile(); err != nil || c.plan != nil || len(c.m.Tunnels()) != 1 || c.m.Tunnels()[0] != legacy { t.Fatal("legacy Slot silently expanded", err) }
+	if err := c.deleteSlot(legacy.Slot); err != nil { t.Fatal(err) }
+	if err := c.reconcile(); err != nil || c.plan == nil || c.plan.Count != 0 || len(c.m.Tunnels()) != 0 { t.Fatal("last explicit deletion recreated default exits", err) }
 }
 
 func TestConsoleDefaultTargetCapacityAndNonNativeDoNotMutate(t *testing.T) {
