@@ -42,6 +42,10 @@ README 的一键命令在安装成功后自动执行 `xnvgatebox access`，直�
 
 全新工作目录、已有系统升级、全新操作系统分别记录；前两项测试不替代用户重装后的最终验收。
 
+## v0.9.2 默认直出与刷新反馈
+
+正式来源 `0b9c90c`，完整包六系统验收 [40065479139](https://github.com/hanhaoops/xnvgatebox/actions/runs/40065479139)、发布 [40065920796](https://github.com/hanhaoops/xnvgatebox/actions/runs/40065920796) 均通过。首次默认直出实际订阅 HTTPS、私有身份保留和用户关闭后升级不重新开启均通过。刷新新增即时进度、等待秒数、安全原因码、完成结果与成功清单时间。公开包 SHA256 为 `53de91a49c32d5c02bfff01fd31c64089656754c54986b17622f792f7793c8c5`，38 个成员、源码快照、匿名下载、固定标签脚本与 latest=v0.9.2 均通过。已有安装可在后台更新，保留原开关；来源连接问题需独立排查，详见 [行为说明](DEFAULT_DIRECT_REFRESH.md) 和 [本轮证据](evidence/github-direct-refresh-20261024.json)。
+
 ## v0.9.1 安装与来源分离
 
 公开完整包 SHA256：`539ac73500a506ca0f755699110fcaeb6c1a797344e7e95de4aaa08a5e4e9295`。匿名下载、38 个成员摘要、干净源码快照、固定标签安装脚本及 latest=v0.9.1 核验通过。

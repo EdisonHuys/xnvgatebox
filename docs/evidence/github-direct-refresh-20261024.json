@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-24",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/13",
+  "source_commit": "0b9c90c5f5126bcd9e4febd1abaf25400044d917",
+  "scope": "First-install direct access and observable candidate refresh",
+  "release": {
+    "version": "v0.9.2",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.2",
+    "full_package_tests": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40065479139",
+    "full_package_tests_conclusion": "success; Go/race and all six distribution jobs passed",
+    "publish_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40065920796",
+    "publish_conclusion": "success",
+    "package_sha256": "53de91a49c32d5c02bfff01fd31c64089656754c54986b17622f792f7793c8c5",
+    "package_file_count": 38,
+    "source_snapshot_sha256": "20a04653183ef70375f2d34e449acd79da8fa8cf042aaf02bd8c19e1fd586516",
+    "anonymous_archive_checksum_members_and_source": "passed",
+    "fixed_tag_installer_matches_package_and_source": "passed",
+    "latest_release_api": "v0.9.2"
+  },
+  "user_observations": {
+    "v0.9.1_console_login": "User screenshot confirms installed v0.9.1 panel with no pool",
+    "manual_pool_builder": "User-provided terminal timeout at 45 seconds, exit 124",
+    "ipv4_source_probe": "User-provided curl connection timeout after 8 seconds, HTTP 000, zero response bytes",
+    "centos_debian_comparison": "User confirms installation only; unchanged candidate count does not establish refresh success or a distribution-specific fault",
+    "cause_attribution": "Unresolved; no claim of VPS hardware/provider fault, Ubuntu-specific defect or official-source global outage"
+  },
+  "behavior": [
+    "New work directory gets one authenticated VLESS/REALITY direct entry after service health succeeds",
+    "Direct initialization failure rolls back the deployment",
+    "Existing and legacy work directories keep their saved direct intent, client identity and ports",
+    "No direct fallback for VPN Gate or custom SOCKS5",
+    "Refresh immediately shows indeterminate progress, actual elapsed seconds and bounded wait",
+    "Refresh result shows completion, candidate count, checked time and safe failure cause",
+    "Last successful pool generation time stays separate from the latest attempt",
+    "Missing-pool message cannot mask the latest refresh failure",
+    "Request submission timeout, duplicate submission and stale polling are handled",
+    "Subprocess error capture is bounded; APIs/logs contain only known cause codes"
+  ],
+  "validation": {
+    "local_installer_tests": 25,
+    "local_console_node_regressions": "passed: flow, third-party, SSTP",
+    "branch_six_system_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40065141048",
+    "branch_six_system_conclusion": "success",
+    "python_node_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40065141132",
+    "python_node_conclusion": "success: Python 3.9/3.12 and Node",
+    "checks": [
+      "Go/race refresh start, deduplication, timeout classification and private error rejection",
+      "Six-system fresh install creates enabled direct access without needing a VPN Gate pool",
+      "Actual generated subscription via Xray verifies HTTPS egress and content",
+      "Source-independent and pool-present updates preserve private state",
+      "Explicitly disable direct, update again, verify disabled state and private identity are unchanged",
+      "Controlled HTTPS synthetic pool recovery, network isolation, backup and uninstall"
+    ],
+    "systems": ["Debian 12", "Debian 13", "Ubuntu 22.04", "Ubuntu 24.04", "CentOS Stream 9", "CentOS Stream 10"]
+  },
+  "limitations": [
+    "No production VPS access or installation/update in this round",
+    "User source connection timeout remains unresolved",
+    "Controlled HTTPS recovery uses synthetic candidates and does not establish a live VPN tunnel",
+    "Containers share runner kernel; independent VPS SELinux/firewalld and provider network remain separate"
+  ],
+  "cloudflare_deployed": false,
+  "three_x_ui_modified": false,
+  "unknown_is_residential": false
+}
