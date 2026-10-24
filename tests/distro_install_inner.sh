@@ -49,7 +49,11 @@ Path('/etc/xnvgatebox/pool.json').write_bytes(Path('/src/config/settings.json').
 PY
 # Restore actual upstream access and build an atomic pool via the real timer's
 # service, then repeat the ordinary online update and subscription checks.
-systemctl start xnvgatebox-pool.service
+if ! systemctl start xnvgatebox-pool.service; then
+  journalctl -u xnvgatebox-pool.service --no-pager -n 35
+  systemctl show xnvgatebox-pool.service -p Result -p ExecMainStatus -p ActiveState -p SubState
+  exit 1
+fi
 python3 - <<'PY'
 import json
 from pathlib import Path
