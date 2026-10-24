@@ -1088,7 +1088,7 @@
             <div>
               <div class="eyebrow">ONE LINK, ALL EXITS</div>
               <h1>我的订阅</h1>
-              <p>复制到支持 VLESS / REALITY 的客户端，刷新订阅即可同步变化。</p>
+              <p>选择客户端格式后复制链接，刷新订阅即可同步变化。</p>
             </div>
           </div>
           <div class="subgrid">
@@ -2154,6 +2154,10 @@
         if (r.status === "passed") return {
           running: false, error: false,
           text: "候选刷新完成 · 当前 " + count + " 个候选，仍需检测后确认连通性。" + finished,
+        };
+        if (r.status === "skipped") return {
+          running: false, error: false,
+          text: "本轮未重复刷新：周期尚未到期、已关闭，或已有来源任务运行。现有候选保留。" + finished,
         };
         if (r.status === "failed") {
           const reasons = {

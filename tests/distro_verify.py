@@ -116,7 +116,7 @@ expected = get_bytes('https://api.ipify.org').strip()
 with XraySession(profiles[0], str(p/'bin/xray'), 60) as client:
     assert client.get('https://api.ipify.org').strip() == expected
     assert b'Example Domain' in client.get('https://www.example.com/')
-if sys.argv[1]=='save' and Path('/mihomo/mihomo').is_file():
+if sys.argv[1] in ('save','compare') and Path('/mihomo/mihomo').is_file():
     sys.path.insert(0,'/src/tests')
     from mihomo_client import verify_mihomo
     c2=http.client.HTTPConnection('127.0.0.1',settings['port'],timeout=10)
