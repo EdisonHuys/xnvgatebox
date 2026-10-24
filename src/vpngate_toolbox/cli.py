@@ -14,6 +14,7 @@ from .pipeline import clear_publication, publish, run_mode_a
 from .pool import build_pool
 from .intelligence import profile_measured_exit
 from .country import attach_country
+from .pool_schedule import scheduled_pool
 
 
 @contextmanager
@@ -40,6 +41,9 @@ def main(argv=None):
         command.add_argument("--csv-file", type=Path, help="Use a local official-format CSV instead of fetching")
         command.add_argument("--output", type=Path, default=Path("data"))
         command.add_argument("--runtime", type=Path, default=Path("runtime"))
+        if name == 'pool':
+            command.add_argument('--schedule-dir', type=Path)
+            command.add_argument('--scheduled', action='store_true')
     export = sub.add_parser("export-subscription")
     export.add_argument("--view", type=Path, default=Path("data/mode_a_validated.json"))
     export.add_argument("--output", type=Path, default=Path("data"))
@@ -84,7 +88,13 @@ def main(argv=None):
                                "generated_at": utc_now()})
                 raise
             if args.command == "pool":
-                pool = build_pool(settings, args.output, args.csv_file)
+                if args.scheduled and args.schedule_dir is None:
+                    raise ToolError('invalid_schedule_configuration')
+                build = lambda: build_pool(settings, args.output, args.csv_file)
+                pool = scheduled_pool(args.schedule_dir, args.output, args.scheduled, build) if args.schedule_dir else build()
+                if pool is None:
+                    print(json.dumps({'status':'source_refresh_skipped'}))
+                    return 0
                 print(json.dumps({"status": "candidate_pool_built", "nodes": len(pool["nodes"]), "full_chain_verified": False}))
                 return 0
             if args.command == "mode-a":

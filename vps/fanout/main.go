@@ -135,6 +135,7 @@ func main() {
 	}
 
 	go console.watch()
+	go console.watchAutomation()
 	go console.sstp.watch()
 
 	go mgr.WatchHealth()

@@ -44,7 +44,7 @@ func poolRefreshCause(ctx context.Context, err error, stderr string) string {
 			"Error: mirror_snapshot_rollback", "Error: mirror_snapshot_conflict", "Error: mirror_download_failed",
 			"Error: mirror_integrity_failed", "Error: mirror_csv_invalid":
 			return strings.TrimPrefix(line, "Error: ")
-		case "Error: invalid_input_or_filesystem_error", "Error: https_url_required":
+		case "Error: invalid_input_or_filesystem_error", "Error: https_url_required", "Error: invalid_schedule_configuration", "Error: invalid_schedule_state":
 			return "pool_refresh_input_error"
 		}
 		if strings.HasPrefix(line, "Error: invalid_setting_") {

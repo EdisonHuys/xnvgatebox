@@ -260,8 +260,10 @@ func handleSub(m *Manager) http.HandlerFunc {
 			target = "base64"
 		case "links", "plain", "text":
 			target = "links"
+		case "clash", "mihomo":
+			target = "clash"
 		default:
-			http.Error(w, "target 只支持 base64 或 links", http.StatusBadRequest)
+			http.Error(w, "target 只支持 base64、links 或 clash", http.StatusBadRequest)
 			return
 		}
 
@@ -317,12 +319,18 @@ func handleSub(m *Manager) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		body:=[]byte(encodeSub(links,target))
+		if target=="clash" {
+			body,err=renderClash(links)
+			if err!=nil {http.Error(w,err.Error(),400);return}
+			w.Header().Set("Content-Type","application/yaml; charset=utf-8")
+		} else {w.Header().Set("Content-Type", "text/plain; charset=utf-8")}
 		w.Header().Set("Cache-Control", "no-store")
 		// 客户端据此决定多久自动拉一次；出口增删之外的变化不影响链接，12 小时够
 		w.Header().Set("Profile-Update-Interval", "12")
 		w.Header().Set("Content-Disposition", "inline; filename=fanout")
-		_, _ = w.Write([]byte(encodeSub(links, target)))
+		if target=="clash" {w.Header().Set("Content-Disposition","inline; filename=xnvgatebox-clash.yaml")}
+		_, _ = w.Write(body)
 	}
 }
 

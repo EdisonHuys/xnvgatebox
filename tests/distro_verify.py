@@ -86,6 +86,11 @@ if sys.argv[1] == 'save':
     r = c.getresponse(); summary = json.loads(r.read())
     assert r.status == 200 and summary['candidates'] == 0 and not summary['pool_generated_at']
     assert summary['suggested_target']==16 and not summary['target_configured']
+    c.request('GET',base+'/api/console/automation',headers={'Cookie':cookie})
+    r=c.getresponse();autom=json.loads(r.read());assert r.status==200
+    assert autom['settings']=={'refresh_enabled':True,'refresh_minutes':60,'check_enabled':True,'check_minutes':60}
+    c.request('POST',base+'/api/console/automation',json.dumps({'refresh_enabled':True,'refresh_minutes':60,'check_enabled':False,'check_minutes':90}),{'Cookie':cookie,'Content-Type':'application/json'})
+    r=c.getresponse();r.read();assert r.status==200
     c.request('GET', base+'/api/console/source-settings', headers={'Cookie': cookie})
     r = c.getresponse(); source_settings = json.loads(r.read())
     assert r.status == 200 and source_settings['mirror_enabled'] is True
@@ -108,11 +113,18 @@ profiles = parse_subscription(blob)
 assert len(profiles) == 1
 c.close()
 expected = get_bytes('https://api.ipify.org').strip()
+if sys.argv[1]=='save' and Path('/mihomo/mihomo').is_file():
+    sys.path.insert(0,'/src/tests')
+    from mihomo_client import verify_mihomo
+    c2=http.client.HTTPConnection('127.0.0.1',settings['port'],timeout=10)
+    c2.request('GET',base+'/sub?'+urllib.parse.urlencode({'token':subscription['token'],'host':'127.0.0.1','vpn':'0','third':'0','direct':'1','target':'clash'}))
+    response=c2.getresponse();clash_body=response.read();assert response.status==200
+    c2.close();verify_mihomo(Path('/mihomo/mihomo'),clash_body,expected)
 with XraySession(profiles[0], str(p/'bin/xray'), 60) as client:
     assert client.get('https://api.ipify.org').strip() == expected
     assert b'Example Domain' in client.get('https://www.example.com/')
 subprocess.run([str(p/'bin/xray'), 'version'], check=True, stdout=subprocess.DEVNULL)
-names = ['basepath', 'password', 'settings.json', 'native.json']
+names = ['basepath', 'password', 'settings.json', 'native.json', 'automation.json']
 state = {n: hashlib.sha256((p/n).read_bytes()).hexdigest() for n in names}
 record = Path('/tmp/xnvgatebox-ci-state.json')
 if sys.argv[1] == 'save':

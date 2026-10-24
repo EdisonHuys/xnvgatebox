@@ -1104,6 +1104,9 @@
                   readonly
                   aria-label="订阅链接"
                 ></textarea>
+                <label for="subFormat">客户端格式</label>
+                <select id="subFormat"><option value="base64">v2rayN / 通用节点列表</option><option value="clash">Clash Verge / Rev（Mihomo）</option></select>
+                <small>Clash 用户请选择专用格式再复制订阅；本 VPS 直接生成，无需第三方转换。</small>
                 <div class="actions" style="margin-top: 12px">
                   <button class="primary" id="copySub">复制订阅链接</button
                   ><button id="copyLinks">复制节点链接</button>
@@ -1146,6 +1149,7 @@
             </div>
             <div class="actions">
               <button id="sourceSettingsButton">来源设置</button>
+              <button id="automationButton">周期任务</button>
               <button data-action="refresh">↻ 刷新来源</button
               ><label class="parallel-setting"
                 >检测并发
@@ -1168,6 +1172,7 @@
             出口。快速端口预检不代表出口可用；无需测完全部候选才能使用订阅。
           </div>
           <div id="poolSourceSummary" class="notice"></div>
+          <div id="automationSummary" class="notice"></div>
           <div class="progressMount"></div>
           <div class="tools">
             <input
@@ -1515,6 +1520,18 @@
         </section>
       </main>
     </div>
+    <dialog id="automationDialog" aria-labelledby="automationTitle">
+      <form id="automationForm">
+        <div class="dialoghead"><h2 id="automationTitle">周期任务</h2><button type="button" data-close="automationDialog" aria-label="关闭">×</button></div>
+        <p>自动任务最低 30 分钟，默认 60 分钟。获取和检测由本 VPS 完成；同时到期先刷新清单，再检测候选，沿用已保存的检测并发。</p>
+        <label class="choice"><input id="autoRefreshEnabled" type="checkbox" />自动刷新候选清单</label>
+        <div class="field"><label for="autoRefreshMinutes">刷新间隔（分钟）</label><input id="autoRefreshMinutes" type="number" min="30" max="525600" step="1" required /></div>
+        <label class="choice"><input id="autoCheckEnabled" type="checkbox" />自动批量检测候选</label>
+        <div class="field"><label for="autoCheckMinutes">检测间隔（分钟）</label><input id="autoCheckMinutes" type="number" min="30" max="525600" step="1" required /></div>
+        <p class="muted">按完成时间计算下一轮，不叠加任务。关闭开关停止后续自动启动，当前检测可使用取消按钮。运行出口继续独立健康检查，批量检测不强制更换正常出口。</p>
+        <div class="dialogfoot"><button type="button" data-close="automationDialog">取消</button><button id="saveAutomation" class="primary" type="submit">保存</button></div>
+      </form>
+    </dialog>
     <dialog id="sourceDialog" aria-labelledby="sourceTitle">
       <form id="sourceForm">
         <div class="dialoghead"><h2 id="sourceTitle">候选来源设置</h2><button type="button" data-close="sourceDialog" aria-label="关闭">×</button></div>
@@ -2260,6 +2277,7 @@
           " 个来源候选 · 上次成功获取 " +
           date(s.pool_generated_at);
         $("poolSourceSummary").textContent = poolSourceText(s.pool_source, s.pool_generated_at);
+        $("automationSummary").textContent = automationText(s.automation);
         document.querySelectorAll("[data-action=refresh]").forEach((b) => {
           b.disabled = poolRefreshSubmitting || s.refresh?.status === "running";
           b.textContent = b.disabled ? "↻ 正在刷新…" : "↻ 刷新候选池";
@@ -2477,8 +2495,9 @@
         if (!all && !ids.length && !direct && !thirdAll && !thirdIDs.length)
           return "";
         const u = new URL(subscription.url, location.href);
-        for (const k of ["slots", "vpn", "direct", "proxies", "third"])
+        for (const k of ["slots", "vpn", "direct", "proxies", "third", "target"])
           u.searchParams.delete(k);
+        if ($("subFormat")?.value === "clash") u.searchParams.set("target", "clash");
         if (!direct) u.searchParams.set("direct", "0");
         else if (!all) u.searchParams.set("direct", "1");
         if (!all) {
@@ -3285,6 +3304,24 @@
           polling = false;
         }
       }
+      function automationText(value) {
+        if (!value) return "周期任务设置读取中…";
+        const labels = {never:"尚未执行",running:"进行中",passed:"刷新成功",failed:"刷新失败",completed:"检测完成",cancelled:"已取消",interrupted:"上次中断",no_candidates:"没有候选，等待下轮",invalid:"状态异常，自动任务暂停"};
+        const one=(title,r)=> !r?.enabled ? title+"：已关闭" : title+"：每 "+r.minutes+" 分钟 · "+(labels[r.status]||"待执行")+(r.running?"，完成后再计时":" · 下次 "+date(r.next_at))+(r.finished_at?" · 上次 "+date(r.finished_at):"");
+        return one("清单刷新",value.refresh)+"。 "+one("候选检测",value.check)+(value.check?.status==="completed"?" · 本轮通过 "+value.check.passed+" / "+value.check.nodes:"")+(value.error?"。 "+value.error:"");
+      }
+      $("automationButton").onclick=()=>action(async()=>{
+        const v=await api("api/console/automation"),s=v.settings;
+        $("autoRefreshEnabled").checked=s.refresh_enabled;$("autoRefreshMinutes").value=s.refresh_minutes;
+        $("autoCheckEnabled").checked=s.check_enabled;$("autoCheckMinutes").value=s.check_minutes;
+        $("automationDialog").showModal();
+      },$("automationButton"));
+      $("automationForm").onsubmit=e=>{e.preventDefault();action(async()=>{
+        const refresh=Number($("autoRefreshMinutes").value),check=Number($("autoCheckMinutes").value);
+        if (![refresh,check].every(n=>Number.isSafeInteger(n)&&n>=30&&n<=525600)) throw Error("自动任务间隔须为 30–525600 分钟");
+        const v=await api("api/console/automation",{refresh_enabled:$("autoRefreshEnabled").checked,refresh_minutes:refresh,check_enabled:$("autoCheckEnabled").checked,check_minutes:check});
+        summary.automation=v;$("automationSummary").textContent=automationText(v);$("automationDialog").close();toast("周期任务已保存");
+      },$("saveAutomation"));};
       async function openSourceSettings() {
         if (sourceSettingsLoading || $("sourceDialog").open) return;
         sourceSettingsLoading = true;
@@ -3637,6 +3674,8 @@
         if (!$("subAll").checked) subSelected.clear();
         renderSubscription();
       };
+      $("subFormat").value=localStorage.getItem("xnvgatebox-sub-format")==="clash"?"clash":"base64";
+      $("subFormat").onchange=()=>{localStorage.setItem("xnvgatebox-sub-format",$("subFormat").value);renderSubscription();};
       $("copySub").onclick = () => action(() => copy(selectedSubURL()));
       $("copyLinks").onclick = () =>
         action(async () => {

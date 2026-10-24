@@ -247,6 +247,7 @@ func (c *Console) checkExit(ctx context.Context, slot int, expectedHost string, 
 }
 
 type CheckRequest struct {
+	scheduled bool
 	Kind        string   `json:"kind"`
 	Hosts       []string `json:"hosts"`
 	Slots       []int    `json:"slots"`
@@ -363,6 +364,7 @@ func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(c.ctx)
+	if err:=c.automationCheckStarted(in.scheduled);err!=nil {cancel();return nil,err}
 	job := &CheckRun{ID: hex.EncodeToString(buf), Status: "running", Kind: "checks", Items: items, Total: len(items), Parallelism: in.Parallelism, cancel: cancel, ctx: ctx, finished: make(chan struct{}), wake: make(chan struct{}, 1), nodes: byHost}
 	c.check = job
 	go c.runChecks(ctx, job)
@@ -372,12 +374,13 @@ func (c *Console) startCheck(in CheckRequest) (*CheckRun, error) {
 // One dispatcher owns all running diagnostic identities. Manual items can join
 // a batch and take the next free permit without exceeding its configured limit.
 func (c *Console) runChecks(ctx context.Context, j *CheckRun) {
-	dispatchCheckRun(ctx, j, &c.checksMu, func(index, slot int, item CheckResult, node Node) { c.runCheckItem(ctx, j, index, item, node, slot) })
+	dispatchCheckRun(ctx, j, &c.checksMu, func(index, slot int, item CheckResult, node Node) { c.runCheckItem(ctx, j, index, item, node, slot) },func(){c.automationCheckFinished(j)})
 }
 
-func dispatchCheckRun(ctx context.Context, j *CheckRun, ownerMu *sync.Mutex, runItem func(int, int, CheckResult, Node)) {
+func dispatchCheckRun(ctx context.Context, j *CheckRun, ownerMu *sync.Mutex, runItem func(int, int, CheckResult, Node), onComplete ...func()) {
 	defer close(j.finished)
 	defer j.cancel()
+	if len(onComplete)>0 {defer onComplete[0]()}
 	finished := make(chan int, j.Parallelism)
 	active := map[int]bool{}
 	cancelSignal := ctx.Done()

@@ -614,7 +614,7 @@ func shareLink(ib *nativeInbound, c nativeClient, host string) string {
 
 	switch ib.Protocol {
 	case "trojan":
-		return fmt.Sprintf("trojan://%s@%s:%d?%s#%s", c.Password, host, ib.Port, q.Encode(), frag)
+		return fmt.Sprintf("trojan://%s@%s:%d?%s#%s", url.User(c.Password).String(), host, ib.Port, q.Encode(), frag)
 	case "vmess":
 		// vmess 的 base64 形式各家客户端解析不一，用通用的 URI 形式
 		q.Set("encryption", "auto")
