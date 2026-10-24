@@ -26,8 +26,8 @@ class System:
         self.l = layout
         self.states = {u: {'active': False, 'enabled': False} for u in d.UNITS}
         self.events = []
-        self.fail_pool = self.fail_check = False
-        self.pool_exit = 4
+        self.fail_config = self.fail_check = False
+        self.config_exit = 2
 
     def active(self, u): return self.states[u]['active']
     def enabled(self, u): return self.states[u]['enabled']
@@ -36,8 +36,8 @@ class System:
         args = list(map(str, args))
         self.events.append(args)
         if args[0] == 'python3':
-            if self.fail_pool: raise subprocess.CalledProcessError(self.pool_exit, args)
-            put(Path(args[-1]) / 'node_pool.json', '{"nodes":[{"node_id":"new"}]}')
+            if self.fail_config: raise subprocess.CalledProcessError(self.config_exit, args)
+            if 'pool' in args: raise AssertionError('Installer must never fetch a candidate pool')
         elif '-check-state' in args:
             if self.fail_check: raise subprocess.CalledProcessError(1, args)
         elif args[0] == 'systemctl' and args[1] != 'daemon-reload':
@@ -166,7 +166,6 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(self.r.states[d.UNITS[0]], {'active': True, 'enabled': True})
 
     def test_source_outage_installs_without_fabricating_pool_or_enabling_direct(self):
-        self.r.fail_pool = True
         self.i.install()
         self.assertTrue(self.r.active(d.UNITS[0]))
         self.assertTrue(self.r.active(d.UNITS[1]))
@@ -174,13 +173,12 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse(self.l.path('var/lib/xnvgatebox/pool/node_pool.json').exists())
         self.assertFalse((self.l.work / 'native.json').exists())
         self.assertEqual(self.job()['status'], 'completed')
-        self.assertEqual(self.job()['warning'], 'pool_source_unavailable')
+        self.assertEqual(self.job()['warning'], 'pool_not_ready')
         self.assertFalse(self.l.journal.exists())
 
     def test_source_outage_direct_only_upgrade_preserves_private_configuration(self):
         private = self.existing()
         self.l.path('var/lib/xnvgatebox/pool/node_pool.json').unlink()
-        self.r.fail_pool = True
         self.i.install()
         for n, value in private.items(): self.assertEqual((self.l.work / n).read_text(), value)
         self.assertFalse(self.l.path('var/lib/xnvgatebox/pool/node_pool.json').exists())
@@ -190,30 +188,27 @@ class InstallerTests(unittest.TestCase):
         for existing in (False, True):
             for code in (1, 2, -9):
                 with self.subTest(existing=existing, code=code):
-                    prepared = self.stage / 'prepared-pool'
-                    if prepared.exists(): prepared.rmdir()
                     if existing: self.existing()
                     self.r.events.clear()
-                    self.r.fail_pool, self.r.pool_exit = True, code
+                    self.r.fail_config, self.r.config_exit = True, code
                     with self.assertRaises(subprocess.CalledProcessError): self.i.install()
                     self.assertFalse(any('stop' in e for e in self.r.events))
                     self.assertFalse(self.l.journal.exists())
 
     def test_source_outage_health_failure_still_rolls_back(self):
-        self.r.fail_pool = True
         self.i.fail_health = True
         with self.assertRaises(RuntimeError): self.i.install()
         for name in d.OWNED: self.assertFalse(self.l.path(name).exists(), name)
         self.assertTrue(self.job()['rolled_back'])
 
-    def test_pool_failure_reuses_previous_nonempty_pool(self):
-        self.existing(); self.r.fail_pool = True
+    def test_upgrade_keeps_previous_nonempty_pool_without_network(self):
+        self.existing()
         self.i.install()
         self.assertEqual(json.loads(self.l.path('var/lib/xnvgatebox/pool/node_pool.json').read_text())['nodes'][0]['node_id'], 'old')
         self.assertEqual(self.job()['pool_status'], 'previous_retained')
 
     def test_empty_old_pool_is_not_accepted_as_fallback(self):
-        self.existing(); self.r.fail_pool = True
+        self.existing()
         put(self.l.path('var/lib/xnvgatebox/pool/node_pool.json'), '{"nodes":[]}')
         with self.assertRaises(ValueError): self.i.install()
         self.assertFalse(any('stop' in e for e in self.r.events))

@@ -111,7 +111,7 @@ class WorkerOriginTests(unittest.TestCase):
 
 
 class SourceTests(unittest.TestCase):
-    def test_pool_cli_distinguishes_outage_from_invalid_input_and_preserves_pool(self):
+    def test_pool_cli_errors_preserve_pool_and_hide_private_details(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output = root / 'data'
@@ -120,7 +120,7 @@ class SourceTests(unittest.TestCase):
             previous.write_bytes(b'{"nodes":[{"existing":"private"}]}')
             args = ['--config', str(ROOT / 'config/settings.json'), '--env-file', str(root / 'none'),
                     'pool', '--output', str(output)]
-            for error, status in ((ServiceError('pool_source_unavailable'), 4),
+            for error, status in ((ServiceError('pool_source_unavailable'), 2),
                                   (ToolError('invalid_setting_node_timeout_seconds'), 2),
                                   (OSError('private filesystem failure'), 2)):
                 with self.subTest(error=type(error).__name__), patch('vpngate_toolbox.cli.build_pool', side_effect=error), \

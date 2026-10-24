@@ -11,7 +11,7 @@ if command -v apt-get >/dev/null; then apt-get update && apt-get install -y ca-c
 curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.1/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.1 && xnvgatebox access
 ```
 
-只下载本项目 GitHub Release 的完整包和 SHA256，固定 Xray 在构建时验证官方归档摘要。安装器检查归档路径、类型、重复项、完整文件清单、成员摘要和正式版本构建信息。下载、包校验及候选清单准备在停止旧服务之前完成；来源暂不可用时保留旧池，没有旧池也可安装。登录后可独立配置本机直出及第三方 SOCKS5，VPN Gate 等待候选并定时重试，不自动回落直出。
+只下载本项目 GitHub Release 的完整包和 SHA256，固定 Xray 在构建时验证官方归档摘要。安装器检查归档路径、类型、重复项、完整文件清单、成员摘要和正式版本构建信息。下载、包校验及本地候选配置检查在停止旧服务之前完成；安装不请求 VPN Gate 来源，保留旧池，没有旧池也可安装。候选由后台或定时器获取。登录后可独立配置本机直出及第三方 SOCKS5，VPN Gate 等待候选，不自动回落直出。
 
 `xnvgatebox access` 查看管理地址和密码，`xnvgatebox version` 查看版本。管理页默认监听 8899，使用随机路径和密码；服务器防火墙需允许管理端口及实际公开接入端口。内部 SOCKS 仅监听本机，外部 SOCKS 需在界面显式启用。
 

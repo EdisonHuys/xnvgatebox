@@ -19,7 +19,7 @@ sed -e 's#https://www.vpngate.net/api/iphone/#https://127.0.0.1:9/#' \
     /src/config/settings.json > /etc/xnvgatebox/pool.json
 chmod 600 /etc/xnvgatebox/pool.json
 run_install
-grep -q 'VPN Gate 候选暂不可用，继续安装' /tmp/install.log
+grep -q '先完成后台安装' /tmp/install.log
 test ! -e /var/lib/xnvgatebox/pool/node_pool.json
 systemctl is-active --quiet xnvgatebox-fanout.service
 systemctl is-enabled --quiet xnvgatebox-pool.timer
@@ -44,14 +44,28 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 status = json.loads(Path('/var/lib/xnvgatebox-deploy/status.json').read_text())
-assert status['status'] == 'completed' and status['warning'] == 'pool_source_unavailable'
-Path('/etc/xnvgatebox/pool.json').write_bytes(Path('/src/config/settings.json').read_bytes())
+assert status['status'] == 'completed' and status['warning'] == 'pool_not_ready'
 PY
-# Restore actual upstream access and build an atomic pool via the real timer's
-# service, then repeat the ordinary online update and subscription checks.
-mkdir -p /tmp/xnv-ci-trace /run/systemd/system/xnvgatebox-pool.service.d
-printf '%s\n' 'import faulthandler; faulthandler.dump_traceback_later(15)' > /tmp/xnv-ci-trace/sitecustomize.py
-printf '%s\n' '[Service]' 'Environment=PYTHONPATH=/tmp/xnv-ci-trace' > /run/systemd/system/xnvgatebox-pool.service.d/trace.conf
+# Recover through a controlled HTTPS source. Trust only its generated CI CA in
+# this disposable service; TLS verification remains enabled. No live VPN claim.
+command -v openssl >/dev/null || { if command -v apt-get >/dev/null; then apt-get install -y openssl; else dnf -y install openssl; fi; }
+python3 /src/tests/pool_source_fixture.py >/tmp/source-fixture.log 2>&1 &
+source_pid=$!
+trap 'kill "$source_pid" 2>/dev/null || true' EXIT
+for attempt in {1..30}; do
+  test ! -f /tmp/xnv-ci-source/port || break
+  sleep 1
+done
+test -f /tmp/xnv-ci-source/port || { cat /tmp/source-fixture.log; exit 1; }
+python3 - <<'PY'
+import json
+from pathlib import Path
+config = json.loads(Path('/etc/xnvgatebox/pool.json').read_text())
+config['source_urls'] = ['https://127.0.0.1:' + Path('/tmp/xnv-ci-source/port').read_text() + '/']
+Path('/etc/xnvgatebox/pool.json').write_text(json.dumps(config))
+PY
+mkdir -p /run/systemd/system/xnvgatebox-pool.service.d
+printf '%s\n' '[Service]' 'Environment=SSL_CERT_FILE=/tmp/xnv-ci-source/cert.pem' > /run/systemd/system/xnvgatebox-pool.service.d/fixture.conf
 systemctl daemon-reload
 if ! systemctl start xnvgatebox-pool.service; then
   journalctl -u xnvgatebox-pool.service --no-pager -n 35
@@ -63,12 +77,15 @@ import json
 from pathlib import Path
 pool = json.loads(Path('/var/lib/xnvgatebox/pool/node_pool.json').read_text())
 assert pool['nodes'] and pool['generated_at'] and pool['source']['name'].startswith('https://')
+assert pool['nodes'][0]['hostname'] == 'ci-synthetic-vpn'
 PY
 run_install
 python3 /src/tests/distro_verify.py compare
+rm -rf /run/systemd/system/xnvgatebox-pool.service.d
+systemctl daemon-reload
 test -n "$(find /var/backups/xnvgatebox -name project.tar.gz -print -quit)"
 xnvgatebox uninstall --yes --purge --legacy
 test ! -e /usr/local/lib/xnvgatebox
 test ! -e /var/lib/xnvgatebox
 test ! -e /var/backups/xnvgatebox
-echo 'PASS: source outage install/update, real subscription, upstream recovery, normal update, network isolation, uninstall'
+echo 'PASS: source outage install/update, real subscription, controlled HTTPS recovery, normal update, network isolation, uninstall'

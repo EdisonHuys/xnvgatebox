@@ -8,7 +8,7 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
-from .common import ServiceError, ToolError, atomic_write, utc_now, write_json
+from .common import ToolError, atomic_write, utc_now, write_json
 from .config import load_env, load_settings, mode_a_environment
 from .pipeline import clear_publication, publish, run_mode_a
 from .pool import build_pool
@@ -118,10 +118,6 @@ def main(argv=None):
             return 0 if count else 3
     except ToolError as exc:
         print("Error: " + str(exc), file=sys.stderr)
-        # Deployment can continue without VPN Gate candidates, but must never
-        # mistake configuration, local CSV or filesystem errors for an outage.
-        if args.command == "pool" and isinstance(exc, ServiceError) and str(exc) == "pool_source_unavailable":
-            return 4
         return 2
     except (OSError, ValueError, KeyError, TypeError):
         print("Error: invalid_input_or_filesystem_error", file=sys.stderr)

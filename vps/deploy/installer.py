@@ -212,30 +212,24 @@ class Installer:
         return True
     def prepare_pool(self):
         self.progress('pool')
-        target=self.stage/'prepared-pool';target.mkdir(mode=0o700)
         config=self.l.path('etc/xnvgatebox/pool.json')
         if not config.exists():config=self.stage/'config/settings.json'
-        try:
-            self.r.run(['python3',self.stage/'scripts/toolbox.py','--config',config,'pool','--output',target],stdout=subprocess.DEVNULL)
-            return target
-        except subprocess.CalledProcessError as exc:
-            if exc.returncode != 4: raise
-            previous=self.l.path('var/lib/xnvgatebox/pool/node_pool.json')
-            if not previous.exists() and not previous.is_symlink():
-                # Exit 4 is exclusively the Pool Builder's upstream-unavailable
-                # result. Do not create a synthetic pool or weaken other checks.
-                self.progress('pool',pool_status='unavailable',
-                              warning='pool_source_unavailable')
-                print('提示：VPN Gate 候选暂不可用，继续安装；可登录后启用本机直出或添加第三方 SOCKS5，候选来源将定时重试。', flush=True)
-                return None
-            # Keep a previous usable snapshot when the source is temporarily
-            # unavailable. No replacement happens before the consistent backup.
+        # Validate local settings with the new package, without requesting any
+        # upstream. Candidate refresh belongs to the console/timer, not deploy.
+        self.r.run(['python3','-c',
+            'import sys;from pathlib import Path;sys.path.insert(0,sys.argv[1]);'
+            'from vpngate_toolbox.config import load_settings;load_settings(Path(sys.argv[2]))',
+            self.stage/'src',config],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        previous=self.l.path('var/lib/xnvgatebox/pool/node_pool.json')
+        if previous.exists() or previous.is_symlink():
             value=json.loads(previous.read_text())
             if not isinstance(value.get('nodes'),list) or not value['nodes']:raise ValueError('no_previous_pool')
-            self.progress('pool',pool_status='previous_retained',
-                          warning='pool_source_unavailable_previous_retained')
-            print('提示：候选刷新失败，保留旧清单并继续部署；候选来源将定时重试。', flush=True)
-            return None
+            self.progress('pool',pool_status='previous_retained',warning='')
+            print('保留已有候选清单；安装不等待 VPN Gate 来源，登录后可刷新。', flush=True)
+        else:
+            self.progress('pool',pool_status='pending',warning='pool_not_ready')
+            print('提示：先完成后台安装，VPN Gate 候选稍后由定时任务或手动刷新获取；可独立启用本机直出或添加第三方 SOCKS5。', flush=True)
+        return None
     def apply_files(self, pool):
         self.l.lib.parent.mkdir(parents=True,exist_ok=True)
         incoming=self.l.lib.with_name('.xnvgatebox-'+self.id)
@@ -293,7 +287,7 @@ class Installer:
         init_job(self.l, self.id)
         if self.l.journal.exists():self.recover()
         self.progress('preparing',target=(self.stage/'VERSION').read_text().strip())
-        pool=self.prepare_pool()  # Fetch before stopping; an upstream outage may leave no pool.
+        pool=self.prepare_pool()  # Local validation only; never wait for the upstream.
         before=self.service_snapshot()
         existing=[n for n in OWNED if self.l.path(n).exists() or self.l.path(n).is_symlink()]
         fresh=not self.l.lib.exists()
