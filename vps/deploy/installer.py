@@ -283,6 +283,26 @@ class Installer:
                 if conn:conn.close()
             time.sleep(.5)
         raise RuntimeError('new_version_health_failed')
+    def enable_initial_direct(self):
+        # Called only for a new work directory, after authenticated health has
+        # succeeded. Never reinterpret existing disabled/unbound entries.
+        settings=json.loads((self.l.work/'settings.json').read_text())
+        host=settings.get('listen_addr') or '127.0.0.1'
+        if host in ('0.0.0.0','all','::'):host='127.0.0.1'
+        base='/'+(self.l.work/'basepath').read_text().strip().strip('/')
+        conn=http.client.HTTPConnection(host,int(settings['port']),timeout=15)
+        try:
+            body=urllib.parse.urlencode({'password':(self.l.work/'password').read_text().strip()})
+            conn.request('POST',base+'/login',body,{'Content-Type':'application/x-www-form-urlencoded'})
+            response=conn.getresponse();response.read();cookie=response.getheader('Set-Cookie','').split(';')[0]
+            if not cookie:raise RuntimeError('initial_direct_login_failed')
+            conn.request('POST',base+'/api/console/direct','{"enabled":true}',
+                         {'Cookie':cookie,'Content-Type':'application/json'})
+            response=conn.getresponse();data=json.loads(response.read(1000000))
+            if response.status!=200 or data.get('ok') is not True:
+                raise RuntimeError('initial_direct_failed')
+        finally:
+            conn.close()
     def install(self):
         init_job(self.l, self.id)
         if self.l.journal.exists():self.recover()
@@ -291,6 +311,7 @@ class Installer:
         before=self.service_snapshot()
         existing=[n for n in OWNED if self.l.path(n).exists() or self.l.path(n).is_symlink()]
         fresh=not self.l.lib.exists()
+        initial_direct=fresh and not self.l.work.exists()
         backup_dir=self.l.path('var/backups/xnvgatebox')/('install-'+self.id)
         backup_dir.mkdir(parents=True,exist_ok=False,mode=0o700)
         record={'id':self.id,'phase':'stopping','before':before,'existing_paths':existing,'backup':str(backup_dir/'project.tar.gz')}
@@ -309,6 +330,9 @@ class Installer:
             record['phase']='health';self.journal(record);self.progress('health')
             if fresh or before[UNITS[0]]['active']:
                 self.r.run(['systemctl','start',UNITS[0]]);self.health((self.stage/'VERSION').read_text().strip())
+            if initial_direct:
+                print('初始化本机直出…',flush=True)
+                self.enable_initial_direct()
             if fresh:
                 self.r.run(['systemctl','enable',UNITS[0],UNITS[1]])
             if fresh or before[UNITS[1]]['active']:self.r.run(['systemctl','start',UNITS[1]])

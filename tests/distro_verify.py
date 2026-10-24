@@ -27,15 +27,29 @@ assert cookie
 c.request('GET', base+'/api/exits', headers={'Cookie': cookie})
 r = c.getresponse(); data = json.loads(r.read())
 assert r.status == 200 and isinstance(data, dict)
+if sys.argv[1] in ('disable', 'disabled'):
+    record = Path('/tmp/xnvgatebox-ci-disabled-state.json')
+    if sys.argv[1] == 'disable':
+        c.request('POST', base+'/api/console/direct', '{"enabled":false}',
+                  {'Cookie': cookie, 'Content-Type': 'application/json'})
+        r = c.getresponse(); r.read()
+        assert r.status == 200
+    else:
+        assert data.get('host_direct') and all(not row['enable'] for row in data['host_direct'])
+    state = {n: hashlib.sha256((p/n).read_bytes()).hexdigest()
+             for n in ['basepath', 'password', 'settings.json', 'native.json']}
+    if sys.argv[1] == 'disable':
+        record.write_text(json.dumps(state)); record.chmod(0o600)
+    else:
+        assert state == json.loads(record.read_text()), 'Update overwrote explicit disabled intent'
+    c.close()
+    print('PASS: explicit disabled direct and private identity retained')
+    sys.exit(0)
 if sys.argv[1] == 'save':
-    assert not data.get('host_direct'), 'Direct access was automatically enabled'
+    assert len(data.get('host_direct') or []) == 1 and data['host_direct'][0]['enable'], 'Fresh install lacks default direct access'
     c.request('GET', base+'/api/console', headers={'Cookie': cookie})
     r = c.getresponse(); summary = json.loads(r.read())
     assert r.status == 200 and summary['candidates'] == 0 and not summary['pool_generated_at']
-    c.request('POST', base+'/api/console/direct', '{"enabled":true}',
-              {'Cookie': cookie, 'Content-Type': 'application/json'})
-    r = c.getresponse(); r.read()
-    assert r.status == 200, 'Host direct creation failed'
 c.request('GET', base+'/api/sub', headers={'Cookie': cookie})
 r = c.getresponse(); subscription = json.loads(r.read())
 assert r.status == 200

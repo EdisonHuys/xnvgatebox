@@ -81,6 +81,9 @@ assert pool['nodes'][0]['hostname'] == 'ci-synthetic.example.invalid'
 PY
 run_install
 python3 /src/tests/distro_verify.py compare
+python3 /src/tests/distro_verify.py disable
+run_install
+python3 /src/tests/distro_verify.py disabled
 rm -rf /run/systemd/system/xnvgatebox-pool.service.d
 systemctl daemon-reload
 test -n "$(find /var/backups/xnvgatebox -name project.tar.gz -print -quit)"
