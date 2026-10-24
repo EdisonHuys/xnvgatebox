@@ -83,6 +83,7 @@ if sys.argv[1] == 'save':
     c.request('GET', base+'/api/console', headers={'Cookie': cookie})
     r = c.getresponse(); summary = json.loads(r.read())
     assert r.status == 200 and summary['candidates'] == 0 and not summary['pool_generated_at']
+    assert summary['suggested_target']==16 and not summary['target_configured']
     c.request('GET', base+'/api/console/source-settings', headers={'Cookie': cookie})
     r = c.getresponse(); source_settings = json.loads(r.read())
     assert r.status == 200 and source_settings['mirror_enabled'] is True
