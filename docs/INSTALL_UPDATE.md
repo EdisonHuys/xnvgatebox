@@ -42,6 +42,12 @@ README 的一键命令在安装成功后自动执行 `xnvgatebox access`，直�
 
 全新工作目录、已有系统升级、全新操作系统分别记录；前两项测试不替代用户重装后的最终验收。
 
+## v0.9.1 安装与来源分离
+
+公开完整包 SHA256：`539ac73500a506ca0f755699110fcaeb6c1a797344e7e95de4aaa08a5e4e9295`。匿名下载、38 个成员摘要、干净源码快照、固定标签安装脚本及 latest=v0.9.1 核验通过。
+
+正式来源 `39adcb1`，完整包六系统测试 [40063237230](https://github.com/hanhaoops/xnvgatebox/actions/runs/40063237230)、发布 [40063537775](https://github.com/hanhaoops/xnvgatebox/actions/runs/40063537775) 均通过。安装、更新不访问 VPN Gate，旧清单保留，首次无池也能登录；后台和定时器独立刷新。系统依赖、安装包下载、校验、本地配置、备份和服务健康仍需正常。用户 v0.9.0 安装失败后可直接运行首页新版命令，无需卸载系统依赖或重装；本修复不改变主机到官方来源的网络可达性。验证范围及已保留的失败轮次见 [安装与来源分离](INSTALL_SOURCE_FAILURE.md) 和 [本轮证据](evidence/github-install-source-20261024.json)。
+
 ## v0.9.0 多发行版安装
 
 正式来源 `1d2ad81`，构建与六系统测试 [39897597251](https://github.com/hanhaoops/xnvgatebox/actions/runs/39897597251)、发布 [39897908876](https://github.com/hanhaoops/xnvgatebox/actions/runs/39897908876) 均成功。公开包 SHA256 为 `88b6d7a5dc7bbcc877c1de949651513403108babede3cb1618b6bcd2c9052e63`，38 个成员、源码快照、固定标签脚本和匿名下载均已核验，latest 接口返回 v0.9.0。测试覆盖六系统真实依赖、systemd、实际直出订阅 HTTPS、更新保留及卸载；独立 VPS 的内核、SELinux/firewalld 和上游正向连接仍需单独验收。详细范围见 [系统兼容性](LINUX_SUPPORT.md) 和 [发布记录](evidence/github-linux-install-20261023.json)。

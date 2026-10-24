@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-24",
+  "scope": "Install and update without synchronous VPN Gate source access",
+  "pull_request": "https://github.com/hanhaoops/xnvgatebox/pull/12",
+  "source_commit": "39adcb1f27d7306b3af1709d7ac020cf859e35dc",
+  "release": {
+    "version": "v0.9.1",
+    "url": "https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.1",
+    "full_package_tests": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40063237230",
+    "full_package_tests_conclusion": "success; Go/race and all six distribution jobs passed",
+    "publish_workflow": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40063537775",
+    "publish_conclusion": "success",
+    "package_sha256": "539ac73500a506ca0f755699110fcaeb6c1a797344e7e95de4aaa08a5e4e9295",
+    "package_file_count": 38,
+    "source_snapshot_sha256": "155ef4d6fd4e04d502cdd2e8925e96b285004bc4f933a7f57a5958fa9fc3a71e",
+    "anonymous_download_checksum_members_and_source": "passed",
+    "fixed_tag_installer_matches_source_and_package": "passed",
+    "latest_release_api": "v0.9.1"
+  },
+  "reported_failure": "Ubuntu 24.04 completed dependencies but first install failed with pool_source_unavailable; user curl showed connect timeout after 10 seconds, HTTP 000 and zero bytes",
+  "behavior": [
+    "Installer validates local pool settings with the new package but does not request the upstream",
+    "Retain existing nonempty pool; allow missing pool without fabricating nodes or timestamps",
+    "Obtain candidates through the console refresh or the existing timer",
+    "Direct and third-party access remain explicitly configured independent sources",
+    "No automatic direct enablement, source switching or fallback",
+    "Package verification, local errors, backup, health checks and recovery remain enforced",
+    "Terminal phases and missing-pool console notice are visible"
+  ],
+  "validation": {
+    "local_installer_tests": 22,
+    "local_source_tests": 7,
+    "node_flow_third_party_sstp": "passed",
+    "branch_six_system_run": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40062945643",
+    "branch_six_system_conclusion": "success",
+    "python_node_run": "https://github.com/hanhaoops/xnvgatebox/actions/runs/40062945722",
+    "systems": ["Debian 12", "Debian 13", "Ubuntu 22.04", "Ubuntu 24.04", "CentOS Stream 9", "CentOS Stream 10"],
+    "checks": [
+      "Fresh install and same-version update with an unreachable configured HTTPS source",
+      "Authenticated management, no automatic direct enablement and no fabricated candidate pool",
+      "Explicitly enable direct, obtain actual VLESS/REALITY subscription and verify real HTTPS egress/content",
+      "Configuration and credentials unchanged after source-independent update",
+      "Real systemd pool service recovers a synthetic official-format pool through controlled HTTPS with a trusted temporary CI CA",
+      "Update with an existing pool and verify actual subscription HTTPS again",
+      "Isolated namespace/iptables, native CentOS SSTP RPM and PPP plugin, backup and purge uninstall",
+      "Linux Go regression and race, including third-party routing and no fallback"
+    ]
+  },
+  "earlier_runs_preserved": [
+    {"run_id": "40061598108", "result": "failed", "finding": "CI setup invoked Python before installer had installed it"},
+    {"run_id": "40061788202", "result": "failed", "finding": "Install/update and direct HTTPS passed, live official pool service recovery timed out"},
+    {"run_id": "40062273885", "result": "failed", "finding": "Official pool service timeout and one Quay image metadata HTTP 503"},
+    {"run_id": "40062720361", "result": "cancelled after superseding implementation", "finding": "Preserved stack shows official source request blocked in socket.create_connection"},
+    {"run_id": "40062922218", "result": "cancelled after superseding fixture hostname correction"}
+  ],
+  "limitations": [
+    "Controlled recovery uses synthetic candidates and does not prove official source reachability or a live VPN tunnel",
+    "Public HTTPS egress is validated for direct subscription, not a new supplier/live VPN test",
+    "Containers share runner kernel and do not replace independent CentOS VPS SELinux/firewalld or provider network validation",
+    "User VPS installation retry remains to be performed by user"
+  ],
+  "production_vps_accessed": false,
+  "cloudflare_deployed": false,
+  "three_x_ui_modified": false,
+  "unknown_is_residential": false
+}

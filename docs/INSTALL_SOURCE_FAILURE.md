@@ -11,6 +11,8 @@
 - 安装终端逐阶段显示进度；后台未取得候选清单时说明可先使用直出或自定义 SOCKS5，并可刷新来源。定时器继续按原计划重试。
 - 源恢复后通过原 Pool Builder 原子更新清单，管理器读取真实候选；候选本身仍需验活。
 
-## 验证计划
+## 验证结果
+
+[v0.9.1](https://github.com/hanhaoops/xnvgatebox/releases/tag/v0.9.1) 已发布。22 项本机安装器回归、7 项来源回归和 Node 交互回归通过；GitHub Python 3.9/3.12、Go/race 与 [正式包六系统测试](https://github.com/hanhaoops/xnvgatebox/actions/runs/40063237230) 全部通过。发布与失败记录见 [脱敏证据](evidence/github-install-source-20261024.json)。用户 VPS 的新版实际重试仍待用户执行。
 
 Python 回归覆盖无池新装、无池重复更新、旧池保留、本地配置错误拒绝、损坏池拒绝和失败恢复。六系统容器使用受控不可达 HTTPS 来源完成新装及更新，验证实际直出订阅 HTTPS、不自动启用直出、不伪造候选；恢复阶段使用临时可信 CA 的 HTTPS 服务返回合成官方格式 CSV，检查实际 Pool Builder/systemd 清单刷新及后续更新。TLS 验证不关闭，合成候选不作为真实 VPN 正向连接。此前外部官方来源的服务超时和镜像仓库 503 失败保留记录，不能将受控恢复称为官方网络恢复。容器结果不替代真实 VPS 的网络、SELinux/firewalld 或真实 VPN Gate 正向连接；第三方 SOCKS5 功能沿用已有独立链路并回归。本轮不连接用户 VPS、不开 CF、不改 3x-ui。
