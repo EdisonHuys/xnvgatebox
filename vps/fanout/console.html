@@ -2163,7 +2163,10 @@
           b.disabled = s.refresh?.status === "running";
           b.textContent = b.disabled ? "↻ 正在刷新…" : "↻ 刷新候选池";
         });
-        const warning =
+        const missingPool = !nodes.length && !s.pool_generated_at;
+        const warning = missingPool
+          ? "尚未取得 VPN Gate 候选清单，可点击刷新来源；系统也会定时重试。可先启用本机直出或添加第三方 SOCKS5，VPN Gate 出口继续等待，不自动切换。"
+          :
           s.refresh?.status === "failed"
             ? errors[s.refresh.error] || "刷新失败，保留旧池"
             : "";

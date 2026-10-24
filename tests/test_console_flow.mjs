@@ -30,3 +30,14 @@ assert.doesNotMatch(output,/data-delone="2"/, 'automatic entry offers misleading
 assert.match(output,/data-delone="4"/, 'unbound manual entry is hidden');
 assert.match(s.exitOptions('',2),/value="slot:2" selected>出口 2 · 等待候选/,'waiting slot cannot be bound');
 console.log('console flow regressions passed');
+
+const warningNodes = {globalNotice: {}};
+const warningContext = vm.createContext({nodes: [], s: {candidates: 0}, document: {}, errors: {}, $: id => warningNodes[id]});
+vm.runInContext(section(html, '        const missingPool =', '        renderProgress();'), warningContext);
+assert.equal(warningNodes.globalNotice.hidden, false);
+assert.match(warningNodes.globalNotice.textContent, /尚未取得 VPN Gate/);
+assert.match(warningNodes.globalNotice.textContent, /第三方 SOCKS5/);
+warningContext.nodes = [{}];
+warningContext.s = {pool_generated_at: '2026-10-24T00:00:00Z'};
+vm.runInContext('{\n' + section(html, '        const missingPool =', '        renderProgress();') + '\n}', warningContext);
+assert.equal(warningNodes.globalNotice.hidden, true, 'outage notice survived a recovered pool');

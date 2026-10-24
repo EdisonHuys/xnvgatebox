@@ -111,6 +111,24 @@ class WorkerOriginTests(unittest.TestCase):
 
 
 class SourceTests(unittest.TestCase):
+    def test_pool_cli_errors_preserve_pool_and_hide_private_details(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / 'data'
+            output.mkdir()
+            previous = output / 'node_pool.json'
+            previous.write_bytes(b'{"nodes":[{"existing":"private"}]}')
+            args = ['--config', str(ROOT / 'config/settings.json'), '--env-file', str(root / 'none'),
+                    'pool', '--output', str(output)]
+            for error, status in ((ServiceError('pool_source_unavailable'), 2),
+                                  (ToolError('invalid_setting_node_timeout_seconds'), 2),
+                                  (OSError('private filesystem failure'), 2)):
+                with self.subTest(error=type(error).__name__), patch('vpngate_toolbox.cli.build_pool', side_effect=error), \
+                        patch('sys.stderr', new_callable=io.StringIO) as stderr:
+                    self.assertEqual(main(args), status)
+                    self.assertNotIn('private filesystem', stderr.getvalue())
+                    self.assertEqual(previous.read_bytes(), b'{"nodes":[{"existing":"private"}]}')
+
     def test_id_stays_stable_when_ip_and_profile_change(self):
         first = parse_csv(csv_data(), SETTINGS)[0][0]
         second = parse_csv(csv_data(ip="1.1.1.1"), SETTINGS)[0][0]

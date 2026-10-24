@@ -28,6 +28,10 @@ c.request('GET', base+'/api/exits', headers={'Cookie': cookie})
 r = c.getresponse(); data = json.loads(r.read())
 assert r.status == 200 and isinstance(data, dict)
 if sys.argv[1] == 'save':
+    assert not data.get('host_direct'), 'Direct access was automatically enabled'
+    c.request('GET', base+'/api/console', headers={'Cookie': cookie})
+    r = c.getresponse(); summary = json.loads(r.read())
+    assert r.status == 200 and summary['candidates'] == 0 and not summary['pool_generated_at']
     c.request('POST', base+'/api/console/direct', '{"enabled":true}',
               {'Cookie': cookie, 'Content-Type': 'application/json'})
     r = c.getresponse(); r.read()

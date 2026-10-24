@@ -5,7 +5,11 @@ set -euo pipefail
 image=${1:?base image required}
 root=$(cd "$(dirname "$0")/.." && pwd)
 command -v docker >/dev/null
-docker build --build-arg "BASE_IMAGE=$image" -f "$root/tests/distro.Dockerfile" -t xnvgatebox-distro-check "$root/tests"
+for attempt in {1..3}; do
+  if docker build --build-arg "BASE_IMAGE=$image" -f "$root/tests/distro.Dockerfile" -t xnvgatebox-distro-check "$root/tests"; then break; fi
+  ((attempt < 3)) || exit 1
+  sleep 2
+done
 name=xnvgatebox-distro-$RANDOM
 trap 'docker logs "$name"; docker rm -f "$name" >/dev/null' EXIT
 docker run -d --name "$name" --privileged --cgroupns=host \
