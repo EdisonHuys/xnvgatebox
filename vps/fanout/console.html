@@ -1135,6 +1135,7 @@
               <p id="poolSummary">正在读取来源清单…</p>
             </div>
             <div class="actions">
+              <button id="sourceSettingsButton">来源设置</button>
               <button data-action="refresh">↻ 刷新来源</button
               ><label class="parallel-setting"
                 >检测并发
@@ -1152,10 +1153,11 @@
             </div>
           </div>
           <div class="notice">
-            清单数量是官方本次返回的候选数量，可能随时间变化。未测试不等于不可用；来源地区与实际出口地区分开展示。检测会建立临时连接并核验
+            清单数量是本次来源返回并经格式校验的候选数量，可能随时间变化。未测试不等于不可用；来源地区与实际出口地区分开展示。检测会建立临时连接并核验
             HTTPS
             出口。快速端口预检不代表出口可用；无需测完全部候选才能使用订阅。
           </div>
+          <div id="poolSourceSummary" class="notice"></div>
           <div class="progressMount"></div>
           <div class="tools">
             <input
@@ -1503,6 +1505,17 @@
         </section>
       </main>
     </div>
+    <dialog id="sourceDialog" aria-labelledby="sourceTitle">
+      <form id="sourceForm">
+        <div class="dialoghead"><h2 id="sourceTitle">候选来源设置</h2><button type="button" data-close="sourceDialog" aria-label="关闭">×</button></div>
+        <p>所有清单获取和节点检测都由本 VPS 执行。先尝试当前配置来源；启用后，仅在失败时请求第三方镜像原始 CSV。</p>
+        <label class="choice"><input id="sourceMirrorEnabled" type="checkbox" />允许第三方镜像后备（默认关闭）</label>
+        <p class="muted">镜像提供者：<a href="https://github.com/GeorgeXie2333/vpngate-list-mirror" target="_blank" rel="noopener noreferrer">GeorgeXie2333/vpngate-list-mirror</a>，非官方。只使用原始候选，不采用对方的检测结论；文件摘要不等于官方来源认证。</p>
+        <div class="field"><label for="sourceTimeout">每次来源请求最长等待（秒）</label><input id="sourceTimeout" type="number" min="2" max="20" step="1" required /></div>
+        <div class="field"><label for="sourceMirrorMaxAge">镜像声明抓取时间的最大年龄（小时）</label><input id="sourceMirrorMaxAge" type="number" min="1" max="168" step="1" required /><small>默认 24 小时；超过 3 小时会提示较旧。摘要、时间或格式校验失败时保留旧清单。节点仍需本 VPS 建连验证。</small></div>
+        <div class="dialogfoot"><button type="button" data-close="sourceDialog">取消</button><button id="saveSourceSettings" class="primary" type="submit">保存</button></div>
+      </form>
+    </dialog>
     <dialog id="targetDialog" aria-labelledby="targetTitle">
       <form id="targetForm">
         <div class="dialoghead">
@@ -1759,6 +1772,8 @@
         polling = false,
         poolRefreshSubmitting = false,
         poolRefreshEpoch = 0,
+        sourceSettingsLoading = false,
+        sourceSettingsSaving = false,
         settingsLoaded = false,
         currentPage = "overview",
         toastTimer;
@@ -2116,6 +2131,16 @@
           const reasons = {
             pool_refresh_timeout: "刷新超时：未能在等待期限内取得候选清单",
             pool_source_unavailable: "来源暂不可用：请求失败或未返回有效候选清单",
+            pool_source_no_matching_candidates: "清单中暂无符合当前筛选条件的候选",
+            mirror_index_invalid: "镜像索引无效，未采用新清单",
+            mirror_index_unavailable: "原来源失败，镜像索引也暂不可达",
+            mirror_time_invalid: "镜像声明时间异常，请检查系统时间或稍后重试",
+            mirror_snapshot_expired: "镜像快照已超过设置的最大年龄，未采用新清单",
+            mirror_snapshot_rollback: "镜像返回了更旧的快照，已拒绝回退",
+            mirror_snapshot_conflict: "镜像同一时间的内容不一致，未采用新清单",
+            mirror_integrity_failed: "镜像文件长度或摘要不符，未采用新清单",
+            mirror_download_failed: "原来源失败，镜像文件也暂不可达",
+            mirror_csv_invalid: "镜像未返回可解析的原始清单",
             pool_refresh_busy: "已有候选构建任务，请稍后重试",
             pool_refresh_input_error: "候选配置或文件读取异常，请检查配置和日志",
             pool_refresh_invalid_pool: "清单无法读取为有效候选，请检查来源结果",
@@ -2135,6 +2160,18 @@
         $("poolRefreshBar").hidden = !f?.running;
         $("poolRefreshMessage").textContent = f?.text || "";
         $("poolRefreshProgress").className = f?.error ? "notice error" : "notice";
+      }
+      function poolSourceText(source, generatedAt) {
+        if (!generatedAt) return "清单获取由本 VPS 执行，尚未取得候选。可在来源设置中选择是否启用第三方镜像后备。";
+        const s = source || {};
+        let text = "当前清单：" + (s.label || "既有清单");
+        if (s.retrieved_at) text += " · 本机获取/导入 " + date(s.retrieved_at);
+        if (s.kind === "mirror") {
+          text += " · 镜像声明抓取 " + date(s.snapshot_fetched_at);
+          if (s.stale) text += "（超过 3 小时，快照较旧）";
+          text += s.integrity_verified ? " · 文件完整性已校验" : " · 元数据待核对";
+        }
+        return text + "。候选仍需本 VPS 建连和真实出口验证。";
       }
       function render() {
         const s = summary;
@@ -2210,6 +2247,7 @@
           nodes.length +
           " 个来源候选 · 上次成功获取 " +
           date(s.pool_generated_at);
+        $("poolSourceSummary").textContent = poolSourceText(s.pool_source, s.pool_generated_at);
         document.querySelectorAll("[data-action=refresh]").forEach((b) => {
           b.disabled = poolRefreshSubmitting || s.refresh?.status === "running";
           b.textContent = b.disabled ? "↻ 正在刷新…" : "↻ 刷新候选池";
@@ -3235,6 +3273,36 @@
           polling = false;
         }
       }
+      async function openSourceSettings() {
+        if (sourceSettingsLoading || $("sourceDialog").open) return;
+        sourceSettingsLoading = true;
+        try {
+          const s = await api("api/console/source-settings");
+          $("sourceMirrorEnabled").checked = s.mirror_enabled === true;
+          $("sourceTimeout").value = s.source_timeout_seconds;
+          $("sourceMirrorMaxAge").value = s.mirror_max_age_hours;
+          $("sourceDialog").showModal();
+        } finally {
+          sourceSettingsLoading = false;
+        }
+      }
+      $("sourceSettingsButton").onclick = () => action(openSourceSettings, $("sourceSettingsButton"));
+      $("sourceForm").onsubmit = (e) => {
+        e.preventDefault();
+        if (sourceSettingsSaving) return;
+        action(async () => {
+          const timeout = Number($("sourceTimeout").value), age = Number($("sourceMirrorMaxAge").value);
+          if (!Number.isSafeInteger(timeout) || timeout < 2 || timeout > 20 || !Number.isSafeInteger(age) || age < 1 || age > 168) throw Error("请填写有效的来源等待和镜像最大年龄");
+          sourceSettingsSaving = true;
+          try {
+            await api("api/console/source-settings", {mirror_enabled: $("sourceMirrorEnabled").checked, source_timeout_seconds: timeout, mirror_max_age_hours: age});
+            $("sourceDialog").close();
+            toast("来源设置已保存，下次刷新生效");
+          } finally {
+            sourceSettingsSaving = false;
+          }
+        }, $("saveSourceSettings"));
+      };
       async function refreshPool() {
         if (poolRefreshSubmitting || summary.refresh?.status === "running") return;
         poolRefreshSubmitting = true;

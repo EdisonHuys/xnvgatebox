@@ -65,6 +65,11 @@ config['source_urls'] = ['https://127.0.0.1:' + Path('/tmp/xnv-ci-source/port').
 Path('/etc/xnvgatebox/pool.json').write_text(json.dumps(config))
 PY
 mkdir -p /run/systemd/system/xnvgatebox-pool.service.d
+if env -u SSL_CERT_FILE -u SSL_CERT_DIR python3 /usr/local/lib/xnvgatebox/scripts/toolbox.py --config /etc/xnvgatebox/pool.json pool --output /tmp/xnv-untrusted-source >/tmp/untrusted-source.log 2>&1; then
+  echo 'FAIL: untrusted source certificate was accepted'
+  exit 1
+fi
+test ! -e /tmp/xnv-untrusted-source/node_pool.json
 printf '%s\n' '[Service]' 'Environment=SSL_CERT_FILE=/tmp/xnv-ci-source/cert.pem' > /run/systemd/system/xnvgatebox-pool.service.d/fixture.conf
 systemctl daemon-reload
 if ! systemctl start xnvgatebox-pool.service; then

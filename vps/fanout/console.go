@@ -44,6 +44,7 @@ type Console struct {
 	refreshError     string
 	refreshCause     string
 	refreshStarted   time.Time
+	sourceMu         sync.Mutex
 	checksMu         sync.Mutex
 	check            *CheckRun
 	results          map[string]CheckResult
@@ -308,6 +309,7 @@ func (c *Console) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/console/direct", c.apiHostDirect)
 	mux.HandleFunc("/api/console/socks", c.apiPublicSocks)
 	mux.HandleFunc("/api/console/refresh", c.apiPoolRefresh)
+	mux.HandleFunc("/api/console/source-settings", c.apiSourceSettings)
 	mux.HandleFunc("/api/console/check/settings", c.apiCheckSettings)
 	mux.HandleFunc("/api/console/check", c.apiCheck)
 	mux.HandleFunc("/api/console/check/cancel", c.apiCheckCancel)
@@ -427,6 +429,7 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 	generated := ""
 	var pool struct {
 		GeneratedAt string `json:"generated_at"`
+		Source poolSourceMetadata `json:"source"`
 	}
 	if blob, err := os.ReadFile(envOr("FANOUT_VALIDATED_POOL_FILE", "/var/lib/xnvgatebox/pool/node_pool.json")); err == nil && json.Unmarshal(blob, &pool) == nil {
 		generated = pool.GeneratedAt
@@ -445,7 +448,7 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, map[string]any{"version": version, "capacity": c.m.maxSlots, "target": target, "target_configured": plan != nil, "suggested_target": 4, "allocated": len(view.Exits), "ready": ready, "stopped": stopped, "waiting": max(0, target-ready-stopped), "candidates": len(nodes), "pool_read_at": fetched, "pool_generated_at": generated, "default_server_name": serverName, "plan": plan, "plan_error": planErr, "refresh": refresh, "check": checkView, "check_settings": map[string]int{"parallelism": parallelism}, "results": results, "memory": memory})
+	writeJSON(w, 200, map[string]any{"version": version, "capacity": c.m.maxSlots, "target": target, "target_configured": plan != nil, "suggested_target": 4, "allocated": len(view.Exits), "ready": ready, "stopped": stopped, "waiting": max(0, target-ready-stopped), "candidates": len(nodes), "pool_read_at": fetched, "pool_generated_at": generated, "pool_source": publicPoolSource(pool.Source), "default_server_name": serverName, "plan": plan, "plan_error": planErr, "refresh": refresh, "check": checkView, "check_settings": map[string]int{"parallelism": parallelism}, "results": results, "memory": memory})
 }
 
 func (c *Console) apiPoolRefresh(w http.ResponseWriter, r *http.Request) {

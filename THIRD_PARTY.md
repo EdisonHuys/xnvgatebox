@@ -7,6 +7,7 @@
 | 组件 | 本轮使用方式 | 许可 / 来源 |
 | --- | --- | --- |
 | VPN Gate 官方 CSV | 运行时读取公开节点与配置数据；配置作为未执行的数据保存 | [官方入口](https://www.vpngate.net/en/)，使用范围依官方项目说明 |
+| vpngate-list-mirror | 用户可选；由自己的 VPS 获取索引和固定提交的原始 CSV，不复用代码或检测结论；导入配置采用指令白名单 | [第三方仓库](https://github.com/GeorgeXie2333/vpngate-list-mirror)，数据使用范围依原发布方说明；不宣称官方认证 |
 | sstp-client | CentOS 安装时从固定版本 1.0.20 源码构建本机 RPM，匹配系统 PPP；独立进程运行，不修改上游源码 | [上游](https://gitlab.com/sstp-project/sstp-client/-/tree/1.0.20)、GPL-2.0-or-later；安装保留 COPYING，归档 SHA256 固定于安装脚本 |
 | CheckSocks5 | 独立部署准备；新增认证与 SSTP API 边界；调用其 HTTP 接口 | GPL v3；固定提交 `2f31cf9a242444eb22905d888d4d8871b0625b3a`，保留完整 LICENSE 和 README |
 | EdgeTunnel | 独立部署准备；强制 SSTP/globalproxy、关闭管理页面和 UDP；生成对应 VLESS/WS 参数 | GPL v2；固定提交 `af4f9837e1843e34159018713bc8749ccec3004d`，保留完整 LICENSE 和上游源文件；不与 GPL v3 Checker 合并 |

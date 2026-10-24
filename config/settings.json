@@ -1,5 +1,7 @@
 {
   "source_urls": ["https://www.vpngate.net/api/iphone/"],
+  "pool_source_timeout_seconds": 10,
+  "mirror_fallback": {"enabled": false, "max_age_hours": 24},
   "countries": [],
   "candidate_limit": 50,
   "sstp_concurrency": 4,

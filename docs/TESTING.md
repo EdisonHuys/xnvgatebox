@@ -28,6 +28,7 @@ Python 检查解析、证据一致性、异常响应、证书拒绝、订阅清�
 
 - `test.yml`：Python 3.9/3.12 与 Node 回归。
 - `vps.yml`：Linux Go/race、卸载验证、完整包构建及多发行版安装矩阵。
+- 手动运行 `vps.yml` 时可选 `live_mirror`，在一次性 Linux 环境运行生产 Builder，自行请求公开镜像索引与固定提交 CSV；不发布候选、不连接 VPN、不替代用户 VPS 验收。
 - `release-vps.yml`：手动发布通过测试的完整包，核对来源、版本与文件摘要。
 - `update.yml`：仅手动构建共享候选池，不定时运行、不部署 Cloudflare。
 

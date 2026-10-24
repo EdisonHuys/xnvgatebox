@@ -10,6 +10,11 @@ on:
         default: dev
         required: true
         type: string
+      live_mirror:
+        description: 'Also verify local Linux acquisition of the opt-in public mirror (external network required)'
+        default: false
+        required: false
+        type: boolean
 permissions:
   contents: read
 jobs:
@@ -33,7 +38,7 @@ jobs:
           sudo /tmp/xnvgatebox-tests -test.v
         working-directory: vps/fanout
       - name: Check diagnostic concurrency for races
-        run: go test -race -run 'Test(ConnectBudget|ConnectObservations|CountryEvidence|ManualEntry|ThirdParty|Update|PoolRefresh|ConsoleRefresh|Sstp|ExplicitHostDirect|PublicSocks|HostDirectSubscription|AccessStore|ShutdownPersistence|ShutdownWaits|NetworkLinks|Diagnostic128|ProductionNetwork|DynamicDiagnostic|Console128|ConsoleManual|ConsoleFullSource|ConsoleCheckSettings|ConsoleTwoWorkers|ConsoleCancellation|ConsoleParallelism|ConsoleCandidateQueue|ConsoleRunningCandidate|ConsoleShutdown|DiagnosticLease|CancelledProduction|DiagnosticBusy|CandidateReuse|Preflight|TCPPreflight)' ./...
+        run: go test -race -run 'Test(ConnectBudget|ConnectObservations|CountryEvidence|ManualEntry|ThirdParty|Update|PoolRefresh|ConsoleRefresh|ConsoleSource|PoolSource|Sstp|ExplicitHostDirect|PublicSocks|HostDirectSubscription|AccessStore|ShutdownPersistence|ShutdownWaits|NetworkLinks|Diagnostic128|ProductionNetwork|DynamicDiagnostic|Console128|ConsoleManual|ConsoleFullSource|ConsoleCheckSettings|ConsoleTwoWorkers|ConsoleCancellation|ConsoleParallelism|ConsoleCandidateQueue|ConsoleRunningCandidate|ConsoleShutdown|DiagnosticLease|CancelledProduction|DiagnosticBusy|CandidateReuse|Preflight|TCPPreflight)' ./...
         working-directory: vps/fanout
       - name: Verify uninstall with real isolated network resources
         run: sudo python3 tests/uninstall_linux.py
@@ -69,3 +74,17 @@ jobs:
           name: xnvgatebox-linux-amd64
           path: dist/
       - run: bash tests/distro_install.sh "${{ matrix.image }}"
+
+  mirror-source:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_mirror
+    needs: vps
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: python3 tests/live_mirror_builder.py
