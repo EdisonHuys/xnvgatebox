@@ -42,6 +42,8 @@ type Console struct {
 	refreshState     string
 	refreshAt        string
 	refreshError     string
+	refreshCause     string
+	refreshStarted   time.Time
 	checksMu         sync.Mutex
 	check            *CheckRun
 	results          map[string]CheckResult
@@ -390,7 +392,7 @@ func (c *Console) apiConsole(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(503)
 		return
 	}
-	refresh := map[string]string{"status": c.refreshState, "checked_at": c.refreshAt, "error": c.refreshError}
+	refresh := c.poolRefreshViewLocked()
 	c.refreshMu.Unlock()
 	c.checksMu.Lock()
 	results := make(map[string]CheckResult, len(c.results))
@@ -463,9 +465,12 @@ func (c *Console) apiPoolRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.refreshState, c.refreshError = "running", ""
+	c.refreshCause, c.refreshAt = "", ""
+	c.refreshStarted = time.Now()
 	finished := make(chan struct{})
 	c.refreshDone = finished
 	c.refreshMu.Unlock()
+	log.Print("[pool-refresh] started")
 	go func() {
 		defer close(finished)
 		ctx, cancel := context.WithTimeout(c.ctx, 90*time.Second)
@@ -474,17 +479,26 @@ func (c *Console) apiPoolRefresh(w http.ResponseWriter, r *http.Request) {
 		cmd := exec.CommandContext(ctx, "python3", envOr("FANOUT_TOOLBOX_SCRIPT", "/usr/local/lib/xnvgatebox/scripts/toolbox.py"), "--config", envOr("FANOUT_POOL_CONFIG", "/etc/xnvgatebox/pool.json"), "pool", "--output", filepath.Dir(pool))
 		// Builder uses the same lock/atomic snapshot as the timer. Never echo its
 		// stdout or private environment to an API response.
+		var stderr poolRefreshErrorBuffer
+		cmd.Stderr = &stderr
 		err := cmdRun(cmd)
+		cause := poolRefreshCause(ctx, err, string(stderr.data))
 		if err == nil {
 			_, err = c.m.RefreshNodes()
+			if err != nil {
+				cause = "pool_refresh_invalid_pool"
+			}
 		}
+		nodes, _ := c.m.Nodes()
 		c.refreshMu.Lock()
 		defer c.refreshMu.Unlock()
 		c.refreshAt = time.Now().UTC().Format(time.RFC3339)
 		c.refreshState = "passed"
 		if err != nil {
 			c.refreshState, c.refreshError = "failed", "pool_refresh_failed_previous_pool_retained"
+			c.refreshCause = cause
 		}
+		log.Printf("[pool-refresh] status=%s cause=%s candidates=%d", c.refreshState, c.refreshCause, len(nodes))
 	}()
 	writeJSON(w, 202, map[string]string{"status": "running"})
 }

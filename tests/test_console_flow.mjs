@@ -32,7 +32,7 @@ assert.match(s.exitOptions('',2),/value="slot:2" selected>出口 2 · 等待候�
 console.log('console flow regressions passed');
 
 const warningNodes = {globalNotice: {}};
-const warningContext = vm.createContext({nodes: [], s: {candidates: 0}, document: {}, errors: {}, $: id => warningNodes[id]});
+const warningContext = vm.createContext({nodes: [], s: {candidates: 0}, document: {}, errors: {}, renderPoolRefresh() {}, $: id => warningNodes[id]});
 vm.runInContext(section(html, '        const missingPool =', '        renderProgress();'), warningContext);
 assert.equal(warningNodes.globalNotice.hidden, false);
 assert.match(warningNodes.globalNotice.textContent, /尚未取得 VPN Gate/);
@@ -41,3 +41,33 @@ warningContext.nodes = [{}];
 warningContext.s = {pool_generated_at: '2026-10-24T00:00:00Z'};
 vm.runInContext('{\n' + section(html, '        const missingPool =', '        renderProgress();') + '\n}', warningContext);
 assert.equal(warningNodes.globalNotice.hidden, true, 'outage notice survived a recovered pool');
+
+const feedbackContext = vm.createContext({date: x => x});
+vm.runInContext(section(html, '      function poolRefreshFeedback(', '      function renderPoolRefresh()'), feedbackContext);
+let f = feedbackContext.poolRefreshFeedback({status:'running',elapsed_seconds:12,timeout_seconds:90},0);
+assert.equal(f.running, true); assert.match(f.text,/12 秒/);
+f = feedbackContext.poolRefreshFeedback({status:'failed',cause:'pool_refresh_timeout',checked_at:'test-time'},0);
+assert.equal(f.error,true); assert.match(f.text,/刷新超时/); assert.match(f.text,/仍未取得候选/); assert.match(f.text,/test-time/);
+assert.doesNotMatch(f.text,/保留旧清单/);
+f = feedbackContext.poolRefreshFeedback({status:'passed'},99);
+assert.match(f.text,/99 个候选/); assert.match(f.text,/仍需检测/);
+const waitingWarning = vm.createContext({nodes:[],s:{refresh:{status:'failed'}},renderPoolRefresh(){},$:id=>warningNodes[id]});
+vm.runInContext(section(html,'        const missingPool =','        renderProgress();'),waitingWarning);
+assert.equal(warningNodes.globalNotice.hidden,true,'generic missing-pool banner masks actual failure');
+
+let resolveRefresh;
+let refreshCalls = 0;
+const refreshContext = vm.createContext({AbortController,setTimeout,clearTimeout,summary:{},poolRefreshSubmitting:false,poolRefreshEpoch:0,render(){},
+  api(){refreshCalls++;return new Promise(resolve=>{resolveRefresh=resolve;});},async poll(){}});
+vm.runInContext(section(html,'      async function refreshPool()', '      function openTarget()'),refreshContext);
+const refreshTask = refreshContext.refreshPool();
+assert.equal(refreshContext.summary.refresh.status,'running','click has no immediate progress');
+assert.equal(refreshContext.poolRefreshSubmitting,true);
+await refreshContext.refreshPool(); assert.equal(refreshCalls,1,'double click starts duplicate request');
+resolveRefresh({status:'running'}); await refreshTask;
+assert.equal(refreshContext.poolRefreshSubmitting,false);
+refreshContext.summary.refresh = {};
+refreshContext.api = async()=>{throw Error('connection lost');};
+await assert.rejects(refreshContext.refreshPool());
+assert.equal(refreshContext.summary.refresh.status,'failed');
+assert.equal(refreshContext.summary.refresh.cause,'pool_refresh_submit_failed');

@@ -491,6 +491,14 @@
         background: var(--card);
         border: 1px solid var(--red);
       }
+      #poolRefreshProgress progress {
+        display: block;
+        width: 100%;
+        height: 6px;
+        margin-top: 10px;
+        accent-color: var(--accent);
+      }
+      #poolRefreshProgress progress[hidden] { display: none; }
       .empty {
         padding: 38px;
         text-align: center;
@@ -959,6 +967,10 @@
       </header>
       <main>
         <div id="globalNotice" class="notice error" hidden></div>
+        <div id="poolRefreshProgress" class="notice" role="status" aria-live="polite" hidden>
+          <span id="poolRefreshMessage"></span>
+          <progress id="poolRefreshBar" aria-label="正在刷新候选清单"></progress>
+        </div>
         <section class="page active" id="overview">
           <div class="pagehead">
             <div>
@@ -1745,6 +1757,8 @@
         sstpSettingsDirty = false,
         currentExit = null,
         polling = false,
+        poolRefreshSubmitting = false,
+        poolRefreshEpoch = 0,
         settingsLoaded = false,
         currentPage = "overview",
         toastTimer;
@@ -1876,9 +1890,10 @@
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => ($("toast").hidden = true), 4500);
       }
-      async function api(path, body) {
+      async function api(path, body, signal) {
         const r = await fetch(path.replace(/^\//, ""), {
           cache: "no-store",
+          signal,
           ...(body !== undefined
             ? {
                 method: "POST",
@@ -2085,6 +2100,42 @@
             }).join("")
           : '<div class="card empty">尚未添加自定义代理，可在“代理资源 → 第三方 SOCKS5”中添加。</div>';
       }
+      function poolRefreshFeedback(refresh, count) {
+        const r = refresh || {};
+        const finished = r.checked_at ? " · 完成于 " + date(r.checked_at) : "";
+        if (r.status === "running") return {
+          running: true, error: false,
+          text: r.submitting ? "正在提交候选刷新请求…" : "正在获取并读取候选清单 · 已等待 " + Math.max(0, Number(r.elapsed_seconds) || 0) +
+            " 秒 · 最长等待 " + (Number(r.timeout_seconds) || 90) + " 秒。获取后仍需检测节点连通性。",
+        };
+        if (r.status === "passed") return {
+          running: false, error: false,
+          text: "候选刷新完成 · 当前 " + count + " 个候选，仍需检测后确认连通性。" + finished,
+        };
+        if (r.status === "failed") {
+          const reasons = {
+            pool_refresh_timeout: "刷新超时：未能在等待期限内取得候选清单",
+            pool_source_unavailable: "来源暂不可用：请求失败或未返回有效候选清单",
+            pool_refresh_busy: "已有候选构建任务，请稍后重试",
+            pool_refresh_input_error: "候选配置或文件读取异常，请检查配置和日志",
+            pool_refresh_invalid_pool: "清单无法读取为有效候选，请检查来源结果",
+            pool_refresh_cancelled: "刷新已中止，可以重新尝试",
+            pool_refresh_submit_failed: "刷新请求未成功提交，请检查管理连接后重试",
+          };
+          return {running: false, error: true,
+            text: (reasons[r.cause] || "候选刷新失败，请稍后重试或查看日志") +
+              (count ? "。现有 " + count + " 个候选保留。" : "。当前仍未取得候选。") +
+              "本机直出和第三方 SOCKS5 可独立使用。" + finished};
+        }
+        return null;
+      }
+      function renderPoolRefresh() {
+        const f = poolRefreshFeedback(summary.refresh, nodes.length);
+        $("poolRefreshProgress").hidden = !f;
+        $("poolRefreshBar").hidden = !f?.running;
+        $("poolRefreshMessage").textContent = f?.text || "";
+        $("poolRefreshProgress").className = f?.error ? "notice error" : "notice";
+      }
       function render() {
         const s = summary;
         if (currentPage === "resources") {
@@ -2157,21 +2208,20 @@
           : "暂不可用";
         $("poolSummary").textContent =
           nodes.length +
-          " 个来源候选 · 清单更新 " +
-          date(s.pool_generated_at || s.pool_read_at);
+          " 个来源候选 · 上次成功获取 " +
+          date(s.pool_generated_at);
         document.querySelectorAll("[data-action=refresh]").forEach((b) => {
-          b.disabled = s.refresh?.status === "running";
+          b.disabled = poolRefreshSubmitting || s.refresh?.status === "running";
           b.textContent = b.disabled ? "↻ 正在刷新…" : "↻ 刷新候选池";
         });
         const missingPool = !nodes.length && !s.pool_generated_at;
-        const warning = missingPool
-          ? "尚未取得 VPN Gate 候选清单，可点击刷新来源；系统也会定时重试。可先启用本机直出或添加第三方 SOCKS5，VPN Gate 出口继续等待，不自动切换。"
-          :
-          s.refresh?.status === "failed"
-            ? errors[s.refresh.error] || "刷新失败，保留旧池"
-            : "";
+        const warning = missingPool && !["running", "failed"].includes(s.refresh?.status)
+          ? "尚未取得 VPN Gate 候选清单，可点击刷新来源；系统也会定时重试。本机直出与第三方 SOCKS5 可独立使用，VPN Gate 出口继续等待，不自动切换。"
+          : "";
         $("globalNotice").hidden = !warning;
         $("globalNotice").textContent = warning;
+        $("globalNotice").className = "notice";
+        renderPoolRefresh();
         renderProgress();
         renderNodes();
         renderSubscription();
@@ -3152,6 +3202,7 @@
         polling = true;
         try {
           const thirdPollEpoch = thirdEpoch;
+          const refreshPollEpoch = poolRefreshEpoch;
           const [s, e, n, sub, third] = await Promise.all([
             api("api/console"),
             api("api/exits"),
@@ -3161,6 +3212,9 @@
               proxies: thirdProxies,
             })),
           ]);
+          if (refreshPollEpoch !== poolRefreshEpoch || poolRefreshSubmitting) s.refresh = summary.refresh;
+          if (summary.refresh?.cause === "pool_refresh_submit_failed" &&
+              (s.refresh?.started_at || "") === summary.refresh.previous_started_at) s.refresh = summary.refresh;
           summary = s;
           summary.backend = e.backend;
           hostDirect = e.host_direct || [];
@@ -3175,10 +3229,33 @@
           render();
         } catch (e) {
           $("globalNotice").hidden = false;
+          $("globalNotice").className = "notice error";
           $("globalNotice").textContent = "连接暂时中断：" + e.message;
         } finally {
           polling = false;
         }
+      }
+      async function refreshPool() {
+        if (poolRefreshSubmitting || summary.refresh?.status === "running") return;
+        poolRefreshSubmitting = true;
+        poolRefreshEpoch++;
+        const previousStarted = summary.refresh?.started_at || "";
+        summary.refresh = {status: "running", submitting: true, elapsed_seconds: 0, timeout_seconds: 90};
+        render();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+          await api("api/console/refresh", {}, controller.signal);
+          summary.refresh.submitting = false;
+        } catch (e) {
+          summary.refresh = {status: "failed", cause: "pool_refresh_submit_failed", previous_started_at: previousStarted};
+          throw e;
+        } finally {
+          clearTimeout(timeout);
+          poolRefreshSubmitting = false;
+          render();
+        }
+        await poll();
       }
       function openTarget() {
         if (summary.capacity === undefined) {
@@ -3293,9 +3370,7 @@
           if (a === "target") openTarget();
           if (a === "edit") openExit(slot);
           if (a === "refresh") {
-            await api("api/console/refresh", {});
-            toast("正在从官方来源刷新候选");
-            await poll();
+            await refreshPool();
           }
           if (a === "check") await check({ slots: [slot], priority: true });
           if (a === "checkAll") {
