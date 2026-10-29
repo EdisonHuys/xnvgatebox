@@ -563,6 +563,15 @@ func shareLink(ib *nativeInbound, c nativeClient, host string) string {
 	net := ib.netOrTCP()
 	sec := ib.securityOrNone()
 
+	port := ib.Port
+	isCDN := cdnDomain() != "" && (net == "ws" || ib.Protocol == "vless")
+	if isCDN {
+		if d := cdnDomain(); d != "" {
+			host = d
+		}
+		port = cdnPort()
+	}
+
 	q := url.Values{}
 	q.Set("type", net)
 	q.Set("security", sec)
@@ -585,7 +594,7 @@ func shareLink(ib *nativeInbound, c nativeClient, host string) string {
 			}
 			// 自签证书验不过 CA。Xray 26.x 移除了 allowInsecure，
 			// 改用证书指纹让客户端固定信任这一张。
-			if ib.TLS.SelfSigned && ib.TLS.CertSha256 != "" {
+			if !isCDN && ib.TLS.SelfSigned && ib.TLS.CertSha256 != "" {
 				q.Set("pinSHA256", ib.TLS.CertSha256)
 			}
 		}
@@ -614,14 +623,14 @@ func shareLink(ib *nativeInbound, c nativeClient, host string) string {
 
 	switch ib.Protocol {
 	case "trojan":
-		return fmt.Sprintf("trojan://%s@%s:%d?%s#%s", url.User(c.Password).String(), host, ib.Port, q.Encode(), frag)
+		return fmt.Sprintf("trojan://%s@%s:%d?%s#%s", url.User(c.Password).String(), host, port, q.Encode(), frag)
 	case "vmess":
 		// vmess 的 base64 形式各家客户端解析不一，用通用的 URI 形式
 		q.Set("encryption", "auto")
-		return fmt.Sprintf("vmess://%s@%s:%d?%s#%s", c.ID, host, ib.Port, q.Encode(), frag)
+		return fmt.Sprintf("vmess://%s@%s:%d?%s#%s", c.ID, host, port, q.Encode(), frag)
 	default:
 		q.Set("encryption", "none")
-		return fmt.Sprintf("vless://%s@%s:%d?%s#%s", c.ID, host, ib.Port, q.Encode(), frag)
+		return fmt.Sprintf("vless://%s@%s:%d?%s#%s", c.ID, host, port, q.Encode(), frag)
 	}
 }
 

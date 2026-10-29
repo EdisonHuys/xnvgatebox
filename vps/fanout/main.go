@@ -678,6 +678,9 @@ func apiXUIDetail(w http.ResponseWriter, r *http.Request) {
 // publicHost 决定分享链接里的连接地址。母机公网 IPv4 才是客户端真正能连上
 // 的地址，所以优先用它；探测不到（比如纯内网）再退回访问 fanout 时用的主机名。
 func publicHost(r *http.Request) string {
+	if d := cdnDomain(); d != "" {
+		return d
+	}
 	if ip := hostPublicIP(); ip != "" {
 		return ip
 	}

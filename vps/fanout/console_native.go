@@ -85,8 +85,21 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 				return err
 			}
 		}
-		ib, err := n.prepareInbound(NewInboundSpec{realityChecked: true, Protocol: "vless", Network: "tcp", Security: "reality", Port: port,
-			Remark: fmt.Sprintf("出口 %02d", v.Slot), Dest: serverName + ":443", ServerNames: serverName, Fingerprint: "chrome"}, used)
+		spec := NewInboundSpec{realityChecked: true, Protocol: "vless", Network: "tcp", Security: "reality", Port: port,
+			Remark: fmt.Sprintf("出口 %02d", v.Slot), Dest: serverName + ":443", ServerNames: serverName, Fingerprint: "chrome"}
+		if d := cdnDomain(); d != "" {
+			spec = NewInboundSpec{
+				Protocol:    "vless",
+				Network:     "ws",
+				Security:    "tls",
+				Port:        port,
+				Remark:      fmt.Sprintf("出口 %02d", v.Slot),
+				Host:        d,
+				Path:        fmt.Sprintf("%s/slot-%02d", cdnPathPrefix(), v.Slot),
+				ServerNames: d,
+			}
+		}
+		ib, err := n.prepareInbound(spec, used)
 		if err != nil {
 			return err
 		}

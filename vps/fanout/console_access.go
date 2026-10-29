@@ -86,10 +86,22 @@ func (n *Native) setHostDirect(enabled bool, serverName string, tunnels []*Tunne
 	for _, tunnel := range tunnels {
 		used[tunnel.Port] = true
 	}
-	ib, err := n.prepareInbound(NewInboundSpec{
+	spec := NewInboundSpec{
 		Protocol: "vless", Network: "tcp", Security: "reality", Remark: "VPS 本机直出",
 		Dest: serverName + ":443", ServerNames: serverName, Fingerprint: "chrome",
-	}, used)
+	}
+	if d := cdnDomain(); d != "" {
+		spec = NewInboundSpec{
+			Protocol:    "vless",
+			Network:     "ws",
+			Security:    "tls",
+			Remark:      "VPS 本机直出",
+			Host:        d,
+			Path:        cdnPathPrefix() + "/direct",
+			ServerNames: d,
+		}
+	}
+	ib, err := n.prepareInbound(spec, used)
 	if err != nil {
 		return err
 	}
