@@ -141,9 +141,15 @@ if [[ -f /var/lib/xnvgatebox-deploy/transaction.json ]]; then
 fi
 mark_phase preparing
 if [[ -z $package ]]; then
+  upstream_repo="${XNVGATEBOX_REPO:-EdisonHuys/xnvgatebox}"
+  fallback_repo="hanhaoops/xnvgatebox"
   if [[ -z $release_tag ]]; then
-    curl -fLsS --retry 3 --connect-timeout 15 --max-time 60 -H 'Accept: application/vnd.github+json' \
-      https://api.github.com/repos/hanhaoops/xnvgatebox/releases/latest -o "$task_tmp/release.json"
+    if ! curl -fLsS --retry 2 --connect-timeout 10 --max-time 30 -H 'Accept: application/vnd.github+json' \
+      "https://api.github.com/repos/$upstream_repo/releases/latest" -o "$task_tmp/release.json" 2>/dev/null || ! grep -q '"tag_name"' "$task_tmp/release.json"; then
+      upstream_repo="$fallback_repo"
+      curl -fLsS --retry 3 --connect-timeout 15 --max-time 60 -H 'Accept: application/vnd.github+json' \
+        "https://api.github.com/repos/$upstream_repo/releases/latest" -o "$task_tmp/release.json"
+    fi
     release_tag=$(python3 - "$task_tmp/release.json" <<'PY'
 import json,re,sys
 r=json.load(open(sys.argv[1]));tag=r.get('tag_name','')
@@ -152,11 +158,16 @@ print(tag)
 PY
 )
   fi
-  release_url="https://github.com/hanhaoops/xnvgatebox/releases/download/$release_tag"
+  release_url="https://github.com/$upstream_repo/releases/download/$release_tag"
   mark_phase downloading
   echo '下载完整安装包…'
-  curl -fL --progress-bar --retry 3 --connect-timeout 15 --max-time 180 "$release_url/xnvgatebox-linux-amd64.tar.gz" -o "$task_tmp/xnvgatebox-linux-amd64.tar.gz"
-  curl -fLsS --retry 3 --connect-timeout 15 --max-time 60 "$release_url/checksums.txt" -o "$task_tmp/checksums.txt"
+  if ! curl -fL --progress-bar --retry 2 --connect-timeout 15 --max-time 180 "$release_url/xnvgatebox-linux-amd64.tar.gz" -o "$task_tmp/xnvgatebox-linux-amd64.tar.gz" 2>/dev/null; then
+    release_url="https://github.com/$fallback_repo/releases/download/$release_tag"
+    curl -fL --progress-bar --retry 3 --connect-timeout 15 --max-time 180 "$release_url/xnvgatebox-linux-amd64.tar.gz" -o "$task_tmp/xnvgatebox-linux-amd64.tar.gz"
+  fi
+  if ! curl -fLsS --retry 2 --connect-timeout 10 --max-time 30 "$release_url/checksums.txt" -o "$task_tmp/checksums.txt" 2>/dev/null; then
+    curl -fLsS --retry 3 --connect-timeout 15 --max-time 60 "https://github.com/$fallback_repo/releases/download/$release_tag/checksums.txt" -o "$task_tmp/checksums.txt"
+  fi
 else
   package=$(realpath "$package")
   cp "$(dirname "$package")/checksums.txt" "$task_tmp/checksums.txt"

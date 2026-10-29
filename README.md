@@ -17,9 +17,28 @@
 
 以上系统均以 root 执行同一段命令，自动选择 APT 或 DNF：
 
+### 1. 常规快速安装
+
 ```sh
 if command -v apt-get >/dev/null; then apt-get update && apt-get install -y ca-certificates curl; else dnf -y install ca-certificates && { command -v curl >/dev/null || dnf -y install curl; }; fi &&
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.6/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.6 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/EdisonHuys/xnvgatebox/main/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.6 && xnvgatebox access
+```
+
+### 2. Cloudflare 小黄云 CDN 救砖模式（针对国内被封 IP 的 VPS）
+
+若您的 VPS IP 在国内已被 GFW 阻断，但拥有已解析且开启 Cloudflare CDN（小黄云 `已代理`）的域名（如 `ali.edisonhu.xyz`），可先写入环境变量，系统将自动启用 **VLESS + WebSocket + TLS** 模式并适配 443 端口：
+
+```sh
+# 预先配置 Cloudflare CDN 接入域名
+mkdir -p /etc/default
+cat <<'EOF' > /etc/default/xnvgatebox-fanout
+FANOUT_CDN_DOMAIN=ali.edisonhu.xyz
+FANOUT_RESIDENTIAL_ONLY=0
+EOF
+
+# 一键安装
+if command -v apt-get >/dev/null; then apt-get update && apt-get install -y ca-certificates curl; else dnf -y install ca-certificates && { command -v curl >/dev/null || dnf -y install curl; }; fi &&
+curl -fsSL https://raw.githubusercontent.com/EdisonHuys/xnvgatebox/main/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.6 && xnvgatebox access
 ```
 
 安装完成后显示随机生成的管理地址和密码。之后可随时查看：

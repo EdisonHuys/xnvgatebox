@@ -6,9 +6,23 @@
 
 支持的系统均以 root 执行：
 
+### 常规安装
+
 ```sh
 if command -v apt-get >/dev/null; then apt-get update && apt-get install -y ca-certificates curl; else dnf -y install ca-certificates && { command -v curl >/dev/null || dnf -y install curl; }; fi &&
-curl -fsSL https://raw.githubusercontent.com/hanhaoops/xnvgatebox/v0.9.6/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.6 && xnvgatebox access
+curl -fsSL https://raw.githubusercontent.com/EdisonHuys/xnvgatebox/main/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.6 && xnvgatebox access
+```
+
+### Cloudflare 小黄云 CDN 救砖模式（VPS IP 被封）
+
+```sh
+mkdir -p /etc/default && cat <<'EOF' > /etc/default/xnvgatebox-fanout
+FANOUT_CDN_DOMAIN=ali.edisonhu.xyz
+FANOUT_RESIDENTIAL_ONLY=0
+EOF
+
+if command -v apt-get >/dev/null; then apt-get update && apt-get install -y ca-certificates curl; else dnf -y install ca-certificates && { command -v curl >/dev/null || dnf -y install curl; }; fi &&
+curl -fsSL https://raw.githubusercontent.com/EdisonHuys/xnvgatebox/main/vps/install.sh -o /tmp/xnvgatebox-install.sh && bash /tmp/xnvgatebox-install.sh --version v0.9.6 && xnvgatebox access
 ```
 
 只下载本项目 GitHub Release 的完整包和 SHA256，固定 Xray 在构建时验证官方归档摘要。安装器检查归档路径、类型、重复项、完整文件清单、成员摘要和正式版本构建信息。下载、包校验及本地候选配置检查在停止旧服务之前完成；安装不请求 VPN Gate 来源，保留旧池，没有旧池也可安装。候选由后台或定时器获取。登录后可独立配置本机直出及第三方 SOCKS5，VPN Gate 等待候选，不自动回落直出。
