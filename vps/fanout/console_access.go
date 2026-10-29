@@ -97,7 +97,8 @@ func (n *Native) setHostDirect(enabled bool, serverName string, tunnels []*Tunne
 			Security:    "tls",
 			Remark:      "VPS 本机直出",
 			Host:        d,
-			Path:        cdnPathPrefix() + "/direct",
+			Path:        cdnPathPrefix(),
+			ServerName:  d,
 			ServerNames: d,
 		}
 	}

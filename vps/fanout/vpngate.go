@@ -100,8 +100,15 @@ func isResidential(hostName, ip string) bool {
 // 先直连；连不上或者拿回来的内容不对（被拦截、返回门户页）就换反代再试一次。
 // 返回的列表已按速度降序排列。
 func fetchNodes(timeout time.Duration) ([]Node, error) {
-	if pool := strings.TrimSpace(os.Getenv("FANOUT_VALIDATED_POOL_FILE")); pool != "" {
+	pool := strings.TrimSpace(os.Getenv("FANOUT_VALIDATED_POOL_FILE"))
+	if pool == "" {
+		pool = "/var/lib/xnvgatebox/pool/node_pool.json"
+	}
+	if _, err := os.Stat(pool); err == nil {
 		return fetchNodesFromValidatedPool(pool)
+	}
+	if os.Getenv("FANOUT_VALIDATED_POOL_FILE") != "" {
+		return nil, fmt.Errorf("指定的候选池文件不可读: %s", pool)
 	}
 	return nil, fmt.Errorf("请配置 FANOUT_VALIDATED_POOL_FILE；本项目只消费共享 Pool Builder 的 node_pool.json")
 }

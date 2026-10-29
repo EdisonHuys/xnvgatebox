@@ -95,7 +95,8 @@ func (n *Native) ensureSlotInbounds(tunnels []*Tunnel, serverName string) error 
 				Port:        port,
 				Remark:      fmt.Sprintf("出口 %02d", v.Slot),
 				Host:        d,
-				Path:        fmt.Sprintf("%s/slot-%02d", cdnPathPrefix(), v.Slot),
+				Path:        cdnPathPrefix(),
+				ServerName:  d,
 				ServerNames: d,
 			}
 		}

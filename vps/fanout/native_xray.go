@@ -74,9 +74,17 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 	for _, t := range tunnels {
 		bySlot[t.Slot] = t
 	}
-	ins := make([]any, 0, len(inbounds))
+	cdnIn, cdnRules := cdnGatewayInbound(inbounds, bound, slots)
+
+	ins := make([]any, 0, len(inbounds)+1)
+	if cdnIn != nil {
+		ins = append(ins, cdnIn)
+	}
 	for _, ib := range inbounds {
 		if !ib.Enable {
+			continue
+		}
+		if cdnIn != nil && ib.Port == cdnPort() {
 			continue
 		}
 		if ib.SocksSlot > 0 {
@@ -105,8 +113,14 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 	}
 
 	rules := []any{}
+	if len(cdnRules) > 0 {
+		rules = append(rules, cdnRules...)
+	}
 	for _, ib := range inbounds {
 		if !ib.Enable {
+			continue
+		}
+		if cdnIn != nil && ib.Port == cdnPort() {
 			continue
 		}
 		tag := bound[ib.BoundTo]
@@ -144,6 +158,122 @@ func buildXrayConfig(inbounds []*nativeInbound, tunnels []*Tunnel) map[string]an
 			"rules":          rules,
 		},
 	}
+}
+
+// cdnGatewayInbound 在开启 Cloudflare CDN 时生成监听在 cdnPort (默认 443) 的聚合入站及路由规则。
+// 该入站汇聚所有可用出口（直出与各 Slot）的客户端凭据，并通过 user (email) 路由至各自分配的出口，
+// 解决 CDN 仅支持单个外部 HTTPS 端口且 WebSocket 路径统一的问题。
+func cdnGatewayInbound(inbounds []*nativeInbound, bound map[string]string, slots map[int]bool) (map[string]any, []any) {
+	d := cdnDomain()
+	if d == "" {
+		return nil, nil
+	}
+	port := cdnPort()
+	path := cdnPathPrefix()
+
+	var certFile, keyFile string
+	for _, ib := range inbounds {
+		if ib.TLS != nil && ib.TLS.CertFile != "" && ib.TLS.KeyFile != "" {
+			certFile, keyFile = ib.TLS.CertFile, ib.TLS.KeyFile
+			break
+		}
+	}
+	if certFile == "" || keyFile == "" {
+		candidates := []string{
+			"/var/lib/xnvgatebox/fanout/certs/ali.crt",
+			"/var/lib/xnvgatebox/fanout/certs/generated.crt",
+		}
+		for _, c := range candidates {
+			k := strings.TrimSuffix(c, ".crt") + ".key"
+			if _, err := os.Stat(c); err == nil {
+				if _, err := os.Stat(k); err == nil {
+					certFile, keyFile = c, k
+					break
+				}
+			}
+		}
+	}
+
+	cdnClients := []any{}
+	cdnRules := []any{}
+	cdnTag := fmt.Sprintf("in-%d-ws", port)
+
+	for _, ib := range inbounds {
+		if !ib.Enable || ib.SocksSlot > 0 {
+			continue
+		}
+		tag := bound[ib.BoundTo]
+		if ib.BoundSlot > 0 {
+			tag = ""
+			if slots[ib.BoundSlot] {
+				tag = slotOutboundTag(ib.BoundSlot)
+			}
+		}
+		if ib.HostDirect && ib.BoundSlot == 0 && ib.BoundTo == "" && ib.SocksSlot == 0 {
+			tag = "host-direct"
+		}
+		if ib.ThirdParty != nil {
+			tag = ""
+			if thirdPartyBound(ib) {
+				tag = thirdPartyTag(ib.ID)
+			}
+		}
+		if tag == "" {
+			tag = "block"
+		}
+
+		for _, c := range ib.Clients {
+			if !c.Enable {
+				continue
+			}
+			cdnClients = append(cdnClients, map[string]any{
+				"id":    c.ID,
+				"email": c.Email,
+				"flow":  c.Flow,
+			})
+			cdnRules = append(cdnRules, map[string]any{
+				"type":        "field",
+				"inboundTag":  []any{cdnTag},
+				"user":        []any{c.Email},
+				"outboundTag": tag,
+			})
+		}
+	}
+
+	tlsSettings := map[string]any{
+		"serverName": d,
+	}
+	if certFile != "" && keyFile != "" {
+		tlsSettings["certificates"] = []any{map[string]any{
+			"certificateFile": certFile,
+			"keyFile":         keyFile,
+		}}
+	}
+
+	inboundCfg := map[string]any{
+		"tag":      cdnTag,
+		"port":     port,
+		"protocol": "vless",
+		"settings": map[string]any{
+			"decryption": "none",
+			"clients":    cdnClients,
+		},
+		"streamSettings": map[string]any{
+			"network":     "ws",
+			"security":    "tls",
+			"tlsSettings": tlsSettings,
+			"wsSettings": map[string]any{
+				"host": d,
+				"path": path,
+			},
+		},
+		"sniffing": map[string]any{
+			"enabled":      true,
+			"destOverride": []any{"http", "tls"},
+		},
+	}
+
+	return inboundCfg, cdnRules
 }
 
 // nativeInboundJSON 把一个入站转成 Xray 的 inbound 配置。

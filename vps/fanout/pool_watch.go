@@ -10,6 +10,9 @@ import (
 // Local systemd builds the same pool; the manager only reads atomic snapshots.
 func (m *Manager) WatchNodePool() {
 	path := strings.TrimSpace(os.Getenv("FANOUT_VALIDATED_POOL_FILE"))
+	if path == "" {
+		path = "/var/lib/xnvgatebox/pool/node_pool.json"
+	}
 	var loaded time.Time
 	for {
 		if info, err := os.Stat(path); err == nil && !info.ModTime().Equal(loaded) {

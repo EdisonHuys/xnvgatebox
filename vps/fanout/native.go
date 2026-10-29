@@ -578,9 +578,16 @@ func shareLink(ib *nativeInbound, c nativeClient, host string) string {
 
 	switch net {
 	case "ws", "httpupgrade", "xhttp":
-		q.Set("path", ib.Path)
-		if ib.Host != "" {
-			q.Set("host", ib.Host)
+		if isCDN {
+			q.Set("path", cdnPathPrefix())
+			if d := cdnDomain(); d != "" {
+				q.Set("host", d)
+			}
+		} else {
+			q.Set("path", ib.Path)
+			if ib.Host != "" {
+				q.Set("host", ib.Host)
+			}
 		}
 	case "grpc":
 		q.Set("serviceName", strings.TrimPrefix(ib.Path, "/"))
@@ -588,13 +595,17 @@ func shareLink(ib *nativeInbound, c nativeClient, host string) string {
 
 	switch sec {
 	case "tls":
-		if ib.TLS != nil {
+		if isCDN {
+			if d := cdnDomain(); d != "" {
+				q.Set("sni", d)
+			}
+		} else if ib.TLS != nil {
 			if ib.TLS.ServerName != "" {
 				q.Set("sni", ib.TLS.ServerName)
 			}
 			// 自签证书验不过 CA。Xray 26.x 移除了 allowInsecure，
 			// 改用证书指纹让客户端固定信任这一张。
-			if !isCDN && ib.TLS.SelfSigned && ib.TLS.CertSha256 != "" {
+			if ib.TLS.SelfSigned && ib.TLS.CertSha256 != "" {
 				q.Set("pinSHA256", ib.TLS.CertSha256)
 			}
 		}
@@ -637,8 +648,18 @@ func shareLink(ib *nativeInbound, c nativeClient, host string) string {
 // buildTLS 组装 TLS 配置。没给证书路径就生成一张自签的，落在 dir/certs 下。
 func buildTLS(dir string, spec NewInboundSpec) (*tlsConfig, error) {
 	name := strings.TrimSpace(spec.ServerName)
+	if name == "" && spec.ServerNames != "" {
+		parts := strings.Split(spec.ServerNames, ",")
+		if len(parts) > 0 && strings.TrimSpace(parts[0]) != "" {
+			name = strings.TrimSpace(parts[0])
+		}
+	}
 	if name == "" {
-		name = "localhost"
+		if d := cdnDomain(); d != "" {
+			name = d
+		} else {
+			name = "localhost"
+		}
 	}
 	conf := &tlsConfig{ServerName: name}
 
